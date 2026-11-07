@@ -1,8 +1,20 @@
-# React + TypeScript + Vite
+# Tarjoushaukka
 
-Yksinkertainen responsiivinen React-sovellus, joka on rakennettu TypeScriptillä Viten päälle.
+Harrasteprojekti, joka kokoaa suomalaisten ruokakauppaketjujen tarjoukset yhteen paikkaan.
+Ensimmäisenä tuotteena on **kahvi**: 10 suosittua suodatinkahvia ja niiden tarjoukset
+S-ryhmän (Prisma, S-market, Sale), K-ryhmän (K-Citymarket, K-Supermarket, K-Market) ja Lidlin ketjuissa.
 
-## Ominaisuudet
+## Toiminnot
+
+- Tarjoukset tuotteittain, halvin voimassa oleva tarjous korostettuna
+- Vertailu kilohinnan mukaan, alennusprosentti ja kanta-asiakashinnat merkittynä
+- Suodatus kaupparyhmän mukaan, järjestys kilohinnan tai nimen mukaan
+- "Halvimmat juuri nyt" -nosto etusivulla
+- Käyttäjä voi ilmoittaa tarjouksen lomakkeella (staattisessa versiossa tallentuu vain omaan selaimeen, `localStorage`)
+
+> Valmiiksi listatut tarjoukset (`src/data/offers.ts`) ovat **keksittyä esimerkkidataa**.
+
+## Tekniikka
 
 - React 19 + TypeScript (strict-tila)
 - Vite 7 kehityspalvelimena ja bundlerina
@@ -31,8 +43,13 @@ npm run preview  # esikatsele tuotantobuildia
 ├── public/             # staattiset tiedostot (favicon)
 ├── src/
 │   ├── main.tsx        # sovelluksen käynnistys
-│   ├── App.tsx         # pääkomponentti
-│   ├── App.css         # komponentin tyylit
+│   ├── App.tsx         # pääsivu: nosto, suodattimet, tuotelista, lomake
+│   ├── App.css         # sivun tyylit
+│   ├── types.ts        # tietomalli (ketju, tuote, tarjous)
+│   ├── data/           # ketjut, tuotteet ja esimerkkitarjoukset
+│   ├── lib/offers.ts   # kilohinta, voimassaolo, muotoilu
+│   ├── hooks/          # käyttäjän ilmoittamat tarjoukset (localStorage)
+│   ├── components/     # ProductCard, OfferForm, RoastMeter
 │   ├── index.css       # globaalit tyylit ja teemamuuttujat
 │   └── vite-env.d.ts   # Viten tyyppimäärittelyt
 ├── vite.config.ts
