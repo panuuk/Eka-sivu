@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Canvas } from './canvas/Canvas'
 import { EntityManager } from './panels/EntityManager'
+import { ExportDialog } from './panels/ExportDialog'
+import { PresentView } from './panels/PresentView'
 import { ListView } from './panels/ListView'
 import { ProcessTree } from './panels/ProcessTree'
 import { SourcesView } from './panels/SourcesView'
@@ -19,6 +21,7 @@ function App() {
   const view = useUi((s) => s.view)
   const leftOpen = useUi((s) => s.leftOpen)
   const rightOpen = useUi((s) => s.rightOpen)
+  const presenting = useUi((s) => s.presenting)
   useShortcuts()
 
   useEffect(() => {
@@ -26,6 +29,15 @@ function App() {
   }, [])
 
   if (!ready) return <div className="loading">Ladataan…</div>
+
+  if (presenting) {
+    return (
+      <div className="app app--present">
+        <PresentView />
+        <ExportDialog />
+      </div>
+    )
+  }
 
   return (
     <div className="app">
@@ -47,6 +59,7 @@ function App() {
         )}
       </div>
       <EntityManager />
+      <ExportDialog />
       <QuickInput />
       <ConfirmHost />
       <PromptHost />

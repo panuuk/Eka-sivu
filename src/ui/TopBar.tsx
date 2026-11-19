@@ -260,6 +260,24 @@ export function TopBar() {
       </button>
       <button
         type="button"
+        className="btn-quick btn-quick--plain"
+        aria-label="Esitä"
+        title="Esitä muille: siisti koko ruudun näkymä ja läpikäynti"
+        onClick={() => useUi.getState().setPresenting(true)}
+      >
+        <Icon name="play" size={16} /> <span className="hide-sm">Esitä</span>
+      </button>
+      <button
+        type="button"
+        className="btn-quick btn-quick--plain"
+        aria-label="Vie ja jaa"
+        title="Vie kuvana, dokumenttina tai tiedostona"
+        onClick={() => useUi.getState().setExportOpen(true)}
+      >
+        <Icon name="download" size={16} /> <span className="hide-sm">Vie</span>
+      </button>
+      <button
+        type="button"
         className="icon-btn"
         aria-label="Roolit, järjestelmät ja tuotokset"
         title="Roolit, järjestelmät ja tuotokset"

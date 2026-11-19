@@ -12,6 +12,8 @@ function isTyping(el: EventTarget | null): boolean {
 export function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Esitystilassa mikään muokkaus ei saa tapahtua vahingossa
+      if (useUi.getState().presenting) return
       const mod = e.ctrlKey || e.metaKey
       const inDialog = e.target instanceof HTMLElement && !!e.target.closest('dialog')
       if (mod && !e.altKey && e.key.toLowerCase() === 'z' && !inDialog) {

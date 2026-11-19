@@ -1966,3 +1966,283 @@
 .entity-usage .linklike {
   color: var(--accent);
 }
+
+/* ===== Vienti ja esitys ===== */
+.btn-quick--plain {
+  border-color: var(--border);
+  color: var(--text);
+  background: var(--surface);
+}
+.dialog--export {
+  width: min(1100px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
+}
+.export {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 1.25rem;
+}
+.export__formats {
+  display: grid;
+  gap: 0.3rem;
+}
+.export__formats button {
+  text-align: left;
+}
+.export__formats .is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.export__preview {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 0.5rem;
+  overflow: auto;
+  max-height: 60vh;
+}
+.export__svg svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+.export__text {
+  margin: 0;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.present-settings {
+  display: grid;
+  gap: 0.75rem;
+}
+.present-settings fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.present-settings input[type='color'] {
+  width: 3rem;
+  height: 2rem;
+  padding: 0;
+}
+@media (max-width: 860px) {
+  .export {
+    grid-template-columns: 1fr;
+  }
+}
+
+.app--present {
+  background: #000;
+}
+.present {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--p-bg);
+  color: var(--p-text);
+  z-index: 40;
+}
+.present__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid var(--p-border);
+  background: var(--p-surface);
+  flex-wrap: wrap;
+}
+.present__crumbs {
+  color: var(--p-muted);
+}
+.present__crumbs strong {
+  color: var(--p-text);
+}
+.present__crumbs .linklike {
+  color: var(--p-accent);
+}
+.present__spacer {
+  flex: 1;
+}
+.present__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--p-surface);
+  color: var(--p-text);
+  border: 1px solid var(--p-border);
+  border-radius: 8px;
+  padding: 0.35em 0.75em;
+  cursor: pointer;
+  font: inherit;
+}
+.present__btn.is-on {
+  border-color: var(--p-accent);
+  color: var(--p-accent);
+}
+.present__btn:disabled {
+  opacity: 0.45;
+}
+.present__zoom {
+  display: flex;
+  gap: 0.25rem;
+}
+.present__settings {
+  position: relative;
+}
+.present__settings summary {
+  list-style: none;
+}
+.present__popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  width: 300px;
+  padding: 0.9rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.present__stage {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+}
+.present__stage:active {
+  cursor: grabbing;
+}
+.present__svg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.present__svg [data-id] {
+  cursor: pointer;
+}
+.present__msg {
+  padding: 2rem;
+  text-align: center;
+  color: var(--p-muted);
+}
+.present__card {
+  position: absolute;
+  right: 16px;
+  top: 72px;
+  width: min(340px, calc(100% - 32px));
+  max-height: calc(100% - 160px);
+  overflow: auto;
+  padding: 1rem 1.1rem;
+  background: var(--p-surface);
+  color: var(--p-text);
+  border: 1px solid var(--p-border);
+  border-top: 4px solid var(--p-accent);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 25%);
+}
+.present__card h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.6rem;
+}
+.present__card p {
+  margin: 0.3rem 0;
+}
+.present__progress {
+  color: var(--p-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.present__k {
+  display: inline-block;
+  min-width: 6.5em;
+  color: var(--p-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.present__desc {
+  margin-top: 0.6rem !important;
+  line-height: 1.55;
+}
+.present__next {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.8rem;
+}
+.present__chip {
+  text-align: left;
+  background: transparent;
+  color: var(--p-text);
+  border: 1px solid var(--p-border);
+  border-radius: 8px;
+  padding: 0.35em 0.7em;
+  cursor: pointer;
+  font: inherit;
+}
+.present__chip:hover {
+  border-color: var(--p-accent);
+}
+.present__walk {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.9rem;
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 25%);
+}
+.present__hint {
+  position: absolute;
+  left: 12px;
+  bottom: 6px;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--p-muted);
+}
+
+.dialog--export[open] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.dialog--export .export {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.dialog--export .dialog__actions {
+  flex: none;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.export__svg svg {
+  max-height: 56vh;
+  width: auto;
+  margin: 0 auto;
+}
+.export__preview {
+  max-height: none;
+  align-self: start;
+}
+.present__svg {
+  margin: 0 auto;
+}

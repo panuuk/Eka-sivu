@@ -1,12 +1,34 @@
 import { create } from 'zustand'
 import { EMPTY_FILTER, type Filter } from '../analysis/search'
+import { DEFAULT_THEME, sanitizeTheme, type Theme } from '../export/theme'
 
 export type ViewMode = 'canvas' | 'list' | 'sources'
 export type Direction = 'DOWN' | 'RIGHT'
 /** Kaavion asettelutapa: vapaa (muokattava), uimaradat (rooleittain) tai kokonaiskuva (alaprosessit auki). */
 export type LayoutMode = 'free' | 'lanes' | 'overview'
 
+export interface PresentOptions {
+  /** Avaa alaprosessit samaan kuvaan. */
+  expand: boolean
+  /** Vain vahvistetut vaiheet. */
+  onlyConfirmed: boolean
+  showRoles: boolean
+  showSystems: boolean
+  /** Varmuus näkyviin (arvaus katkoviivalla). Esityksessä oletuksena pois. */
+  showUncertainty: boolean
+}
+
+export const DEFAULT_PRESENT: PresentOptions = {
+  expand: false,
+  onlyConfirmed: false,
+  showRoles: true,
+  showSystems: true,
+  showUncertainty: false,
+}
+
 interface Persisted {
+  theme: Theme
+  present: PresentOptions
   view: ViewMode
   direction: Direction
   layoutMode: LayoutMode
@@ -20,6 +42,8 @@ function load(): Persisted {
   // Pienellä näytöllä paneelit ovat oletuksena kiinni, koska ne peittäisivät kaavion.
   const small = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 900px)').matches
   const fallback: Persisted = {
+    theme: DEFAULT_THEME,
+    present: DEFAULT_PRESENT,
     view: 'canvas',
     direction: 'DOWN',
     layoutMode: 'free',
@@ -29,7 +53,13 @@ function load(): Persisted {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return fallback
-    return { ...fallback, ...(JSON.parse(raw) as Partial<Persisted>) }
+    const stored = JSON.parse(raw) as Partial<Persisted>
+    return {
+      ...fallback,
+      ...stored,
+      theme: sanitizeTheme(stored.theme),
+      present: { ...DEFAULT_PRESENT, ...(stored.present ?? {}) },
+    }
   } catch {
     return fallback
   }
@@ -71,6 +101,13 @@ interface UiState extends Persisted {
   }) => Promise<string | null>
   closePrompt: (value: string | null) => void
   entityManagerOpen: boolean
+  /** Esitystila: siisti koko ruudun näkymä. */
+  presenting: boolean
+  setPresenting: (on: boolean) => void
+  setTheme: (patch: Partial<Theme>) => void
+  setPresentOptions: (patch: Partial<PresentOptions>) => void
+  exportOpen: boolean
+  setExportOpen: (open: boolean) => void
   /** Haku ja suodattimet (kaavio ja lista himmentävät ei-osuvat vaiheet). */
   filter: Filter
   setFilter: (patch: Partial<Filter>) => void
@@ -126,8 +163,8 @@ interface UiState extends Persisted {
 
 export const useUi = create<UiState>((set, get) => {
   const save = () => {
-    const { view, direction, layoutMode, leftOpen, rightOpen } = get()
-    persist({ view, direction, layoutMode, leftOpen, rightOpen })
+    const { theme, present, view, direction, layoutMode, leftOpen, rightOpen } = get()
+    persist({ theme, present, view, direction, layoutMode, leftOpen, rightOpen })
   }
   return {
     ...load(),
@@ -152,6 +189,18 @@ export const useUi = create<UiState>((set, get) => {
       r.resolve(value)
     },
     entityManagerOpen: false,
+    presenting: false,
+    setPresenting: (presenting) => set({ presenting }),
+    setTheme: (patch) => {
+      set((st) => ({ theme: sanitizeTheme({ ...st.theme, ...patch }) }))
+      save()
+    },
+    setPresentOptions: (patch) => {
+      set((st) => ({ present: { ...st.present, ...patch } }))
+      save()
+    },
+    exportOpen: false,
+    setExportOpen: (exportOpen) => set({ exportOpen }),
     filter: EMPTY_FILTER,
     setFilter: (patch) => set((st) => ({ filter: { ...st.filter, ...patch } })),
     clearFilter: () => set({ filter: EMPTY_FILTER }),

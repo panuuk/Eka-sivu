@@ -27,6 +27,8 @@ export interface HierarchyInput {
   nodesOf: (processId: string) => HierNodeInput[]
   edgesOf: (processId: string) => HierEdgeInput[]
   direction: Direction
+  /** Avataanko alaprosessit ryhmiksi (oletus kyllä). */
+  expand?: boolean
   /** Alaprosessit avataan vain, kunnes solmuja on tämän verran, jotta valtavat mallit pysyvät käytettävinä. */
   maxNodes?: number
 }
@@ -111,6 +113,7 @@ export function buildHierarchyGraph(input: HierarchyInput): { graph: ElkNode; gr
       const childNodes =
         n.childProcessId && !opened.has(n.childProcessId) ? input.nodesOf(n.childProcessId) : []
       if (
+        input.expand !== false &&
         n.kind === 'subprocess' &&
         n.childProcessId &&
         childNodes.length > 0 &&
