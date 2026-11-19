@@ -47,14 +47,12 @@ export function TopBar() {
       label: 'Uusi projekti…',
       separatorBefore: true,
       onSelect: async () => {
-        const name = await useUi
-          .getState()
-          .prompt({
-            title: 'Uusi projekti',
-            label: 'Projektin nimi',
-            initial: 'Uusi projekti',
-            confirmLabel: 'Luo',
-          })
+        const name = await useUi.getState().prompt({
+          title: 'Uusi projekti',
+          label: 'Projektin nimi',
+          initial: 'Uusi projekti',
+          confirmLabel: 'Luo',
+        })
         if (name) await useStore.getState().createProject(name)
       },
     },
@@ -65,14 +63,12 @@ export function TopBar() {
     {
       label: 'Nimeä projekti uudelleen…',
       onSelect: async () => {
-        const name = await useUi
-          .getState()
-          .prompt({
-            title: 'Nimeä projekti',
-            label: 'Projektin nimi',
-            initial: project.name,
-            confirmLabel: 'Tallenna',
-          })
+        const name = await useUi.getState().prompt({
+          title: 'Nimeä projekti',
+          label: 'Projektin nimi',
+          initial: project.name,
+          confirmLabel: 'Tallenna',
+        })
         if (name) useStore.getState().dispatch({ type: 'renameProject', name })
       },
     },
@@ -219,6 +215,15 @@ export function TopBar() {
         </button>
       )}
 
+      <button
+        type="button"
+        className="btn-quick"
+        aria-label="Pikasyöte"
+        title="Lisää tai vie prosessi tekstinä (Ctrl+K)"
+        onClick={() => useUi.getState().openQuick('add')}
+      >
+        <Icon name="edit" size={16} /> <span className="hide-sm">Pikasyöte</span>
+      </button>
       <button
         type="button"
         className="icon-btn"

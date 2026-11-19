@@ -66,6 +66,13 @@ interface UiState extends Persisted {
   }) => Promise<string | null>
   closePrompt: (value: string | null) => void
   entityManagerOpen: boolean
+  quickOpen: boolean
+  quickTab: 'add' | 'export'
+  /** Pikasyötteen keskeneräinen teksti säilyy, vaikka ikkuna suljetaan. */
+  quickDraft: string
+  openQuick: (tab?: 'add' | 'export', draft?: string) => void
+  closeQuick: () => void
+  setQuickDraft: (text: string) => void
   /** Solmu, jonka nimeä muokataan kaaviossa tai listassa. */
   editNodeId: string | null
   setEditNode: (id: string | null) => void
@@ -113,6 +120,13 @@ export const useUi = create<UiState>((set, get) => {
       r.resolve(value)
     },
     entityManagerOpen: false,
+    quickOpen: false,
+    quickTab: 'add',
+    quickDraft: '',
+    openQuick: (tab = 'add', draft) =>
+      set((s) => ({ quickOpen: true, quickTab: tab, quickDraft: draft ?? s.quickDraft })),
+    closeQuick: () => set({ quickOpen: false }),
+    setQuickDraft: (quickDraft) => set({ quickDraft }),
     editNodeId: null,
     setEditNode: (editNodeId) => set({ editNodeId }),
     setView: (view) => {

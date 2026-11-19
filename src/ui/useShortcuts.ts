@@ -25,6 +25,12 @@ export function useShortcuts() {
         useStore.getState().redo()
         return
       }
+      if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        if (useUi.getState().quickOpen) useUi.getState().closeQuick()
+        else useUi.getState().openQuick('add')
+        return
+      }
       if (isTyping(e.target) || inDialog || mod || e.altKey) return
       const sel = useStore.getState().selection
       if (e.key === 'Enter' && sel.nodeIds.length === 1 && sel.edgeIds.length === 0) {

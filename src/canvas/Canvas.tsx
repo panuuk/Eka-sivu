@@ -283,6 +283,9 @@ function CanvasInner() {
             <button type="button" onClick={() => addNode('step')}>
               Lisää yksi vaihe
             </button>
+            <button type="button" onClick={() => useUi.getState().openQuick('add')}>
+              Kirjoita tekstinä
+            </button>
           </div>
         </div>
       )}

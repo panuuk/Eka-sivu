@@ -4,6 +4,7 @@ import { EntityManager } from './panels/EntityManager'
 import { Inspector } from './panels/Inspector'
 import { ListView } from './panels/ListView'
 import { ProcessTree } from './panels/ProcessTree'
+import { QuickInput } from './panels/QuickInput'
 import { useStore } from './store/store'
 import { useUi } from './store/ui'
 import { ConfirmHost, PromptHost } from './ui/ConfirmHost'
@@ -45,6 +46,7 @@ function App() {
         )}
       </div>
       <EntityManager />
+      <QuickInput />
       <ConfirmHost />
       <PromptHost />
     </div>
