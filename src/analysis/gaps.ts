@@ -1,6 +1,7 @@
 import { leadingRoleMention } from '../capture/suggest'
 import { flowOrder } from '../model/flow'
-import { nodesOf, normalizeName, outgoing, reachableFrom } from '../model/selectors'
+import { normalizeName } from '../model/selectors'
+import type { ProcessEdge, ProcessNode } from '../model/types'
 import type { Project } from '../model/types'
 
 /**
@@ -40,7 +41,51 @@ export interface Gap {
 
 const SEVERITY_RANK: Record<Severity, number> = { high: 0, medium: 1, low: 2 }
 
-export function findGaps(p: Project): Gap[] {
+/** Solmut ja reunat prosesseittain sekä reunat solmuittain: rakennetaan kerran, jotta analyysi on lineaarinen. */
+export interface GraphIndex {
+  nodesByProcess: Map<string, ProcessNode[]>
+  edgesByProcess: Map<string, ProcessEdge[]>
+  out: Map<string, ProcessEdge[]>
+  inc: Map<string, ProcessEdge[]>
+}
+
+export function indexGraph(p: Project): GraphIndex {
+  const nodesByProcess = new Map<string, ProcessNode[]>()
+  const edgesByProcess = new Map<string, ProcessEdge[]>()
+  const out = new Map<string, ProcessEdge[]>()
+  const inc = new Map<string, ProcessEdge[]>()
+  const push = <K, V>(m: Map<K, V[]>, k: K, v: V) => {
+    const list = m.get(k)
+    if (list) list.push(v)
+    else m.set(k, [v])
+  }
+  for (const n of Object.values(p.nodes)) push(nodesByProcess, n.processId, n)
+  for (const e of Object.values(p.edges)) {
+    push(edgesByProcess, e.processId, e)
+    push(out, e.from, e)
+    push(inc, e.to, e)
+  }
+  return { nodesByProcess, edgesByProcess, out, inc }
+}
+
+/** Solmut, joihin alkupisteistä pääsee seuraamalla reunoja. */
+function reach(starts: string[], out: Map<string, ProcessEdge[]>): Set<string> {
+  const seen = new Set(starts)
+  const stack = [...starts]
+  while (stack.length) {
+    for (const e of out.get(stack.pop()!) ?? []) {
+      if (!seen.has(e.to)) {
+        seen.add(e.to)
+        stack.push(e.to)
+      }
+    }
+  }
+  return seen
+}
+
+export function findGaps(p: Project, index: GraphIndex = indexGraph(p)): Gap[] {
+  const { nodesByProcess, out } = index
+  const outgoing = (id: string) => out.get(id) ?? []
   const gaps: Gap[] = []
   const push = (g: Gap) => gaps.push(g)
 
@@ -54,7 +99,7 @@ export function findGaps(p: Project): Gap[] {
 
   for (const processId of processIds) {
     const proc = p.processes[processId]
-    const nodes = nodesOf(p, processId)
+    const nodes = nodesByProcess.get(processId) ?? []
     const starts = nodes.filter((n) => n.kind === 'start')
     const ends = nodes.filter((n) => n.kind === 'end')
     const hasStructure = nodes.length >= 2
@@ -81,10 +126,9 @@ export function findGaps(p: Project): Gap[] {
 
     // Saavutettavuus alusta ja pääsy loppuun
     if (hasStructure && starts.length > 0) {
-      const reachable = reachableFrom(
-        p,
+      const reachable = reach(
         starts.map((s) => s.id),
-        true,
+        out,
       )
       for (const n of nodes) {
         if (n.kind !== 'start' && !reachable.has(n.id)) {
@@ -100,7 +144,7 @@ export function findGaps(p: Project): Gap[] {
       }
     }
     if (hasStructure) {
-      const deadEnds = nodes.filter((n) => n.kind !== 'end' && outgoing(p, n.id).length === 0)
+      const deadEnds = nodes.filter((n) => n.kind !== 'end' && outgoing(n.id).length === 0)
       // Jos loppupistettä ei ole, yksittäinen häntä on luonnollinen; useampi on epäselvä.
       if (ends.length > 0 || deadEnds.length > 1) {
         for (const n of deadEnds) {
@@ -143,7 +187,7 @@ export function findGaps(p: Project): Gap[] {
       }
 
       if (n.kind === 'decision') {
-        const outs = outgoing(p, n.id)
+        const outs = outgoing(n.id)
         if (outs.length < 2) {
           push({
             key: `decision-branches:${n.id}`,
@@ -174,7 +218,9 @@ export function findGaps(p: Project): Gap[] {
       if (n.kind === 'subprocess') {
         const child = n.childProcessId ? p.processes[n.childProcessId] : undefined
         const inner = child
-          ? nodesOf(p, child.id).filter((x) => x.kind !== 'start' && x.kind !== 'end')
+          ? (nodesByProcess.get(child.id) ?? []).filter(
+              (x) => x.kind !== 'start' && x.kind !== 'end',
+            )
           : []
         if (inner.length === 0) {
           push({

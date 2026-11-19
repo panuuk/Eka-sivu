@@ -6,13 +6,13 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
-  useNodesState,
   useReactFlow,
   type Connection,
   type Edge,
   type FitViewOptions,
   type Node,
-  type OnSelectionChangeParams,
+  type OnEdgesChange,
+  type OnNodesChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -32,8 +32,9 @@ import { useStore } from '../store/store'
 import { useUi } from '../store/ui'
 import { Icon } from '../ui/Icon'
 import { NODE_SIZE } from './geometry'
-import { ProcessNodeView } from './ProcessNodeView'
-import { RoutedEdge } from './RoutedEdge'
+import { ProcessNodeView, type NodeData } from './ProcessNodeView'
+import { useAnalysis } from '../analysis/useAnalysis'
+import { RoutedEdge, type RoutedEdgeData } from './RoutedEdge'
 
 const nodeTypes = { process: ProcessNodeView }
 const edgeTypes = { routed: RoutedEdge }
@@ -42,11 +43,38 @@ const FIT_OPTIONS: FitViewOptions = {
   padding: { top: '84px', right: '32px', bottom: '32px', left: '32px' },
   maxZoom: 1.1,
 }
-const NO_LAYOUT: LayoutResult = { positions: new Map(), routes: new Map() }
-
-function sameIds(a: string[], b: string[]) {
-  return a.length === b.length && a.every((x, i) => x === b[i])
+/** Palauttaa edellisen olion, jos se on sisällöltään sama: pitää viitteet vakaina, jolloin React Flow ei renderöi turhaan. */
+function reuseStable<T extends { id: string }>(
+  cache: Map<string, T>,
+  next: T[],
+  same: (a: T, b: T) => boolean,
+): T[] {
+  const out = next.map((n) => {
+    const old = cache.get(n.id)
+    return old && same(old, n) ? old : n
+  })
+  cache.clear()
+  for (const o of out) cache.set(o.id, o)
+  return out
 }
+
+const sameNode = (a: Node, b: Node) =>
+  a.position.x === b.position.x &&
+  a.position.y === b.position.y &&
+  a.selected === b.selected &&
+  a.width === b.width &&
+  a.height === b.height &&
+  (a.data as NodeData).questions === (b.data as NodeData).questions
+
+const sameEdge = (a: Edge, b: Edge) =>
+  a.source === b.source &&
+  a.target === b.target &&
+  a.label === b.label &&
+  a.selected === b.selected &&
+  (a.data as RoutedEdgeData | undefined)?.points === (b.data as RoutedEdgeData | undefined)?.points
+
+const MARKER = { type: MarkerType.ArrowClosed, width: 18, height: 18 } as const
+const NO_LAYOUT: LayoutResult = { positions: new Map(), routes: new Map() }
 
 function CanvasInner() {
   const project = useStore((s) => s.project)!
@@ -54,6 +82,10 @@ function CanvasInner() {
   const selection = useStore((s) => s.selection)
   const direction = useUi((s) => s.direction)
   const { fitView } = useReactFlow()
+  const analysis = useAnalysis()
+  // Edellisten renderöintien oliot, joiden viitteet pidetään vakaina (kasvattaa vain muistia solmujen määrän verran).
+  const [nodeCache] = useState(() => new Map<string, Node>())
+  const [edgeCache] = useState(() => new Map<string, Edge>())
 
   const procNodes = useMemo(() => nodesOf(project, processId), [project, processId])
   const procEdges = useMemo(() => edgesOf(project, processId), [project, processId])
@@ -103,10 +135,11 @@ function CanvasInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [structureKey])
 
+  const selectedNodeSet = useMemo(() => new Set(selection.nodeIds), [selection.nodeIds])
   const derivedNodes = useMemo<Node[]>(() => {
     const preds = new Map<string, string>()
     for (const e of procEdges) if (!preds.has(e.to)) preds.set(e.to, e.from)
-    return procNodes.map((n) => {
+    const built = procNodes.map((n): Node => {
       let pos: Point | undefined = n.locked ? n.position : undefined
       pos ??= layout.positions.get(n.id)
       if (!pos) {
@@ -123,16 +156,53 @@ function CanvasInner() {
         id: n.id,
         type: 'process',
         position: pos,
-        selected: selection.nodeIds.includes(n.id),
+        selected: selectedNodeSet.has(n.id),
         width: NODE_SIZE[n.kind].width,
         height: NODE_SIZE[n.kind].height,
-        data: {},
+        data: { questions: analysis.perNode.get(n.id) ?? 0 } satisfies NodeData,
       }
     })
-  }, [procNodes, procEdges, layout, selection.nodeIds, project.nodes])
+    return reuseStable(nodeCache, built, sameNode)
+  }, [procNodes, procEdges, layout, selectedNodeSet, project.nodes, analysis.perNode, nodeCache])
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>(derivedNodes)
-  useEffect(() => setNodes(derivedNodes), [derivedNodes, setNodes])
+  // Täysin ohjattu malli: solmut tulevat mallista, ja vain vedon aikainen sijainti pidetään tässä. Näin React Flow
+  // säilyttää solmujen mittaukset eikä reunoja piirretä uudelleen jokaisella muutoksella.
+  const [dragPositions, setDragPositions] = useState<Map<string, Point>>(new Map())
+  const nodes = useMemo(
+    () =>
+      dragPositions.size === 0
+        ? derivedNodes
+        : derivedNodes.map((n) => {
+            const pos = dragPositions.get(n.id)
+            return pos ? { ...n, position: pos } : n
+          }),
+    [derivedNodes, dragPositions],
+  )
+  const onNodesChange = useCallback<OnNodesChange<Node>>((changes) => {
+    const moved = new Map<string, Point>()
+    let selected: Set<string> | null = null
+    for (const c of changes) {
+      if (c.type === 'position' && c.position) moved.set(c.id, c.position)
+      else if (c.type === 'select') {
+        selected ??= new Set(useStore.getState().selection.nodeIds)
+        if (c.selected) selected.add(c.id)
+        else selected.delete(c.id)
+      }
+    }
+    if (selected) useStore.getState().select({ nodeIds: [...selected] })
+    if (moved.size) setDragPositions((prev) => new Map([...prev, ...moved]))
+  }, [])
+
+  const onEdgesChange = useCallback<OnEdgesChange<Edge>>((changes) => {
+    let selected: Set<string> | null = null
+    for (const c of changes) {
+      if (c.type !== 'select') continue
+      selected ??= new Set(useStore.getState().selection.edgeIds)
+      if (c.selected) selected.add(c.id)
+      else selected.delete(c.id)
+    }
+    if (selected) useStore.getState().select({ edgeIds: [...selected] })
+  }, [])
 
   useEffect(() => {
     if (fitPending.current && layoutKey === structureKey && procNodes.length > 0) {
@@ -141,11 +211,21 @@ function CanvasInner() {
     }
   }, [layoutKey, structureKey, procNodes.length, fitView])
 
+  const lockedKey = useMemo(
+    () =>
+      procNodes
+        .filter((n) => n.locked)
+        .map((n) => n.id)
+        .join(','),
+    [procNodes],
+  )
+  const selectedEdgeSet = useMemo(() => new Set(selection.edgeIds), [selection.edgeIds])
   const edges = useMemo<Edge[]>(() => {
     const routesValid = layoutKey === structureKey
-    return procEdges.map((e) => {
+    const locked = new Set(lockedKey ? lockedKey.split(',') : [])
+    const built = procEdges.map((e): Edge => {
       // ELK:n reitti on voimassa vain, jos asettelu on ajan tasalla eikä päätesolmuja ole siirretty käsin.
-      const moved = project.nodes[e.from]?.locked || project.nodes[e.to]?.locked
+      const moved = locked.has(e.from) || locked.has(e.to)
       const points = routesValid && !moved ? layout.routes.get(e.id) : undefined
       return {
         id: e.id,
@@ -154,21 +234,13 @@ function CanvasInner() {
         label: e.label,
         type: 'routed',
         data: { points },
-        selected: selection.edgeIds.includes(e.id),
-        markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+        selected: selectedEdgeSet.has(e.id),
+        markerEnd: MARKER,
         interactionWidth: 24,
       }
     })
-  }, [procEdges, selection.edgeIds, layout, layoutKey, structureKey, project.nodes])
-
-  const onSelectionChange = useCallback(({ nodes: ns, edges: es }: OnSelectionChangeParams) => {
-    const nodeIds = ns.map((n) => n.id)
-    const edgeIds = es.map((e) => e.id)
-    const cur = useStore.getState().selection
-    if (!sameIds(cur.nodeIds, nodeIds) || !sameIds(cur.edgeIds, edgeIds)) {
-      useStore.getState().select({ nodeIds, edgeIds })
-    }
-  }, [])
+    return reuseStable(edgeCache, built, sameEdge)
+  }, [procEdges, selectedEdgeSet, layout, layoutKey, structureKey, lockedKey, edgeCache])
 
   const onConnect = useCallback((c: Connection) => {
     const { project, currentProcessId, dispatch } = useStore.getState()
@@ -192,6 +264,7 @@ function CanvasInner() {
 
   const onNodeDragStop = useCallback((_: unknown, __: Node, dragged: Node[]) => {
     const { dispatch } = useStore.getState()
+    setDragPositions(new Map())
     dispatch(
       dragged.map((n) => ({
         type: 'updateNode' as const,
@@ -215,7 +288,7 @@ function CanvasInner() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
-        onSelectionChange={onSelectionChange}
+        onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         isValidConnection={isValidConnection}
         onNodeDragStop={onNodeDragStop}
@@ -226,6 +299,7 @@ function CanvasInner() {
         zoomOnDoubleClick={false}
         minZoom={0.1}
         maxZoom={2}
+        onlyRenderVisibleElements={procNodes.length > 150}
         proOptions={{ hideAttribution: true }}
         aria-label="Prosessikaavio"
       >

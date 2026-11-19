@@ -1,7 +1,5 @@
-import { descendantProcessIds } from '../model/operations'
-import { nodesOf } from '../model/selectors'
 import type { Project, Question } from '../model/types'
-import { findGaps, type Gap } from './gaps'
+import { findGaps, indexGraph, type Gap } from './gaps'
 
 export interface Readiness {
   /** 0–100 */
@@ -38,7 +36,8 @@ export function analyze(p: Project): Analysis {
       .filter((q) => q.rule !== 'custom' && q.status === 'dismissed')
       .map((q) => q.key),
   )
-  const gaps = findGaps(p)
+  const index = indexGraph(p)
+  const gaps = findGaps(p, index)
   const open = gaps.filter((g) => !dismissedKeys.has(g.key))
   const dismissed = gaps.filter((g) => dismissedKeys.has(g.key))
   const custom = Object.values(p.questions)
@@ -53,9 +52,21 @@ export function analyze(p: Project): Analysis {
   }
 
   const readiness = (processId: string, includeChildren = true): Readiness => {
-    const ids = new Set(includeChildren ? descendantProcessIds(p, processId) : [processId])
+    const ids = new Set([processId])
+    if (includeChildren) {
+      // Alaprosessit kulkevat vaiheiden childProcessId-viitteiden kautta.
+      const stack = [processId]
+      while (stack.length) {
+        for (const n of index.nodesByProcess.get(stack.pop()!) ?? []) {
+          if (n.childProcessId && !ids.has(n.childProcessId)) {
+            ids.add(n.childProcessId)
+            stack.push(n.childProcessId)
+          }
+        }
+      }
+    }
     const nodes = [...ids]
-      .flatMap((id) => nodesOf(p, id))
+      .flatMap((id) => index.nodesByProcess.get(id) ?? [])
       .filter((n) => n.kind !== 'start' && n.kind !== 'end')
     const gapNodes = new Set(
       open.filter((g) => g.targetId && ids.has(g.processId)).map((g) => g.targetId!),

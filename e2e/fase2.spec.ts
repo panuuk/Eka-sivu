@@ -104,3 +104,50 @@ test('projektin vienti ja tuonti', async ({ page }) => {
   await expect(page.locator('.topbar')).toContainText('(tuotu)')
   await expect(page.locator('.react-flow__node')).toHaveCount(1)
 })
+
+test('solmun siirto lukitsee sijainnin ja yhteyden valinta avaa yhteyden tiedot', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Luo alku, vaihe ja loppu' }).click()
+  await page.keyboard.type('Siirrettävä')
+  await page.keyboard.press('Enter')
+  const node = page.locator('.react-flow__node', { hasText: 'Siirrettävä' })
+  await page.waitForTimeout(700) // asettelun siirtymäanimaatio
+  const box = (await node.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2 + 160, box.y + box.height / 2 + 10, { steps: 8 })
+  await page.mouse.up()
+  await expect(node.locator('.node__badge--lock')).toBeVisible()
+  const moved = (await node.boundingBox())!
+  expect(Math.round(moved.x - box.x)).toBeGreaterThan(100)
+
+  // Järjestä-painike vapauttaa lukituksen
+  await page.getByRole('button', { name: 'Järjestä' }).click()
+  await expect(node.locator('.node__badge--lock')).toHaveCount(0)
+
+  // Yhteyden valinta
+  const pt = await page
+    .locator('.react-flow__edge-interaction')
+    .first()
+    .evaluate((el) => {
+      const path = el as unknown as SVGPathElement
+      const p = path.getPointAtLength(path.getTotalLength() / 2)
+      const m = path.getScreenCTM()!
+      return { x: p.x * m.a + p.y * m.c + m.e, y: p.x * m.b + p.y * m.d + m.f }
+    })
+  await page.mouse.click(pt.x, pt.y)
+  await expect(page.getByTestId('inspector-edge')).toBeVisible()
+})
+
+test('useamman solmun valinta ja ryhmittely alaprosessiksi', async ({ page }) => {
+  await page.getByRole('button', { name: 'Pikasyöte' }).click()
+  await page.getByLabel('Kirjoita tai liitä prosessin kuvaus').fill('- A\n- B\n- C')
+  await page.getByTestId('quick-apply').click()
+  await page.waitForTimeout(700)
+  await page.locator('.node__label', { hasText: /^B$/ }).click()
+  await page.locator('.node__label', { hasText: /^C$/ }).click({ modifiers: ['Control'] })
+  await expect(page.getByText('2 vaihetta ja 0 yhteyttä valittu')).toBeVisible()
+  await page.getByRole('button', { name: 'Ryhmitä' }).first().click()
+  await expect(page.locator('.breadcrumb [aria-current]')).toHaveText('Uusi alaprosessi')
+})

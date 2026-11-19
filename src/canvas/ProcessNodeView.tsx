@@ -1,6 +1,5 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { memo, useEffect, useRef, useState } from 'react'
-import { analyze } from '../analysis/analyze'
 import { entityColor } from '../model/flow'
 import type { NodeKind } from '../model/types'
 import { enterSubprocess } from '../store/actions'
@@ -8,6 +7,10 @@ import { useStore } from '../store/store'
 import { useUi } from '../store/ui'
 import { Icon } from '../ui/Icon'
 import { NODE_SIZE } from './geometry'
+
+export interface NodeData extends Record<string, unknown> {
+  questions: number
+}
 
 function InlineEdit({ id, initial }: { id: string; initial: string }) {
   const [value, setValue] = useState(initial)
@@ -45,11 +48,12 @@ function InlineEdit({ id, initial }: { id: string; initial: string }) {
   )
 }
 
-function ProcessNodeViewImpl({ id, selected }: NodeProps) {
+function ProcessNodeViewImpl({ id, selected, data }: NodeProps) {
   const node = useStore((s) => s.project?.nodes[id])
   const role = useStore((s) => (node?.roleId ? s.project?.entities[node.roleId] : undefined))
   const systems = useStore((s) => s.project?.entities)
-  const openQuestions = useStore((s) => (s.project ? (analyze(s.project).perNode.get(id) ?? 0) : 0))
+  // Avointen kysymysten määrä tulee kaaviolta (lasketaan kerran koko kaaviolle, ei solmukohtaisesti).
+  const openQuestions = (data as NodeData).questions
   const direction = useUi((s) => s.direction)
   const editing = useUi((s) => s.editNodeId === id)
   if (!node) return null
