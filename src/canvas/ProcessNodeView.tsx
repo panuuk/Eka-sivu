@@ -10,6 +10,8 @@ import { NODE_SIZE } from './geometry'
 
 export interface NodeData extends Record<string, unknown> {
   questions: number
+  /** Haun tai suodattimen ulkopuolinen vaihe himmennetään. */
+  dim: boolean
 }
 
 function InlineEdit({ id, initial }: { id: string; initial: string }) {
@@ -54,12 +56,11 @@ function ProcessNodeViewImpl({ id, selected, data }: NodeProps) {
   const systems = useStore((s) => s.project?.entities)
   // Avointen kysymysten määrä tulee kaaviolta (lasketaan kerran koko kaaviolle, ei solmukohtaisesti).
   const openQuestions = (data as NodeData).questions
-  const direction = useUi((s) => s.direction)
+  const vertical = useUi((s) => s.layoutMode !== 'lanes' && s.direction === 'DOWN')
   const editing = useUi((s) => s.editNodeId === id)
   if (!node) return null
   const kind: NodeKind = node.kind
   const size = NODE_SIZE[kind]
-  const vertical = direction === 'DOWN'
   const sysNames = node.systemIds.map((x) => systems?.[x]?.name).filter(Boolean) as string[]
 
   const label = editing ? (
@@ -72,7 +73,7 @@ function ProcessNodeViewImpl({ id, selected, data }: NodeProps) {
 
   return (
     <div
-      className={`node node--${kind} ${selected ? 'is-selected' : ''}`}
+      className={`node node--${kind} ${selected ? 'is-selected' : ''} ${(data as NodeData).dim ? 'is-dim' : ''}`}
       data-confidence={node.confidence}
       data-testid={`node-${kind}`}
       style={{ width: size.width, height: size.height }}

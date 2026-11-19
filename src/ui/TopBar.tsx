@@ -54,6 +54,7 @@ export function TopBar() {
   const canRedo = useStore((s) => s.future.length > 0)
   const view = useUi((s) => s.view)
   const direction = useUi((s) => s.direction)
+  const layoutMode = useUi((s) => s.layoutMode)
   const leftOpen = useUi((s) => s.leftOpen)
   const rightOpen = useUi((s) => s.rightOpen)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -236,7 +237,7 @@ export function TopBar() {
         </button>
       </div>
 
-      {view === 'canvas' && (
+      {view === 'canvas' && layoutMode !== 'lanes' && (
         <button
           type="button"
           className="icon-btn"

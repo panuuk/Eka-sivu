@@ -114,3 +114,25 @@ export function reachableFrom(p: Project, startIds: string[], forward = true): S
   }
   return seen
 }
+
+/** Vaiheet, jotka käyttävät entiteettiä (roolina, järjestelmänä, syötteenä tai tuotoksena), prosessin ja nimen mukaan järjestettynä. */
+export function entityUsages(
+  p: Project,
+  entityId: string,
+): { node: ProcessNode; as: ('rooli' | 'järjestelmä' | 'syöte' | 'tuotos')[] }[] {
+  const out: { node: ProcessNode; as: ('rooli' | 'järjestelmä' | 'syöte' | 'tuotos')[] }[] = []
+  for (const node of Object.values(p.nodes)) {
+    const as: ('rooli' | 'järjestelmä' | 'syöte' | 'tuotos')[] = []
+    if (node.roleId === entityId) as.push('rooli')
+    if (node.systemIds.includes(entityId)) as.push('järjestelmä')
+    if (node.inputIds.includes(entityId)) as.push('syöte')
+    if (node.outputIds.includes(entityId)) as.push('tuotos')
+    if (as.length) out.push({ node, as })
+  }
+  const procName = (id: string) => p.processes[id]?.name ?? ''
+  return out.sort(
+    (a, b) =>
+      procName(a.node.processId).localeCompare(procName(b.node.processId), 'fi') ||
+      a.node.label.localeCompare(b.node.label, 'fi'),
+  )
+}

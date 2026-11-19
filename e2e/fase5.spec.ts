@@ -142,3 +142,44 @@ test('solmun kysymysmerkki avaa kysymykset valittuun solmuun', async ({ page }) 
   await badge.click()
   await expect(page.getByTestId('questions-tab')).toHaveAttribute('aria-selected', 'true')
 })
+
+test('haku himmentää ei-osuvat vaiheet ja osumaa klikkaamalla siirrytään vaiheeseen', async ({
+  page,
+}) => {
+  await loadSample(page)
+  const search = page.getByLabel('Hae vaiheita')
+  await search.fill('esimies')
+  await expect(page.locator('.filterbar__count')).toBeVisible()
+  const dimmed = await page.locator('.node.is-dim').count()
+  const total = await page.locator('.react-flow__node').count()
+  expect(dimmed).toBeGreaterThan(0)
+  expect(dimmed).toBeLessThan(total)
+  // Osuma avaa vaiheen alaprosessista
+  await page
+    .getByRole('option', { name: /Esimies hyväksyy/ })
+    .getByRole('button')
+    .click()
+  await expect(page.locator('.breadcrumb [aria-current]')).toHaveText('Hyväksyntäkierto')
+  await expect(page.getByTestId('inspector-node')).toBeVisible()
+  // Tyhjennys poistaa himmennyksen
+  await page.getByRole('button', { name: 'Tyhjennä haku ja suodattimet' }).click()
+  await expect(page.locator('.node.is-dim')).toHaveCount(0)
+})
+
+test('suodattimet rajaavat roolin ja varmuuden mukaan, ja / siirtää haun kohdistuksen', async ({
+  page,
+}) => {
+  await loadSample(page)
+  await page.keyboard.press('/')
+  await expect(page.getByLabel('Hae vaiheita')).toBeFocused()
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Suodattimet' }).click()
+  const filters = page.locator('.filterbar__filters')
+  await filters.getByLabel('Varmuus').selectOption('guess')
+  await expect(page.locator('.filterbar__count')).toContainText('/')
+  await expect(page.locator('.node.is-dim').first()).toBeVisible()
+  await filters.getByLabel('Rooli').selectOption({ label: 'Esimies' })
+  const count = await page.locator('.filterbar__count').innerText()
+  expect(count).toMatch(/^\d+ \/ \d+$/)
+})

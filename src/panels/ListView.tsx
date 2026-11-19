@@ -1,5 +1,8 @@
 import { useMemo } from 'react'
+import { filterActive, matchNodes } from '../analysis/search'
+import { useAnalysis } from '../analysis/useAnalysis'
 import { flowOrder } from '../model/flow'
+import { FilterBar } from './FilterBar'
 import { CONFIDENCE_LABELS, KIND_LABELS, type Confidence } from '../model/types'
 import { addNode, deleteSelection, enterSubprocess, startProcessSkeleton } from '../store/actions'
 import { useStore } from '../store/store'
@@ -16,6 +19,15 @@ export function ListView() {
   const editId = useUi((s) => s.editNodeId)
 
   const rows = useMemo(() => flowOrder(project, processId), [project, processId])
+  const filter = useUi((s) => s.filter)
+  const analysis = useAnalysis()
+  const matchIds = useMemo(
+    () =>
+      filterActive(filter)
+        ? new Set(matchNodes(project, filter, new Set(analysis.perNode.keys())).map((n) => n.id))
+        : null,
+    [filter, project, analysis.perNode],
+  )
 
   if (rows.length === 0) {
     return (
@@ -39,6 +51,7 @@ export function ListView() {
 
   return (
     <div className="listview" data-testid="listview">
+      <FilterBar className="filterbar--list" />
       <table>
         <caption className="sr-only">Prosessin vaiheet</caption>
         <thead>
@@ -60,7 +73,7 @@ export function ListView() {
             return (
               <tr
                 key={node.id}
-                className={`${selected ? 'is-selected' : ''} ${orphan ? 'is-orphan' : ''}`}
+                className={`${selected ? 'is-selected' : ''} ${orphan ? 'is-orphan' : ''} ${matchIds && !matchIds.has(node.id) ? 'is-dim' : ''}`}
                 aria-selected={selected}
                 onClick={() => select({ nodeIds: [node.id], edgeIds: [] })}
               >

@@ -2,7 +2,6 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  MarkerType,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
@@ -16,11 +15,10 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { computeLayout, type LayoutResult } from '../layout/elk'
-import { workerRunner } from '../layout/runner'
 import { createEdge } from '../model/factory'
-import { edgesOf, nodesOf, outgoing } from '../model/selectors'
+import { outgoing } from '../model/selectors'
 import type { Point } from '../model/types'
+import { FilterBar } from '../panels/FilterBar'
 import {
   addNode,
   deleteSelection,
@@ -29,141 +27,54 @@ import {
   startProcessSkeleton,
 } from '../store/actions'
 import { useStore } from '../store/store'
-import { useUi } from '../store/ui'
+import { useUi, type LayoutMode } from '../store/ui'
 import { Icon } from '../ui/Icon'
-import { NODE_SIZE } from './geometry'
-import { ProcessNodeView, type NodeData } from './ProcessNodeView'
-import { useAnalysis } from '../analysis/useAnalysis'
-import { RoutedEdge, type RoutedEdgeData } from './RoutedEdge'
+import { LaneView } from './LaneView'
+import { ProcessGroupView } from './ProcessGroupView'
+import { ProcessNodeView } from './ProcessNodeView'
+import { RoutedEdge } from './RoutedEdge'
+import { useCanvasModel } from './useCanvasModel'
 
-const nodeTypes = { process: ProcessNodeView }
+const nodeTypes = { process: ProcessNodeView, procgroup: ProcessGroupView, lane: LaneView }
 const edgeTypes = { routed: RoutedEdge }
 // Yläreunaan jätetään tilaa kelluvalle työkalupalkille.
 const FIT_OPTIONS: FitViewOptions = {
   padding: { top: '84px', right: '32px', bottom: '32px', left: '32px' },
   maxZoom: 1.1,
 }
-/** Palauttaa edellisen olion, jos se on sisällöltään sama: pitää viitteet vakaina, jolloin React Flow ei renderöi turhaan. */
-function reuseStable<T extends { id: string }>(
-  cache: Map<string, T>,
-  next: T[],
-  same: (a: T, b: T) => boolean,
-): T[] {
-  const out = next.map((n) => {
-    const old = cache.get(n.id)
-    return old && same(old, n) ? old : n
-  })
-  cache.clear()
-  for (const o of out) cache.set(o.id, o)
-  return out
+
+const MODE_LABEL: Record<LayoutMode, string> = {
+  free: 'Vapaa',
+  lanes: 'Uimaradat',
+  overview: 'Kokonaiskuva',
 }
 
-const sameNode = (a: Node, b: Node) =>
-  a.position.x === b.position.x &&
-  a.position.y === b.position.y &&
-  a.selected === b.selected &&
-  a.width === b.width &&
-  a.height === b.height &&
-  (a.data as NodeData).questions === (b.data as NodeData).questions
-
-const sameEdge = (a: Edge, b: Edge) =>
-  a.source === b.source &&
-  a.target === b.target &&
-  a.label === b.label &&
-  a.selected === b.selected &&
-  (a.data as RoutedEdgeData | undefined)?.points === (b.data as RoutedEdgeData | undefined)?.points
-
-const MARKER = { type: MarkerType.ArrowClosed, width: 18, height: 18 } as const
-const NO_LAYOUT: LayoutResult = { positions: new Map(), routes: new Map() }
+const MODE_HINT: Record<LayoutMode, string> = {
+  free: '',
+  lanes: 'Uimaradat: vaiheet roolin mukaan riveillä. Asettelu on automaattinen.',
+  overview: 'Kokonaiskuva: kaikki alaprosessit auki. Asettelu on automaattinen.',
+}
 
 function CanvasInner() {
-  const project = useStore((s) => s.project)!
   const processId = useStore((s) => s.currentProcessId)
   const selection = useStore((s) => s.selection)
-  const direction = useUi((s) => s.direction)
+  const project = useStore((s) => s.project)!
   const { fitView } = useReactFlow()
-  const analysis = useAnalysis()
-  // Edellisten renderöintien oliot, joiden viitteet pidetään vakaina (kasvattaa vain muistia solmujen määrän verran).
-  const [nodeCache] = useState(() => new Map<string, Node>())
-  const [edgeCache] = useState(() => new Map<string, Edge>())
+  const model = useCanvasModel()
+  const { mode } = model
+  const editable = mode === 'free'
 
-  const procNodes = useMemo(() => nodesOf(project, processId), [project, processId])
-  const procEdges = useMemo(() => edgesOf(project, processId), [project, processId])
-
-  // Asettelu lasketaan uudelleen vain rakenteen muuttuessa, ei tekstin tai metatietojen muokkauksessa.
-  const structureKey = useMemo(
-    () =>
-      JSON.stringify([
-        direction,
-        procNodes.map((n) => [n.id, n.kind]),
-        procEdges.map((e) => [e.from, e.to]),
-      ]),
-    [procNodes, procEdges, direction],
-  )
-
-  const [layout, setLayout] = useState<LayoutResult>(NO_LAYOUT)
-  const [layoutKey, setLayoutKey] = useState('')
   const fitPending = useRef(true)
-  const lastProcess = useRef(processId)
+  const lastFitKey = useRef('')
 
+  // Sovita näkymä uudelleen, kun prosessi tai asettelutapa vaihtuu.
+  const fitKey = `${processId}|${mode}`
   useEffect(() => {
-    if (lastProcess.current !== processId) {
-      lastProcess.current = processId
+    if (lastFitKey.current !== fitKey) {
+      lastFitKey.current = fitKey
       fitPending.current = true
     }
-  }, [processId])
-
-  useEffect(() => {
-    let cancelled = false
-    computeLayout(
-      {
-        direction,
-        nodes: procNodes.map((n) => ({ id: n.id, ...NODE_SIZE[n.kind] })),
-        edges: procEdges.map((e) => ({ id: e.id, from: e.from, to: e.to })),
-      },
-      workerRunner,
-    )
-      .then((res) => {
-        if (cancelled) return
-        setLayout(res)
-        setLayoutKey(structureKey)
-      })
-      .catch((e: Error) => useStore.getState().setError(`Asettelu epäonnistui: ${e.message}`))
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [structureKey])
-
-  const selectedNodeSet = useMemo(() => new Set(selection.nodeIds), [selection.nodeIds])
-  const derivedNodes = useMemo<Node[]>(() => {
-    const preds = new Map<string, string>()
-    for (const e of procEdges) if (!preds.has(e.to)) preds.set(e.to, e.from)
-    const built = procNodes.map((n): Node => {
-      let pos: Point | undefined = n.locked ? n.position : undefined
-      pos ??= layout.positions.get(n.id)
-      if (!pos) {
-        // Uusi solmu, jolle asettelua ei ole vielä laskettu: sijoita edeltäjän viereen.
-        const pre = preds.get(n.id)
-        const pp = pre
-          ? project.nodes[pre]?.locked
-            ? project.nodes[pre].position
-            : layout.positions.get(pre)
-          : undefined
-        pos = pp ? { x: pp.x, y: pp.y + 120 } : { x: 0, y: 0 }
-      }
-      return {
-        id: n.id,
-        type: 'process',
-        position: pos,
-        selected: selectedNodeSet.has(n.id),
-        width: NODE_SIZE[n.kind].width,
-        height: NODE_SIZE[n.kind].height,
-        data: { questions: analysis.perNode.get(n.id) ?? 0 } satisfies NodeData,
-      }
-    })
-    return reuseStable(nodeCache, built, sameNode)
-  }, [procNodes, procEdges, layout, selectedNodeSet, project.nodes, analysis.perNode, nodeCache])
+  }, [fitKey])
 
   // Täysin ohjattu malli: solmut tulevat mallista, ja vain vedon aikainen sijainti pidetään tässä. Näin React Flow
   // säilyttää solmujen mittaukset eikä reunoja piirretä uudelleen jokaisella muutoksella.
@@ -171,13 +82,14 @@ function CanvasInner() {
   const nodes = useMemo(
     () =>
       dragPositions.size === 0
-        ? derivedNodes
-        : derivedNodes.map((n) => {
+        ? model.nodes
+        : model.nodes.map((n) => {
             const pos = dragPositions.get(n.id)
             return pos ? { ...n, position: pos } : n
           }),
-    [derivedNodes, dragPositions],
+    [model.nodes, dragPositions],
   )
+
   const onNodesChange = useCallback<OnNodesChange<Node>>((changes) => {
     const moved = new Map<string, Point>()
     let selected: Set<string> | null = null
@@ -205,42 +117,28 @@ function CanvasInner() {
   }, [])
 
   useEffect(() => {
-    if (fitPending.current && layoutKey === structureKey && procNodes.length > 0) {
+    if (fitPending.current && model.ready && model.scopeCount > 0) {
       fitPending.current = false
       requestAnimationFrame(() => fitView({ ...FIT_OPTIONS, duration: 250 }))
     }
-  }, [layoutKey, structureKey, procNodes.length, fitView])
+  }, [model.ready, model.structureKey, model.scopeCount, fitView])
 
-  const lockedKey = useMemo(
-    () =>
-      procNodes
-        .filter((n) => n.locked)
-        .map((n) => n.id)
-        .join(','),
-    [procNodes],
-  )
-  const selectedEdgeSet = useMemo(() => new Set(selection.edgeIds), [selection.edgeIds])
-  const edges = useMemo<Edge[]>(() => {
-    const routesValid = layoutKey === structureKey
-    const locked = new Set(lockedKey ? lockedKey.split(',') : [])
-    const built = procEdges.map((e): Edge => {
-      // ELK:n reitti on voimassa vain, jos asettelu on ajan tasalla eikä päätesolmuja ole siirretty käsin.
-      const moved = locked.has(e.from) || locked.has(e.to)
-      const points = routesValid && !moved ? layout.routes.get(e.id) : undefined
-      return {
-        id: e.id,
-        source: e.from,
-        target: e.to,
-        label: e.label,
-        type: 'routed',
-        data: { points },
-        selected: selectedEdgeSet.has(e.id),
-        markerEnd: MARKER,
-        interactionWidth: 24,
-      }
-    })
-    return reuseStable(edgeCache, built, sameEdge)
-  }, [procEdges, selectedEdgeSet, layout, layoutKey, structureKey, lockedKey, edgeCache])
+  // Keskitä kaavio pyydettyyn vaiheeseen, kun asettelu on valmis.
+  const centerRequest = useUi((s) => s.centerRequest)
+  useEffect(() => {
+    if (!centerRequest || !model.ready) return
+    if (!model.nodes.some((n) => n.id === centerRequest.nodeId)) return
+    useUi.getState().clearCenterRequest()
+    fitPending.current = false
+    requestAnimationFrame(() =>
+      fitView({
+        nodes: [{ id: centerRequest.nodeId }],
+        duration: 350,
+        maxZoom: 1.1,
+        padding: '45%',
+      }),
+    )
+  }, [centerRequest, model.ready, model.nodes, fitView])
 
   const onConnect = useCallback((c: Connection) => {
     const { project, currentProcessId, dispatch } = useStore.getState()
@@ -251,15 +149,23 @@ function CanvasInner() {
       const used = new Set(outgoing(project, src.id).map((e) => e.label))
       label = ['Kyllä', 'Ei'].find((l) => !used.has(l))
     }
-    dispatch({ type: 'addEdge', edge: createEdge(currentProcessId, c.source, c.target, label) })
+    // Kokonaiskuvassa solmut voivat olla alaprosessissa: reuna kuuluu lähtösolmun prosessiin.
+    dispatch({
+      type: 'addEdge',
+      edge: createEdge(src?.processId ?? currentProcessId, c.source, c.target, label),
+    })
   }, [])
 
   const isValidConnection = useCallback(
     (c: Connection | Edge) => {
       if (!c.source || !c.target || c.source === c.target) return false
-      return !procEdges.some((e) => e.from === c.source && e.to === c.target)
+      const a = project.nodes[c.source]
+      const b = project.nodes[c.target]
+      // Reunat kulkevat vain saman prosessin sisällä.
+      if (!a || !b || a.processId !== b.processId) return false
+      return !model.edges.some((e) => e.source === c.source && e.target === c.target)
     },
-    [procEdges],
+    [model.edges, project.nodes],
   )
 
   const onNodeDragStop = useCallback((_: unknown, __: Node, dragged: Node[]) => {
@@ -277,14 +183,17 @@ function CanvasInner() {
     )
   }, [])
 
-  const hasLocked = procNodes.some((n) => n.locked)
-  const empty = procNodes.length === 0
+  const hasLocked = useMemo(
+    () => Object.values(project.nodes).some((n) => n.processId === processId && n.locked),
+    [project.nodes, processId],
+  )
+  const empty = model.ownCount === 0
 
   return (
-    <div className="canvas" data-testid="canvas">
+    <div className="canvas" data-testid="canvas" data-mode={mode}>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={model.edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
@@ -293,21 +202,23 @@ function CanvasInner() {
         isValidConnection={isValidConnection}
         onNodeDragStop={onNodeDragStop}
         onPaneClick={() => useUi.getState().setEditNode(null)}
+        nodesDraggable={editable}
         deleteKeyCode={null}
         selectionKeyCode="Shift"
         multiSelectionKeyCode={['Meta', 'Control']}
         zoomOnDoubleClick={false}
         minZoom={0.1}
         maxZoom={2}
-        onlyRenderVisibleElements={procNodes.length > 150}
+        onlyRenderVisibleElements={model.scopeCount > 150}
         proOptions={{ hideAttribution: true }}
         aria-label="Prosessikaavio"
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} />
         <Controls showInteractive={false} fitViewOptions={FIT_OPTIONS} />
-        {procNodes.length > 12 && <MiniMap pannable zoomable ariaLabel="Pienoiskartta" />}
+        {model.scopeCount > 12 && <MiniMap pannable zoomable ariaLabel="Pienoiskartta" />}
       </ReactFlow>
 
+      <FilterBar className="canvas__filter" />
       <div className="canvas__toolbar" role="toolbar" aria-label="Kaavion työkalut">
         <button type="button" onClick={() => addNode('step')} title="Lisää vaihe (Enter)">
           <Icon name="plus" size={16} /> Vaihe
@@ -339,12 +250,28 @@ function CanvasInner() {
         <button
           type="button"
           onClick={() => releaseLayout(processId)}
-          disabled={!hasLocked}
+          disabled={!hasLocked || !editable}
           title="Vapauta käsin siirretyt sijainnit ja järjestä automaattisesti"
         >
           <Icon name="layout" size={16} /> Järjestä
         </button>
       </div>
+
+      <div className="canvas__mode" role="radiogroup" aria-label="Asettelu">
+        {(Object.keys(MODE_LABEL) as LayoutMode[]).map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="radio"
+            aria-checked={mode === m}
+            className={mode === m ? 'is-on' : ''}
+            onClick={() => useUi.getState().setLayoutMode(m)}
+          >
+            {MODE_LABEL[m]}
+          </button>
+        ))}
+      </div>
+      {MODE_HINT[mode] && <p className="canvas__hint">{MODE_HINT[mode]}</p>}
 
       {empty && (
         <div className="canvas__empty">

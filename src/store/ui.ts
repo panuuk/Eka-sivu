@@ -1,11 +1,15 @@
 import { create } from 'zustand'
+import { EMPTY_FILTER, type Filter } from '../analysis/search'
 
 export type ViewMode = 'canvas' | 'list' | 'sources'
 export type Direction = 'DOWN' | 'RIGHT'
+/** Kaavion asettelutapa: vapaa (muokattava), uimaradat (rooleittain) tai kokonaiskuva (alaprosessit auki). */
+export type LayoutMode = 'free' | 'lanes' | 'overview'
 
 interface Persisted {
   view: ViewMode
   direction: Direction
+  layoutMode: LayoutMode
   leftOpen: boolean
   rightOpen: boolean
 }
@@ -18,6 +22,7 @@ function load(): Persisted {
   const fallback: Persisted = {
     view: 'canvas',
     direction: 'DOWN',
+    layoutMode: 'free',
     leftOpen: !small,
     rightOpen: !small,
   }
@@ -66,6 +71,14 @@ interface UiState extends Persisted {
   }) => Promise<string | null>
   closePrompt: (value: string | null) => void
   entityManagerOpen: boolean
+  /** Haku ja suodattimet (kaavio ja lista himmentävät ei-osuvat vaiheet). */
+  filter: Filter
+  setFilter: (patch: Partial<Filter>) => void
+  clearFilter: () => void
+  /** Kaavio keskittyy tähän vaiheeseen, kun se on näkyvissä. */
+  centerRequest: { nodeId: string; nonce: number } | null
+  requestCenter: (nodeId: string) => void
+  clearCenterRequest: () => void
   rightTab: 'props' | 'questions'
   setRightTab: (t: 'props' | 'questions') => void
   /** Avaa oikean paneelin annetulle välilehdelle. */
@@ -96,6 +109,7 @@ interface UiState extends Persisted {
   setEditNode: (id: string | null) => void
   setView: (v: ViewMode) => void
   setDirection: (d: Direction) => void
+  setLayoutMode: (m: LayoutMode) => void
   toggleLeft: () => void
   toggleRight: () => void
   setRightOpen: (open: boolean) => void
@@ -112,8 +126,8 @@ interface UiState extends Persisted {
 
 export const useUi = create<UiState>((set, get) => {
   const save = () => {
-    const { view, direction, leftOpen, rightOpen } = get()
-    persist({ view, direction, leftOpen, rightOpen })
+    const { view, direction, layoutMode, leftOpen, rightOpen } = get()
+    persist({ view, direction, layoutMode, leftOpen, rightOpen })
   }
   return {
     ...load(),
@@ -138,6 +152,12 @@ export const useUi = create<UiState>((set, get) => {
       r.resolve(value)
     },
     entityManagerOpen: false,
+    filter: EMPTY_FILTER,
+    setFilter: (patch) => set((st) => ({ filter: { ...st.filter, ...patch } })),
+    clearFilter: () => set({ filter: EMPTY_FILTER }),
+    centerRequest: null,
+    requestCenter: (nodeId) => set({ centerRequest: { nodeId, nonce: Date.now() } }),
+    clearCenterRequest: () => set({ centerRequest: null }),
     rightTab: 'props',
     setRightTab: (rightTab) => set({ rightTab }),
     showRight: (rightTab) => {
@@ -184,6 +204,10 @@ export const useUi = create<UiState>((set, get) => {
     },
     setDirection: (direction) => {
       set({ direction })
+      save()
+    },
+    setLayoutMode: (layoutMode) => {
+      set({ layoutMode })
       save()
     },
     toggleLeft: () => {

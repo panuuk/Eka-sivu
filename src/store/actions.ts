@@ -49,8 +49,15 @@ export function resolveAnchor(
 export function insertNode(opts: InsertOptions): string | undefined {
   const { project, currentProcessId, selection } = st()
   if (!project) return undefined
-  const anchor = resolveAnchor(project, currentProcessId, selection, opts.afterId)
-  const { ops, nodeId } = opsInsertAfter(project, currentProcessId, anchor, {
+  // Kokonaiskuvassa valittu vaihe voi olla alaprosessissa: lisää sen omaan prosessiin.
+  const picked = opts.afterId ?? (selection.nodeIds.length === 1 ? selection.nodeIds[0] : undefined)
+  const pickedNode = picked ? project.nodes[picked] : undefined
+  const processId =
+    useUi.getState().layoutMode === 'overview' && pickedNode
+      ? pickedNode.processId
+      : currentProcessId
+  const anchor = resolveAnchor(project, processId, selection, opts.afterId)
+  const { ops, nodeId } = opsInsertAfter(project, processId, anchor, {
     label: opts.label,
     kind: opts.kind ?? 'step',
     edgeLabel: opts.edgeLabel,
@@ -202,4 +209,17 @@ export function releaseLayout(processId: string) {
       patch: { locked: undefined, position: undefined },
     }))
   st().dispatch(ops)
+}
+
+/** Siirtyy vaiheeseen: avaa sen prosessin, valitsee vaiheen ja keskittää kaavion siihen. */
+export function goToNode(nodeId: string, view: 'canvas' | 'list' = 'canvas') {
+  const { project } = st()
+  const node = project?.nodes[nodeId]
+  if (!node) return
+  st().setCurrentProcess(node.processId)
+  st().select({ nodeIds: [nodeId], edgeIds: [] })
+  const ui = useUi.getState()
+  if (ui.view === 'sources' || view === 'canvas') ui.setView(ui.view === 'list' ? 'list' : 'canvas')
+  ui.setRightTab('props')
+  ui.requestCenter(nodeId)
 }

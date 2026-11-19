@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { opsMergeEntities } from '../model/commands'
 import { createEntity } from '../model/factory'
-import { entityUsage, entitiesOfKind } from '../model/selectors'
+import { entityUsage, entityUsages, entitiesOfKind } from '../model/selectors'
+import { goToNode } from '../store/actions'
 import { ENTITY_LABELS, type Entity, type EntityKind } from '../model/types'
 import { useStore } from '../store/store'
 import { useUi } from '../store/ui'
@@ -18,6 +19,7 @@ function EntityRow({ entity }: { entity: Entity }) {
   const project = useStore((s) => s.project)!
   const dispatch = useStore((s) => s.dispatch)
   const usage = entityUsage(project, entity.id)
+  const [showUsage, setShowUsage] = useState(false)
   const others = entitiesOfKind(project, entity.kind).filter((e) => e.id !== entity.id)
   return (
     <li className="entity-row">
@@ -50,7 +52,15 @@ function EntityRow({ entity }: { entity: Entity }) {
           }
         />
       </div>
-      <span className="muted entity-row__usage">{usage} käyttöä</span>
+      <button
+        type="button"
+        className="linklike entity-row__usage"
+        aria-expanded={showUsage}
+        disabled={usage === 0}
+        onClick={() => setShowUsage((v) => !v)}
+      >
+        {usage} käyttöä
+      </button>
       {others.length > 0 && (
         <select
           aria-label={`Yhdistä ${entity.name} toiseen`}
@@ -93,6 +103,26 @@ function EntityRow({ entity }: { entity: Entity }) {
       >
         <Icon name="trash" size={16} />
       </button>
+      {showUsage && usage > 0 && (
+        <ul className="entity-usage" aria-label={`Käyttökohdat: ${entity.name}`}>
+          {entityUsages(project, entity.id).map(({ node, as }) => (
+            <li key={node.id}>
+              <button
+                type="button"
+                className="linklike"
+                onClick={() => {
+                  useUi.getState().setEntityManagerOpen(false)
+                  goToNode(node.id)
+                }}
+              >
+                <span className="muted">{project.processes[node.processId]?.name} › </span>
+                {node.label}
+              </button>
+              <span className="muted"> ({as.join(', ')})</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </li>
   )
 }

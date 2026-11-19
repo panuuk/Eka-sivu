@@ -32,6 +32,14 @@ export function useShortcuts() {
         return
       }
       if (isTyping(e.target) || inDialog || mod || e.altKey) return
+      if (e.key === '/' && !e.shiftKey) {
+        const el = document.getElementById('global-search')
+        if (el) {
+          e.preventDefault()
+          el.focus()
+          return
+        }
+      }
       const sel = useStore.getState().selection
       if (e.key === 'Enter' && sel.nodeIds.length === 1 && sel.edgeIds.length === 0) {
         // Enter lisää seuraavan vaiheen, mutta ei jos fokus on painikkeella (se käsittelee Enterin itse).

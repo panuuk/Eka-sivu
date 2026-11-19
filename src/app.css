@@ -456,6 +456,7 @@
 }
 .entity-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem;
@@ -1698,5 +1699,270 @@
 .gap__meta .linklike,
 .sources__side .linklike,
 .inspector .linklike {
+  color: var(--accent);
+}
+
+/* ===== Haku ja suodattimet ===== */
+.filterbar {
+  position: relative;
+  display: grid;
+  gap: 0.4rem;
+}
+.canvas__filter {
+  position: absolute;
+  top: 64px;
+  left: 12px;
+  z-index: 6;
+  width: min(300px, calc(100% - 24px));
+  padding: 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.filterbar--list {
+  margin-bottom: 0.75rem;
+  max-width: 460px;
+}
+.filterbar__row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.filterbar__search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+}
+.filterbar__search:focus-within {
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.filterbar__search input {
+  border: 0;
+  padding: 0.35em 0;
+  background: transparent;
+  outline: none;
+  min-width: 0;
+}
+.filterbar__toggle {
+  padding: 0.3em 0.6em;
+  font-size: 0.82rem;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.filterbar__toggle.is-on {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.filterbar__count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.filterbar__filters {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
+}
+.filterbar__filters label {
+  display: grid;
+  gap: 0.15rem;
+}
+.filterbar__filters .check {
+  grid-column: 1 / -1;
+}
+.filterbar__results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.filterbar__results button {
+  display: grid;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 0.4em 0.6em;
+}
+.filterbar__results button:hover {
+  background: var(--surface-2);
+}
+.filterbar__results .muted {
+  font-size: 0.78rem;
+}
+.node.is-dim,
+.listview tr.is-dim {
+  opacity: 0.2;
+  filter: grayscale(0.7);
+}
+@media (max-width: 900px) {
+  .canvas__filter {
+    width: min(260px, calc(100% - 24px));
+  }
+}
+
+/* ===== Asettelutavat: uimaradat ja kokonaiskuva ===== */
+.canvas__mode {
+  position: absolute;
+  right: 12px;
+  top: 64px;
+  z-index: 6;
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.canvas__mode button {
+  border: 0;
+  border-radius: 0;
+  padding: 0.4em 0.7em;
+  font-size: 0.82rem;
+  background: transparent;
+  white-space: nowrap;
+}
+.canvas__mode button + button {
+  border-left: 1px solid var(--border);
+}
+.canvas__mode .is-on {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.canvas__hint {
+  position: absolute;
+  z-index: 5;
+  right: 12px;
+  top: 106px;
+  margin: 0;
+  max-width: 320px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.lane {
+  position: relative;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--lane) 7%, transparent);
+  pointer-events: none;
+}
+.lane--missing {
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--warn) 9%, transparent) 0 10px,
+    transparent 10px 20px
+  );
+}
+.lane__label {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 150px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.8rem;
+  border-right: 3px solid var(--lane);
+  background: color-mix(in srgb, var(--lane) 14%, var(--surface));
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.lane__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--lane);
+}
+.group-box {
+  border: 2px solid color-mix(in srgb, var(--accent) 50%, var(--border-strong));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.group-box.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.group-box .react-flow__handle {
+  opacity: 0;
+}
+.group-box__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 40px;
+  padding: 0 0.5rem 0 0.9rem;
+}
+.group-box__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.group-box__title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.group-box__kind {
+  margin-right: auto;
+  padding: 0 0.5em;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 900px) {
+  .canvas__mode {
+    top: auto;
+    bottom: 12px;
+    right: 12px;
+  }
+  .canvas__hint {
+    display: none;
+  }
+}
+
+.entity-usage {
+  flex-basis: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem 0 0.1rem 0.5rem;
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.88rem;
+  border-top: 1px dashed var(--border);
+}
+.entity-usage .linklike {
   color: var(--accent);
 }

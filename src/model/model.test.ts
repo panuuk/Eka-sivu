@@ -12,7 +12,15 @@ import { createEdge, createEntity, createNode, createProcess, createProject } fr
 import { useDeterministicIds } from './ids'
 import { applyOperation, applyOperations, OperationError, type Operation } from './operations'
 import { parseProjectJson, projectToJson, ImportError, migrateProject } from './serialize'
-import { edgesOf, findEntity, nodesOf, processPath, processTree, reachableFrom } from './selectors'
+import {
+  edgesOf,
+  entityUsages,
+  findEntity,
+  nodesOf,
+  processPath,
+  processTree,
+  reachableFrom,
+} from './selectors'
 import { validateProject } from './validate'
 import type { Project } from './types'
 
@@ -370,5 +378,28 @@ describe('alaprosessin nimen synkronointi', () => {
       patch: { name: 'Toinen nimi' },
     })
     expect(p4.nodes[b].label).toBe('Toinen nimi')
+  })
+})
+
+describe('entityUsages', () => {
+  it('listaa käyttökohdat rooleineen ja järjestää prosessin ja nimen mukaan', () => {
+    const { p, a, b } = sample()
+    const role = createEntity('role', 'Myynti')
+    const art = createEntity('artifact', 'Tilaus')
+    const p2 = applyOperations(p, [
+      { type: 'addEntity', entity: role },
+      { type: 'addEntity', entity: art },
+      { type: 'updateNode', id: a, patch: { roleId: role.id, outputIds: [art.id] } },
+      { type: 'updateNode', id: b, patch: { roleId: role.id, inputIds: [art.id] } },
+    ])
+    expect(entityUsages(p2, role.id).map((u) => [u.node.label, u.as])).toEqual([
+      ['A', ['rooli']],
+      ['B', ['rooli']],
+    ])
+    expect(entityUsages(p2, art.id).map((u) => [u.node.label, u.as])).toEqual([
+      ['A', ['tuotos']],
+      ['B', ['syöte']],
+    ])
+    expect(entityUsages(p2, 'puuttuu')).toEqual([])
   })
 })
