@@ -1,5 +1,6 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { memo, useEffect, useRef, useState } from 'react'
+import { analyze } from '../analysis/analyze'
 import { entityColor } from '../model/flow'
 import type { NodeKind } from '../model/types'
 import { enterSubprocess } from '../store/actions'
@@ -48,12 +49,7 @@ function ProcessNodeViewImpl({ id, selected }: NodeProps) {
   const node = useStore((s) => s.project?.nodes[id])
   const role = useStore((s) => (node?.roleId ? s.project?.entities[node.roleId] : undefined))
   const systems = useStore((s) => s.project?.entities)
-  const openQuestions = useStore((s) => {
-    let n = 0
-    for (const q of Object.values(s.project?.questions ?? {}))
-      if (q.targetId === id && q.status === 'open') n++
-    return n
-  })
+  const openQuestions = useStore((s) => (s.project ? (analyze(s.project).perNode.get(id) ?? 0) : 0))
   const direction = useUi((s) => s.direction)
   const editing = useUi((s) => s.editNodeId === id)
   if (!node) return null
@@ -140,9 +136,19 @@ function ProcessNodeViewImpl({ id, selected }: NodeProps) {
         </span>
       )}
       {openQuestions > 0 && (
-        <span className="node__badge node__badge--q" title={`${openQuestions} avointa kysymystä`}>
-          ?
-        </span>
+        <button
+          type="button"
+          className="node__badge node__badge--q nodrag nopan"
+          title={`${openQuestions} avointa kysymystä. Avaa kysymykset.`}
+          aria-label={`${openQuestions} avointa kysymystä: ${node.label}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            useStore.getState().select({ nodeIds: [id], edgeIds: [] })
+            useUi.getState().showRight('questions')
+          }}
+        >
+          {openQuestions}
+        </button>
       )}
     </div>
   )

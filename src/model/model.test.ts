@@ -150,40 +150,6 @@ describe('operaatiot', () => {
     const { p, root } = sample()
     expect(() => applyOperation(p, { type: 'deleteProcess', id: root })).toThrow(/Päätason/)
   })
-
-  it('syncQuestions säilyttää vastatut ja omat kysymykset sekä poistaa vanhentuneet avoimet', () => {
-    const { p, b, root } = sample()
-    const mk = (
-      id: string,
-      key: string,
-      status: 'open' | 'answered' | 'dismissed',
-      rule = 'r',
-    ) => ({
-      id,
-      processId: root,
-      targetId: b,
-      rule,
-      text: key,
-      status,
-      key,
-    })
-    let p2 = applyOperations(p, [
-      { type: 'addQuestion', question: mk('q1', 'a', 'open') },
-      { type: 'addQuestion', question: mk('q2', 'b', 'dismissed') },
-      { type: 'addQuestion', question: mk('q3', 'c', 'open') },
-      { type: 'addQuestion', question: mk('q4', 'omat', 'open', 'custom') },
-    ])
-    p2 = applyOperation(p2, {
-      type: 'syncQuestions',
-      processId: root,
-      generated: [mk('g1', 'a', 'open'), mk('g2', 'b', 'open'), mk('g3', 'd', 'open')],
-    })
-    const keys = Object.values(p2.questions)
-      .map((q) => `${q.key}:${q.status}`)
-      .sort()
-    expect(keys).toEqual(['a:open', 'b:dismissed', 'd:open', 'omat:open'])
-    expect(p2.questions['q1']).toBeDefined() // sama id säilyy
-  })
 })
 
 describe('komennot', () => {

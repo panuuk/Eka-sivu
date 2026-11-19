@@ -216,6 +216,23 @@ function scoreSentence(text: string, listItem: boolean): { score: number; reason
   return { score, reasons }
 }
 
+/** Lauseen alussa (subjektina) mainittu rooli, jos sellainen on. */
+export function leadingRoleMention(
+  project: Pick<Project, 'entities'>,
+  text: string,
+): string | undefined {
+  const m = findMentions(project, text, ['role']).find((x) => {
+    const lead = collapse(text.slice(0, x.start)).replace(/[,:\s]+$/, '')
+    return (
+      lead === '' ||
+      /^(?:ensin|aluksi|sitten|seuraavaksi|tämän jälkeen|sen jälkeen|lopuksi|viimeiseksi|lopulta)$/i.test(
+        lead,
+      )
+    )
+  })
+  return m?.entityId
+}
+
 export const ruleExtractor: Extractor = {
   suggest(project, sourceId, text) {
     const drafts: Draft[] = []

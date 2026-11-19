@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { processTree } from '../model/selectors'
 import { addProcess, deleteProcess, duplicateProcess } from '../store/actions'
+import { useAnalysis } from '../analysis/useAnalysis'
 import { useStore } from '../store/store'
 import { useUi } from '../store/ui'
 import { Icon } from '../ui/Icon'
@@ -15,6 +16,7 @@ export function ProcessTree() {
   const [draft, setDraft] = useState('')
 
   const tree = processTree(project)
+  const analysis = useAnalysis()
 
   const startRename = (id: string, name: string) => {
     setRenaming(id)
@@ -72,6 +74,10 @@ export function ProcessTree() {
                 >
                   {depth > 0 && <Icon name="chevronRight" size={12} />}
                   <span>{process.name}</span>
+                  <ProgressChip
+                    percent={analysis.readiness(process.id).percent}
+                    empty={analysis.readiness(process.id).nodes === 0}
+                  />
                 </button>
                 <Menu
                   label={`Toiminnot: ${process.name}`}
@@ -99,5 +105,14 @@ export function ProcessTree() {
         ))}
       </ul>
     </nav>
+  )
+}
+
+function ProgressChip({ percent, empty }: { percent: number; empty: boolean }) {
+  if (empty) return null
+  return (
+    <span className="tree__chip" title={`Valmiusaste ${percent} %`}>
+      {percent} %
+    </span>
   )
 }

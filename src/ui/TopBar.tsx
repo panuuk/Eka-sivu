@@ -3,10 +3,33 @@ import { downloadText, safeFilename } from '../export/download'
 import { buildSampleProject } from '../model/sample'
 import { projectToJson } from '../model/serialize'
 import { processPath } from '../model/selectors'
+import { useAnalysis } from '../analysis/useAnalysis'
 import { useStore } from '../store/store'
 import { useUi } from '../store/ui'
 import { Icon } from './Icon'
 import { Menu, type MenuItem } from './Menu'
+
+function ReadinessPill() {
+  const analysis = useAnalysis()
+  const processId = useStore((s) => s.currentProcessId)
+  const r = analysis.readiness(processId)
+  if (r.nodes === 0) return null
+  return (
+    <button
+      type="button"
+      className="readiness-pill"
+      title={`Valmiusaste ${r.percent} %. ${r.openQuestions} avointa kysymystä. Avaa kysymykset.`}
+      aria-label={`Valmiusaste ${r.percent} prosenttia, ${r.openQuestions} avointa kysymystä`}
+      onClick={() => useUi.getState().showRight('questions')}
+      data-testid="readiness-pill"
+    >
+      <span className="readiness-pill__bar">
+        <span style={{ width: `${r.percent}%` }} />
+      </span>
+      {r.percent} %{r.openQuestions > 0 && <b className="readiness-pill__q">{r.openQuestions}</b>}
+    </button>
+  )
+}
 
 function SaveStatus() {
   const status = useStore((s) => s.saveStatus)
@@ -156,6 +179,7 @@ export function TopBar() {
         </ol>
       </nav>
 
+      <ReadinessPill />
       <div className="topbar__spacer" />
       <SaveStatus />
 

@@ -26,7 +26,6 @@ export function buildSampleProject(): Project {
   }
   const reskontra = role('Ostoreskontra')
   const esimies = role('Esimies')
-  const toimittaja = role('Toimittaja')
   const operaattori = sys('Verkkolaskuoperaattori')
   const erp = sys('ERP')
   const lasku = art('Ostolasku')
@@ -60,7 +59,8 @@ export function buildSampleProject(): Project {
     'confirmed',
   )
   const ok = mk('Tiedot kunnossa?', 'decision', {}, 'confirmed')
-  const request = mk('Pyydä korjaus toimittajalta', 'step', { roleId: toimittaja }, 'guess')
+  // Rooli puuttuu tarkoituksella: esimerkki näyttää, miten kysymysjono ohjaa täydentämään mallia.
+  const request = mk('Pyydä korjaus toimittajalta', 'step', {}, 'guess')
   const approval = mk('Hyväksyntäkierto', 'subprocess', { roleId: esimies }, 'likely')
   const approved = mk('Hyväksytty?', 'decision', {}, 'likely')
   const post = mk(

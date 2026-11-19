@@ -28,7 +28,9 @@ async function openSources(page: Page) {
 }
 
 async function importText(page: Page, name = 'kuvaus.txt', text = TEXT) {
-  await page.getByTestId('source-file-input').setInputFiles({ name, mimeType: 'text/plain', buffer: Buffer.from(text, 'utf8') })
+  await page
+    .getByTestId('source-file-input')
+    .setInputFiles({ name, mimeType: 'text/plain', buffer: Buffer.from(text, 'utf8') })
   await expect(page.getByTestId('reader')).toBeVisible()
 }
 
@@ -72,7 +74,9 @@ test.beforeEach(async ({ page }) => {
   await fresh(page)
 })
 
-test('tekstitiedoston tuonti ja ehdotukset: lisää kaikki muodostaa haarautuvan prosessin', async ({ page }) => {
+test('tekstitiedoston tuonti ja ehdotukset: lisää kaikki muodostaa haarautuvan prosessin', async ({
+  page,
+}) => {
   await openSources(page)
   await importText(page)
   await expect(page.getByTestId('reader')).toContainText('Ostolasku saapuu')
@@ -85,7 +89,9 @@ test('tekstitiedoston tuonti ja ehdotukset: lisää kaikki muodostaa haarautuvan
   // alku, 5 vaihetta/päätös + 2 haaraa, loppu
   await expect(page.locator('.react-flow__node[data-id]')).not.toHaveCount(0)
   await expect(page.locator('.node--decision')).toHaveCount(1)
-  await expect(page.locator('.react-flow__node', { hasText: 'Esimies hyväksyy laskun' })).toBeVisible()
+  await expect(
+    page.locator('.react-flow__node', { hasText: 'Esimies hyväksyy laskun' }),
+  ).toBeVisible()
 
   // Takaisin lähteeseen solmun viitteestä
   await page.locator('.react-flow__node', { hasText: 'Esimies hyväksyy laskun' }).click()
@@ -94,7 +100,9 @@ test('tekstitiedoston tuonti ja ehdotukset: lisää kaikki muodostaa haarautuvan
   await expect(page.locator('.m-focus')).toContainText('Esimies hyväksyy laskun')
 })
 
-test('valinnasta luodaan vaihe, jonka viite näkyy lähteessä ja viitteet-välilehdellä', async ({ page }) => {
+test('valinnasta luodaan vaihe, jonka viite näkyy lähteessä ja viitteet-välilehdellä', async ({
+  page,
+}) => {
   await openSources(page)
   await importText(page)
   await selectText(page, 'Esimies hyväksyy laskun')
@@ -120,7 +128,9 @@ test('Word- ja PDF-tiedostojen tuonti', async ({ page, browser }) => {
   )
   const pdf = await pdfPage.pdf({ format: 'A4' })
   await ctx.close()
-  await page.getByTestId('source-file-input').setInputFiles({ name: 'tilaus.pdf', mimeType: 'application/pdf', buffer: pdf })
+  await page
+    .getByTestId('source-file-input')
+    .setInputFiles({ name: 'tilaus.pdf', mimeType: 'application/pdf', buffer: pdf })
   await expect(page.locator('#source-select')).toContainText('tilaus')
   await expect(page.getByTestId('reader')).toContainText('Myynti vastaanottaa tilauksen')
   await expect(page.getByTestId('reader')).toContainText('Talous tarkistaa luottotiedot')
@@ -128,13 +138,19 @@ test('Word- ja PDF-tiedostojen tuonti', async ({ page, browser }) => {
 
 test('virheellinen ja liian outo tiedosto antaa selkeän virheen', async ({ page }) => {
   await openSources(page)
-  await page.getByTestId('source-file-input').setInputFiles({ name: 'kuva.png', mimeType: 'image/png', buffer: Buffer.from([1, 2, 3]) })
+  await page
+    .getByTestId('source-file-input')
+    .setInputFiles({ name: 'kuva.png', mimeType: 'image/png', buffer: Buffer.from([1, 2, 3]) })
   await expect(page.getByRole('alert')).toContainText('ei tueta')
-  await page.getByTestId('source-file-input').setInputFiles({ name: 'tyhja.txt', mimeType: 'text/plain', buffer: Buffer.from('   ') })
+  await page
+    .getByTestId('source-file-input')
+    .setInputFiles({ name: 'tyhja.txt', mimeType: 'text/plain', buffer: Buffer.from('   ') })
   await expect(page.getByRole('alert')).toContainText('ei löytynyt tekstiä')
 })
 
-test('muistiinpanon muokkaus säilyttää viitteet, kun teksti lisätään niiden eteen', async ({ page }) => {
+test('muistiinpanon muokkaus säilyttää viitteet, kun teksti lisätään niiden eteen', async ({
+  page,
+}) => {
   await openSources(page)
   await page.getByRole('button', { name: 'Kirjoita muistiinpano' }).click()
   await page.getByLabel('Otsikko').fill('Haastattelu')
@@ -146,7 +162,9 @@ test('muistiinpanon muokkaus säilyttää viitteet, kun teksti lisätään niide
   await page.getByRole('button', { name: 'Luo vaihe' }).click()
 
   await page.getByRole('button', { name: 'Muokkaa tekstiä' }).click()
-  await page.getByLabel('Lähdetekstin muokkaus').fill('Uusi johdanto.\n\nMyyjä kirjaa tilauksen järjestelmään.')
+  await page
+    .getByLabel('Lähdetekstin muokkaus')
+    .fill('Uusi johdanto.\n\nMyyjä kirjaa tilauksen järjestelmään.')
   await page.getByRole('button', { name: 'Valmis' }).click()
   await expect(page.locator('[data-testid=reader] .m-ref')).toContainText('Myyjä kirjaa tilauksen')
   await page.getByRole('tab', { name: /Viitteet/ }).click()
@@ -169,7 +187,9 @@ test('lähteen poisto säilyttää vaiheet mutta poistaa viitteet', async ({ pag
   await page.getByRole('dialog').getByRole('button', { name: 'Poista' }).click()
   await expect(page.getByText('Ei vielä lähteitä')).toBeVisible()
   await page.getByRole('radio', { name: 'Kaavio' }).click()
-  await expect(page.locator('.react-flow__node', { hasText: 'Esimies hyväksyy laskun' })).toBeVisible()
+  await expect(
+    page.locator('.react-flow__node', { hasText: 'Esimies hyväksyy laskun' }),
+  ).toBeVisible()
   await expect(page.getByRole('button', { name: 'Avaa lähteessä' })).toHaveCount(0)
 })
 

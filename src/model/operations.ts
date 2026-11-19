@@ -33,7 +33,6 @@ export type Operation =
   | { type: 'addQuestion'; question: Question }
   | { type: 'updateQuestion'; id: string; patch: Partial<Omit<Question, 'id'>> }
   | { type: 'deleteQuestion'; id: string }
-  | { type: 'syncQuestions'; processId: string; generated: Question[] }
   | { type: 'batch'; ops: Operation[] }
 
 export class OperationError extends Error {
@@ -270,35 +269,6 @@ export function applyOperation(p: Project, op: Operation): Project {
       need(p.questions, op.id, 'Kysymys')
       return { ...p, questions: omit(p.questions, op.id) }
     }
-    case 'syncQuestions': {
-      // Päivittää prosessin generoidut kysymykset säilyttäen käyttäjän tekemät (vastatut, ohitetut, omat).
-      const keep: Record<string, Question> = {}
-      const existingByKey = new Map<string, Question>()
-      for (const q of Object.values(p.questions)) {
-        if (q.processId !== op.processId) {
-          keep[q.id] = q
-        } else if (q.rule === 'custom') {
-          keep[q.id] = q
-        } else {
-          existingByKey.set(q.key, q)
-        }
-      }
-      for (const g of op.generated) {
-        const prev = existingByKey.get(g.key)
-        if (prev) {
-          keep[prev.id] = { ...prev, text: g.text, targetId: g.targetId }
-          existingByKey.delete(g.key)
-        } else {
-          keep[g.id] = g
-        }
-      }
-      // Vastatut ja ohitetut kysymykset, joiden aukko on jo korjattu, jäävät historiaksi.
-      for (const q of existingByKey.values()) {
-        if (q.status !== 'open') keep[q.id] = q
-      }
-      return { ...p, questions: keep }
-    }
-
     case 'batch':
       return op.ops.reduce(applyOperation, p)
   }

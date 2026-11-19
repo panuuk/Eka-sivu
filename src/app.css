@@ -1478,3 +1478,225 @@
   color: var(--accent-contrast);
   border-color: var(--accent);
 }
+
+/* ===== Kysymykset ja valmiusaste ===== */
+.rightpanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.tabs--panel {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+  margin: 0;
+  padding: 0.4rem 0.5rem 0;
+}
+.tree__chip {
+  margin-left: auto;
+  padding: 0 0.45em;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.readiness {
+  margin: 0.25rem 0 0.9rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.readiness__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.readiness__head strong {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.readiness__head span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.readiness__bar {
+  height: 8px;
+  margin: 0.45rem 0;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.readiness__bar div {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--warn), var(--ok));
+  transition: width 0.3s;
+}
+.readiness__facts {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.readiness-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25em 0.7em;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--surface-2);
+}
+.readiness-pill__bar {
+  width: 44px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.readiness-pill__bar span {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+}
+.readiness-pill__q {
+  min-width: 1.4em;
+  padding: 0 0.35em;
+  border-radius: 999px;
+  background: var(--warn);
+  color: #fff;
+  font-size: 0.72rem;
+  text-align: center;
+}
+.questions .segmented {
+  margin-bottom: 0.75rem;
+  width: 100%;
+}
+.questions__done {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ok) 14%, var(--surface));
+  color: var(--ok);
+}
+.gap-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 1rem;
+  display: grid;
+  gap: 0.6rem;
+}
+.gap {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+.gap--high {
+  border-left-color: var(--danger);
+}
+.gap--medium {
+  border-left-color: var(--warn);
+}
+.gap--low,
+.gap--custom {
+  border-left-color: var(--border-strong);
+}
+.gap.is-dismissed,
+.gap.is-answered {
+  opacity: 0.75;
+}
+.gap__head {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+.gap__dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-top: 0.4rem;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.gap__dot--high {
+  background: var(--danger);
+}
+.gap__dot--medium {
+  background: var(--warn);
+}
+.gap__text {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.gap__meta {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0.15rem 0 0.4rem 1.05rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.gap-answer {
+  display: grid;
+  gap: 0.4rem;
+  margin-left: 1.05rem;
+}
+.gap-answer .field {
+  margin-bottom: 0;
+}
+.gap-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.gap-row input {
+  flex: 1;
+  min-width: 120px;
+}
+.gap-select {
+  display: grid;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 140px;
+}
+.gap-quote {
+  display: block;
+  margin: 0.2rem 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.dismissed {
+  margin-bottom: 1rem;
+}
+.custom-q {
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+.custom-q .panel__title {
+  padding-left: 0;
+}
+.node__badge--q {
+  top: -9px;
+  right: -9px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.gap .linklike,
+.gap__meta .linklike,
+.sources__side .linklike,
+.inspector .linklike {
+  color: var(--accent);
+}

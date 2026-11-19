@@ -66,6 +66,10 @@ interface UiState extends Persisted {
   }) => Promise<string | null>
   closePrompt: (value: string | null) => void
   entityManagerOpen: boolean
+  rightTab: 'props' | 'questions'
+  setRightTab: (t: 'props' | 'questions') => void
+  /** Avaa oikean paneelin annetulle välilehdelle. */
+  showRight: (t: 'props' | 'questions') => void
   /** Lähdenäkymässä avoinna oleva lähde. */
   openSourceId: string | null
   /** Kohta, johon lähdenäkymä vierittää ja jonka se korostaa. `nonce` pakottaa päivityksen samalle kohdalle. */
@@ -134,6 +138,12 @@ export const useUi = create<UiState>((set, get) => {
       r.resolve(value)
     },
     entityManagerOpen: false,
+    rightTab: 'props',
+    setRightTab: (rightTab) => set({ rightTab }),
+    showRight: (rightTab) => {
+      set({ rightTab, rightOpen: true })
+      save()
+    },
     openSourceId: null,
     focusRef: null,
     pendingEditSourceId: null,

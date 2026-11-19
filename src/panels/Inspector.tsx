@@ -15,6 +15,7 @@ import { useUi } from '../store/ui'
 import { ChipPicker } from '../ui/ChipPicker'
 import { Icon } from '../ui/Icon'
 import { Segmented, TextField } from './fields'
+import { ReadinessCard } from './QuestionsPanel'
 
 const KINDS: NodeKind[] = ['step', 'decision', 'subprocess', 'start', 'end']
 
@@ -246,6 +247,7 @@ function ProcessInspector() {
           )
         }
       />
+      <ReadinessCard processId={processId} />
       <dl className="stats">
         <div>
           <dt>Vaiheita</dt>
