@@ -1,3 +1,4 @@
+import { refIsStale } from '../capture/refs'
 import { opsExpandNode } from '../model/commands'
 import type { NodePatch, Operation } from '../model/operations'
 import { edgesOf, nodesOf } from '../model/selectors'
@@ -10,6 +11,7 @@ import {
 } from '../model/types'
 import { deleteSelection, enterSubprocess, groupSelection } from '../store/actions'
 import { useStore } from '../store/store'
+import { useUi } from '../store/ui'
 import { ChipPicker } from '../ui/ChipPicker'
 import { Icon } from '../ui/Icon'
 import { Segmented, TextField } from './fields'
@@ -138,12 +140,27 @@ function NodeInspector({ node }: { node: ProcessNode }) {
         <div className="field">
           <span className="field__label">Lähteet</span>
           <ul className="source-list">
-            {sourceRefs.map((s, i) => (
-              <li key={i}>
-                <strong>{project.sources[s.sourceId].title}</strong>
-                <q>{s.quote}</q>
-              </li>
-            ))}
+            {sourceRefs.map((s, i) => {
+              const src = project.sources[s.sourceId]
+              const stale = refIsStale(src, s)
+              return (
+                <li key={i}>
+                  <strong>{src.title}</strong>
+                  <q>{s.quote.length > 140 ? `${s.quote.slice(0, 140)}…` : s.quote}</q>
+                  {stale ? (
+                    <span className="muted">Lähdettä on muokattu, kohtaa ei löydy enää.</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="linklike"
+                      onClick={() => useUi.getState().focusSourceRef(s.sourceId, s.start, s.end)}
+                    >
+                      Avaa lähteessä
+                    </button>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         </div>
       )}

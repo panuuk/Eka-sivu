@@ -67,6 +67,8 @@ export interface Source {
   kind: 'note' | 'document'
   text: string
   addedAt: number
+  /** Tuodun tiedoston alkuperäinen nimi. */
+  fileName?: string
 }
 
 export type QuestionStatus = 'open' | 'answered' | 'dismissed'

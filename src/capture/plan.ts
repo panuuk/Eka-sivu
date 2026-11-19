@@ -19,6 +19,8 @@ export interface PlanOptions {
   saveSource?: boolean
   sourceTitle?: string
   skipLines?: ReadonlySet<number>
+  /** Viitteet olemassa oleviin lähteisiin rivinumeron mukaan (ohittaa `saveSource`-viitteet). */
+  lineRefs?: ReadonlyMap<number, SourceRef>
 }
 
 export type EffectStatus = 'new' | 'matched' | 'updated' | 'branch' | 'link' | 'note'
@@ -65,6 +67,7 @@ class Planner {
   private sourceId?: string
   private text: string
   /** Tekstissä annetut alku- ja loppupisteen nimet. */
+  lineRefs?: ReadonlyMap<number, SourceRef>
   private terminalLabels: { start?: string; end?: string } = {}
 
   constructor(project: Project, text: string, saveSource: boolean, sourceTitle: string) {
@@ -114,7 +117,9 @@ class Planner {
     return id
   }
 
-  private sourceRef(item: { start: number; end: number }): SourceRef | undefined {
+  private sourceRef(item: { start: number; end: number; line: number }): SourceRef | undefined {
+    const external = this.lineRefs?.get(item.line)
+    if (external) return external
     if (!this.sourceId) return undefined
     return {
       sourceId: this.sourceId,
@@ -174,7 +179,11 @@ class Planner {
       }
       if (ref) {
         const cur = this.p.nodes[existing]
-        this.emit({ type: 'updateNode', id: existing, patch: { sources: [...cur.sources, ref] } })
+        const dup = cur.sources.some(
+          (r) => r.sourceId === ref.sourceId && r.start === ref.start && r.end === ref.end,
+        )
+        if (!dup)
+          this.emit({ type: 'updateNode', id: existing, patch: { sources: [...cur.sources, ref] } })
       }
       const changed =
         this.p !== before &&
@@ -475,6 +484,7 @@ export function planText(project: Project, text: string, options: PlanOptions): 
     options.saveSource ?? false,
     options.sourceTitle ?? 'Pikasyöte',
   )
+  planner.lineRefs = options.lineRefs
 
   let processId = options.processId
   if (options.newProcessName !== undefined) {

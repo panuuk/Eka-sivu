@@ -6,9 +6,9 @@ import {
   opsGroupIntoSubprocess,
   opsInsertAfter,
 } from '../model/commands'
-import type { Operation } from '../model/operations'
+import type { NodePatch, Operation } from '../model/operations'
 import { incoming, nodesOf } from '../model/selectors'
-import type { NodeKind } from '../model/types'
+import type { NodeKind, Project } from '../model/types'
 import { useStore } from './store'
 import { useUi } from './ui'
 
@@ -16,21 +16,62 @@ import { useUi } from './ui'
 
 const st = () => useStore.getState()
 
+export interface InsertOptions {
+  kind?: NodeKind
+  label: string
+  afterId?: string
+  /** Uuden yhteyden nimi, jos liitoskohta on päätös. */
+  edgeLabel?: string
+  patch?: NodePatch
+  /** Avaa nimen muokkauksen heti lisäyksen jälkeen. */
+  edit?: boolean
+  /** Ei siirrä valintaa eikä avaa ominaisuuspaneelia. */
+  quiet?: boolean
+}
+
+/** Liitoskohta uudelle solmulle: annettu tai valittu solmu. Loppupisteen perään ei lisätä, vaan sen edelle. */
+export function resolveAnchor(
+  project: Project,
+  processId: string,
+  selection: { nodeIds: string[] },
+  afterId?: string,
+): string | undefined {
+  let anchor = afterId ?? (selection.nodeIds.length === 1 ? selection.nodeIds[0] : undefined)
+  if (anchor && project.nodes[anchor]?.processId !== processId) anchor = undefined
+  if (anchor && project.nodes[anchor].kind === 'end') {
+    const ins = incoming(project, anchor)
+    anchor = ins.length === 1 ? ins[0].from : undefined
+  }
+  return anchor
+}
+
+/** Lisää solmun liitoskohdan jälkeen ja valitsee sen. Palauttaa uuden solmun tunnisteen. */
+export function insertNode(opts: InsertOptions): string | undefined {
+  const { project, currentProcessId, selection } = st()
+  if (!project) return undefined
+  const anchor = resolveAnchor(project, currentProcessId, selection, opts.afterId)
+  const { ops, nodeId } = opsInsertAfter(project, currentProcessId, anchor, {
+    label: opts.label,
+    kind: opts.kind ?? 'step',
+    edgeLabel: opts.edgeLabel,
+  })
+  if (opts.patch && Object.keys(opts.patch).length)
+    ops.push({ type: 'updateNode', id: nodeId, patch: opts.patch })
+  if (!st().dispatch(ops)) return undefined
+  if (!opts.quiet) {
+    st().select({ nodeIds: [nodeId], edgeIds: [] })
+    useUi.getState().setRightOpen(true)
+  }
+  if (opts.edit) useUi.getState().setEditNode(nodeId)
+  return nodeId
+}
+
 /** Lisää solmun valitun solmun jälkeen (tai itsenäisenä, jos mitään ei ole valittu) ja valitsee sen. */
 export function addNode(
   kind: NodeKind = 'step',
   afterId?: string,
   label?: string,
 ): string | undefined {
-  const { project, currentProcessId, selection } = st()
-  if (!project) return undefined
-  let anchor = afterId ?? (selection.nodeIds.length === 1 ? selection.nodeIds[0] : undefined)
-  if (anchor && project.nodes[anchor]?.processId !== currentProcessId) anchor = undefined
-  // Loppupisteen perään ei lisätä mitään: lisää sen edelle.
-  if (anchor && project.nodes[anchor].kind === 'end') {
-    const ins = incoming(project, anchor)
-    anchor = ins.length === 1 ? ins[0].from : undefined
-  }
   const defaults: Record<NodeKind, string> = {
     step: 'Uusi vaihe',
     decision: 'Uusi päätös?',
@@ -38,15 +79,7 @@ export function addNode(
     end: 'Loppu',
     subprocess: 'Uusi alaprosessi',
   }
-  const { ops, nodeId } = opsInsertAfter(project, currentProcessId, anchor, {
-    label: label ?? defaults[kind],
-    kind,
-  })
-  if (!st().dispatch(ops)) return undefined
-  st().select({ nodeIds: [nodeId], edgeIds: [] })
-  useUi.getState().setRightOpen(true)
-  if (!label) useUi.getState().setEditNode(nodeId)
-  return nodeId
+  return insertNode({ kind, afterId, label: label ?? defaults[kind], edit: !label })
 }
 
 /** Luo tyhjään prosessiin alun, ensimmäisen vaiheen ja lopun. */

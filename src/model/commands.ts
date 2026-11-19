@@ -11,7 +11,7 @@ export function opsInsertAfter(
   p: Project,
   processId: string,
   afterId: string | undefined,
-  init: { label: string; kind?: NodeKind },
+  init: { label: string; kind?: NodeKind; edgeLabel?: string },
 ): { ops: Operation[]; nodeId: string } {
   const node = createNode(processId, { label: init.label, kind: init.kind ?? 'step' })
   const ops: Operation[] = [{ type: 'addNode', node }]
@@ -26,8 +26,8 @@ export function opsInsertAfter(
       ops.push({ type: 'addEdge', edge: createEdge(processId, node.id, old.to, old.label) })
     } else {
       // Päätöksen uudet haarat nimetään automaattisesti (Kyllä, Ei) niiltä osin kuin nimet ovat vapaina.
-      let label: string | undefined
-      if (after.kind === 'decision') {
+      let label: string | undefined = init.edgeLabel
+      if (after.kind === 'decision' && !label) {
         const used = new Set(outs.map((o) => o.label))
         label = ['Kyllä', 'Ei'].find((l) => !used.has(l))
       }

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type ViewMode = 'canvas' | 'list'
+export type ViewMode = 'canvas' | 'list' | 'sources'
 export type Direction = 'DOWN' | 'RIGHT'
 
 interface Persisted {
@@ -66,6 +66,20 @@ interface UiState extends Persisted {
   }) => Promise<string | null>
   closePrompt: (value: string | null) => void
   entityManagerOpen: boolean
+  /** Lähdenäkymässä avoinna oleva lähde. */
+  openSourceId: string | null
+  /** Kohta, johon lähdenäkymä vierittää ja jonka se korostaa. `nonce` pakottaa päivityksen samalle kohdalle. */
+  focusRef: { sourceId: string; start: number; end: number; nonce: number } | null
+  /** Juuri luotu muistiinpano, joka avataan suoraan muokattavaksi. */
+  pendingEditSourceId: string | null
+  setPendingEditSource: (id: string | null) => void
+  sourcesTab: 'selection' | 'suggestions' | 'refs'
+  setSourcesTab: (t: 'selection' | 'suggestions' | 'refs') => void
+  /** Hetkeksi korostettu tekstikohta lähdenäkymässä. */
+  flash: { start: number; end: number } | null
+  flashRange: (start: number, end: number, ms?: number) => void
+  setOpenSource: (id: string | null) => void
+  focusSourceRef: (sourceId: string, start: number, end: number) => void
   quickOpen: boolean
   quickTab: 'add' | 'export'
   /** Pikasyötteen keskeneräinen teksti säilyy, vaikka ikkuna suljetaan. */
@@ -120,6 +134,31 @@ export const useUi = create<UiState>((set, get) => {
       r.resolve(value)
     },
     entityManagerOpen: false,
+    openSourceId: null,
+    focusRef: null,
+    pendingEditSourceId: null,
+    setPendingEditSource: (pendingEditSourceId) => set({ pendingEditSourceId }),
+    sourcesTab: 'suggestions',
+    setSourcesTab: (sourcesTab) => set({ sourcesTab }),
+    flash: null,
+    flashRange: (start, end, ms = 2400) => {
+      const mine = { start, end }
+      set({ flash: mine })
+      setTimeout(() => {
+        if (get().flash === mine) set({ flash: null })
+      }, ms)
+    },
+    setOpenSource: (openSourceId) => set({ openSourceId }),
+    focusSourceRef: (sourceId, start, end) => {
+      set({
+        view: 'sources',
+        openSourceId: sourceId,
+        sourcesTab: 'refs',
+        focusRef: { sourceId, start, end, nonce: Date.now() },
+      })
+      get().flashRange(start, end, 2600)
+      save()
+    },
     quickOpen: false,
     quickTab: 'add',
     quickDraft: '',
