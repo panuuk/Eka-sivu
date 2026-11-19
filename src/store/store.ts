@@ -54,6 +54,8 @@ export interface AppState {
   openProject: (id: string) => Promise<void>
   deleteProject: (id: string) => Promise<void>
   importProjectJson: (text: string) => Promise<void>
+  /** Ottaa valmiin projektin käyttöön uutena projektina (esim. esimerkki). */
+  adoptProject: (project: Project) => Promise<void>
   flushSave: () => Promise<void>
 }
 
@@ -267,6 +269,12 @@ export const useStore = create<AppState>((set, get) => {
       } catch (e) {
         set({ error: (e as Error).message })
       }
+    },
+
+    async adoptProject(project) {
+      await get().flushSave()
+      await saveProject(project)
+      await activate(project)
     },
 
     async flushSave() {

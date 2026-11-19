@@ -25,7 +25,13 @@ export function opsInsertAfter(
       ops.push({ type: 'addEdge', edge: createEdge(processId, afterId, node.id, undefined) })
       ops.push({ type: 'addEdge', edge: createEdge(processId, node.id, old.to, old.label) })
     } else {
-      ops.push({ type: 'addEdge', edge: createEdge(processId, afterId, node.id) })
+      // Päätöksen uudet haarat nimetään automaattisesti (Kyllä, Ei) niiltä osin kuin nimet ovat vapaina.
+      let label: string | undefined
+      if (after.kind === 'decision') {
+        const used = new Set(outs.map((o) => o.label))
+        label = ['Kyllä', 'Ei'].find((l) => !used.has(l))
+      }
+      ops.push({ type: 'addEdge', edge: createEdge(processId, afterId, node.id, label) })
     }
   }
   return { ops, nodeId: node.id }

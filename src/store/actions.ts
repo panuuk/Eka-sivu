@@ -1,0 +1,172 @@
+import { createEdge, createNode, createProcess } from '../model/factory'
+import {
+  opsDeleteNodeBridging,
+  opsDuplicateProcess,
+  opsExpandNode,
+  opsGroupIntoSubprocess,
+  opsInsertAfter,
+} from '../model/commands'
+import type { Operation } from '../model/operations'
+import { incoming, nodesOf } from '../model/selectors'
+import type { NodeKind } from '../model/types'
+import { useStore } from './store'
+import { useUi } from './ui'
+
+/** Käyttöliittymän yhteiset toiminnot: kaavio, lista, työkalupalkki ja pikanäppäimet käyttävät samoja. */
+
+const st = () => useStore.getState()
+
+/** Lisää solmun valitun solmun jälkeen (tai itsenäisenä, jos mitään ei ole valittu) ja valitsee sen. */
+export function addNode(
+  kind: NodeKind = 'step',
+  afterId?: string,
+  label?: string,
+): string | undefined {
+  const { project, currentProcessId, selection } = st()
+  if (!project) return undefined
+  let anchor = afterId ?? (selection.nodeIds.length === 1 ? selection.nodeIds[0] : undefined)
+  if (anchor && project.nodes[anchor]?.processId !== currentProcessId) anchor = undefined
+  // Loppupisteen perään ei lisätä mitään: lisää sen edelle.
+  if (anchor && project.nodes[anchor].kind === 'end') {
+    const ins = incoming(project, anchor)
+    anchor = ins.length === 1 ? ins[0].from : undefined
+  }
+  const defaults: Record<NodeKind, string> = {
+    step: 'Uusi vaihe',
+    decision: 'Uusi päätös?',
+    start: 'Alku',
+    end: 'Loppu',
+    subprocess: 'Uusi alaprosessi',
+  }
+  const { ops, nodeId } = opsInsertAfter(project, currentProcessId, anchor, {
+    label: label ?? defaults[kind],
+    kind,
+  })
+  if (!st().dispatch(ops)) return undefined
+  st().select({ nodeIds: [nodeId], edgeIds: [] })
+  useUi.getState().setRightOpen(true)
+  if (!label) useUi.getState().setEditNode(nodeId)
+  return nodeId
+}
+
+/** Luo tyhjään prosessiin alun, ensimmäisen vaiheen ja lopun. */
+export function startProcessSkeleton() {
+  const { project, currentProcessId } = st()
+  if (!project) return
+  const start = createNode(currentProcessId, {
+    kind: 'start',
+    label: 'Alku',
+    confidence: 'confirmed',
+  })
+  const step = createNode(currentProcessId, { label: 'Ensimmäinen vaihe' })
+  const end = createNode(currentProcessId, { kind: 'end', label: 'Loppu', confidence: 'confirmed' })
+  st().dispatch([
+    { type: 'addNode', node: start },
+    { type: 'addNode', node: step },
+    { type: 'addNode', node: end },
+    { type: 'addEdge', edge: createEdge(currentProcessId, start.id, step.id) },
+    { type: 'addEdge', edge: createEdge(currentProcessId, step.id, end.id) },
+  ])
+  st().select({ nodeIds: [step.id], edgeIds: [] })
+  useUi.getState().setEditNode(step.id)
+}
+
+export async function deleteSelection() {
+  const { project, selection } = st()
+  if (!project) return
+  const ops: Operation[] = []
+  const nodeIds = new Set(selection.nodeIds)
+  const withChildren = selection.nodeIds.filter((id) => project.nodes[id]?.childProcessId)
+  if (withChildren.length) {
+    const names = withChildren.map((id) => `“${project.nodes[id].label}”`).join(', ')
+    const ok = await useUi.getState().ask({
+      title: 'Poistetaanko alaprosessi?',
+      message: `${names} sisältää alaprosessin, joka poistetaan kaikkine vaiheineen. Voit kumota poiston (Ctrl+Z).`,
+      confirmLabel: 'Poista',
+      danger: true,
+    })
+    if (!ok) return
+  }
+  for (const id of selection.nodeIds) {
+    // Siltaus lasketaan alkuperäisestä mallista; poistettavien naapureihin ei siltata.
+    const bridged = opsDeleteNodeBridging(project, id).filter(
+      (op) => op.type !== 'addEdge' || (!nodeIds.has(op.edge.from) && !nodeIds.has(op.edge.to)),
+    )
+    ops.push(...bridged)
+  }
+  for (const id of selection.edgeIds) {
+    const e = project.edges[id]
+    if (e && !nodeIds.has(e.from) && !nodeIds.has(e.to)) ops.push({ type: 'deleteEdge', id })
+  }
+  if (ops.length) st().dispatch(ops)
+}
+
+export function enterSubprocess(nodeId: string) {
+  const { project } = st()
+  const node = project?.nodes[nodeId]
+  if (!node) return
+  if (node.childProcessId) return st().setCurrentProcess(node.childProcessId)
+  const { ops, processId } = opsExpandNode(project!, nodeId)
+  if (st().dispatch(ops)) st().setCurrentProcess(processId)
+}
+
+export function groupSelection() {
+  const { project, selection } = st()
+  if (!project || selection.nodeIds.length < 2) return
+  try {
+    const { ops, processId } = opsGroupIntoSubprocess(
+      project,
+      selection.nodeIds,
+      'Uusi alaprosessi',
+    )
+    if (st().dispatch(ops)) st().setCurrentProcess(processId)
+  } catch (e) {
+    st().setError((e as Error).message)
+  }
+}
+
+export function addProcess(name = 'Uusi prosessi') {
+  const { project } = st()
+  if (!project) return
+  const process = createProcess(name)
+  if (st().dispatch({ type: 'addProcess', process })) st().setCurrentProcess(process.id)
+}
+
+export function duplicateProcess(processId: string) {
+  const { project } = st()
+  if (!project) return
+  const { ops, processId: id } = opsDuplicateProcess(project, processId)
+  if (st().dispatch(ops)) st().setCurrentProcess(id)
+}
+
+export async function deleteProcess(processId: string) {
+  const { project } = st()
+  const proc = project?.processes[processId]
+  if (!project || !proc) return
+  if (processId === project.rootProcessId) {
+    st().setError('Päätason prosessia ei voi poistaa')
+    return
+  }
+  const count = nodesOf(project, processId).length
+  const ok = await useUi.getState().ask({
+    title: `Poistetaanko “${proc.name}”?`,
+    message: `Prosessi ja sen ${count} vaihetta (alaprosessit mukaan lukien) poistetaan. Voit kumota poiston (Ctrl+Z).`,
+    confirmLabel: 'Poista',
+    danger: true,
+  })
+  if (ok) st().dispatch({ type: 'deleteProcess', id: processId })
+}
+
+/** Vapauttaa käsin asetetut sijainnit, jolloin automaattinen asettelu ottaa vallan. */
+export function releaseLayout(processId: string) {
+  const { project } = st()
+  if (!project) return
+  const ops: Operation[] = nodesOf(project, processId)
+    .filter((n) => n.locked)
+    .map((n) => ({
+      type: 'updateNode' as const,
+      id: n.id,
+      patch: { locked: undefined, position: undefined },
+    }))
+  st().dispatch(ops)
+}

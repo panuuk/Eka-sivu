@@ -138,7 +138,21 @@ export function applyOperation(p: Project, op: Operation): Project {
     }
     case 'updateProcess': {
       const cur = need(p.processes, op.id, 'Prosessi')
-      return { ...p, processes: { ...p.processes, [op.id]: applyPatch(cur, op.patch) } }
+      const next: Project = {
+        ...p,
+        processes: { ...p.processes, [op.id]: applyPatch(cur, op.patch) },
+      }
+      // Alaprosessin nimi ja sen vanhempivaiheen nimi pidetään samana.
+      const parent = next.processes[op.id].parentNodeId
+        ? next.nodes[next.processes[op.id].parentNodeId!]
+        : undefined
+      if (op.patch.name !== undefined && parent && parent.label !== op.patch.name) {
+        return {
+          ...next,
+          nodes: { ...next.nodes, [parent.id]: { ...parent, label: op.patch.name } },
+        }
+      }
+      return next
     }
     case 'deleteProcess': {
       need(p.processes, op.id, 'Prosessi')
@@ -157,7 +171,15 @@ export function applyOperation(p: Project, op: Operation): Project {
       const cur = need(p.nodes, op.id, 'Solmu')
       const next = applyPatch(cur, op.patch)
       if (next.childProcessId) need(p.processes, next.childProcessId, 'Alaprosessi')
-      return { ...p, nodes: { ...p.nodes, [op.id]: next } }
+      const result: Project = { ...p, nodes: { ...p.nodes, [op.id]: next } }
+      const child = next.childProcessId ? p.processes[next.childProcessId] : undefined
+      if (op.patch.label !== undefined && child && child.name !== next.label) {
+        return {
+          ...result,
+          processes: { ...result.processes, [child.id]: { ...child, name: next.label } },
+        }
+      }
+      return result
     }
     case 'deleteNode': {
       const n = need(p.nodes, op.id, 'Solmu')

@@ -390,3 +390,19 @@ describe('operaatiotyypit ovat sarjallistettavia', () => {
     expect(applyOperations(p, again).nodes[b].label).toBe('Z')
   })
 })
+
+describe('alaprosessin nimen synkronointi', () => {
+  it('vaiheen ja alaprosessin nimi pysyvät samana molempiin suuntiin', () => {
+    const { p, b } = sample()
+    const p2 = applyOperations(p, opsExpandNode(p, b).ops)
+    const cid = p2.nodes[b].childProcessId!
+    const p3 = applyOperation(p2, { type: 'updateNode', id: b, patch: { label: 'Uusi nimi' } })
+    expect(p3.processes[cid].name).toBe('Uusi nimi')
+    const p4 = applyOperation(p3, {
+      type: 'updateProcess',
+      id: cid,
+      patch: { name: 'Toinen nimi' },
+    })
+    expect(p4.nodes[b].label).toBe('Toinen nimi')
+  })
+})
