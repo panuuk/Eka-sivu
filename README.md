@@ -1,42 +1,118 @@
-# React + TypeScript + Vite
+# Prosessikartta
 
-Yksinkertainen responsiivinen React-sovellus, joka on rakennettu TypeScriptillä Viten päälle.
+Työkalu prosessien hahmottamiseen ja mallintamiseen. Laajojen, tietotyövaltaisten prosessien kuvaaminen ja visualisointi on hidasta, joten työkalu kehittää prosessin mallia pikkuhiljaa syötetyn tiedon perusteella: kirjoita tai liitä teksti, tuo dokumentteja, vastaa työkalun kysymyksiin, ja kaavio tarkentuu.
+
+Kaikki data pysyy omassa selaimessa. Mitään ei lähetetä palvelimelle, eikä työkalu käytä ulkoisia tekoälypalveluja.
 
 ## Ominaisuudet
 
-- React 19 + TypeScript (strict-tila)
-- Vite 7 kehityspalvelimena ja bundlerina
-- Responsiivinen asettelu (CSS Grid, mobiilivalikko alle 640 px leveydellä)
-- Vaalea ja tumma teema käyttöjärjestelmän asetuksen mukaan (`prefers-color-scheme`)
+| Alue                   | Mitä tekee                                                                                                                                                                                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Malli**              | Prosessi on rakenteinen graafi (vaiheet, päätökset, alaprosessit, roolit, järjestelmät, syötteet ja tuotokset). Kaavio, lista ja esitys piirretään siitä. Jokaisella vaiheella on varmuustaso (arvaus, todennäköinen, vahvistettu).                                                  |
+| **Kaavio**             | Automaattinen asettelu, jonka voi ylittää käsin. Kolme asettelutapaa: _Vapaa_, _Uimaradat_ (rooleittain riveillä) ja _Kokonaiskuva_ (kaikki alaprosessit auki). Kumoa ja tee uudelleen, pikanäppäimet.                                                                               |
+| **Pikasyöte** (Ctrl+K) | Kirjoita prosessi tekstinä (ks. syntaksi alla), katso esikatselu ja lisää malliin. Saman tekstin voi lisätä uudelleen ilman kaksoiskappaleita. Prosessin voi viedä takaisin tekstinä ja muokata.                                                                                     |
+| **Lähteet**            | Tuo Word-, PDF-, teksti- ja Markdown-tiedostoja tai kirjoita muistiinpanoja. Työkalu ehdottaa tekstistä vaiheita, päätöksiä, rooleja ja järjestelmiä (sääntöpohjaisesti, suomen taivutukset huomioiden). Jokainen poiminta muistaa lähdekohdan, ja siihen pääsee takaisin kaaviosta. |
+| **Tarkentuminen**      | Työkalu löytää mallin aukot (puuttuva rooli, umpikuja, päätös ilman haaraa, arvaus ilman lähdettä, lähteen ja mallin ristiriita ym.) ja esittää ne kysymyksinä. Vastaus korjaa mallin. Valmiusaste näkyy koko ajan.                                                                  |
+| **Laajat prosessit**   | Hierarkia (alaprosessit), haku ja suodattimet, uimaradat, kokonaiskuva, ristiviittaukset (missä rooli tai järjestelmä on käytössä). Sujuva yli 500 vaiheen malleilla.                                                                                                                |
+| **Esittäminen**        | _Esitystila_ (siisti koko ruudun näkymä, läpikäynti vaihe vaiheelta) sekä viennit: SVG, PNG, PDF, prosessidokumentti, itsenäinen HTML, Mermaid ja BPMN 2.0.                                                                                                                          |
 
-## Vaatimukset
-
-- Node.js 20.19+ tai 22.12+
-- npm
-
-## Käyttö
+## Aloitus
 
 ```bash
-npm install      # asenna riippuvuudet
-npm run dev      # käynnistä kehityspalvelin (http://localhost:5173)
-npm run build    # tyyppitarkistus + tuotantobuild hakemistoon dist/
-npm run preview  # esikatsele tuotantobuildia
+npm install
+npm run dev        # http://localhost:5173
 ```
 
-## Rakenne
+Projektivalikosta (yläpalkin projektin nimi) löytyy **Uusi esimerkkiprojektista**, joka lataa ostolaskun käsittelyn esimerkkinä. Siinä on tarkoituksella aukkoja, joten kysymysjono on heti käytössä.
+
+Vaatimukset: Node.js 20.19+ tai 22.12+.
+
+## Pikasyötteen syntaksi
 
 ```
-.
-├── index.html          # HTML-pohja, josta Vite lataa sovelluksen
-├── public/             # staattiset tiedostot (favicon)
-├── src/
-│   ├── main.tsx        # sovelluksen käynnistys
-│   ├── App.tsx         # pääkomponentti
-│   ├── App.css         # komponentin tyylit
-│   ├── index.css       # globaalit tyylit ja teemamuuttujat
-│   └── vite-env.d.ts   # Viten tyyppimäärittelyt
-├── vite.config.ts
-├── tsconfig.json       # projektiviittaukset
-├── tsconfig.app.json   # sovelluskoodin TS-asetukset
-└── tsconfig.node.json  # vite.config.ts:n TS-asetukset
+# Tilauksen käsittely
+- Vastaanota tilaus @Myynti [CRM] > Tilaus
+- Tarkista luottotiedot @Talous
+? Ylittyykö luottoraja
+  kyllä: Pyydä ennakkomaksu @Talous
+  ei: jatka
+- Lähetä tilausvahvistus @Myynti [Sähköposti] ~arvaus
++ Toimitus @Logistiikka
+  - Keräile tuotteet [Varastojärjestelmä]
+  - Lähetä paketti
 ```
+
+| Merkintä                          | Merkitys                                          |
+| --------------------------------- | ------------------------------------------------- |
+| `- Vaihe`                         | Vaihe (myös `*`, `1.`, `1)`)                      |
+| `@Rooli`, `@(Monisanainen rooli)` | Vastuurooli                                       |
+| `[CRM, ERP]`                      | Järjestelmät                                      |
+| `< Syöte`, `> Tuotos`             | Syötteet ja tuotokset                             |
+| `~arvaus`, `~vahvistettu`         | Varmuus (oletus: todennäköinen)                   |
+| `? Kysymys`                       | Päätös, haarat sisennettynä `kyllä: …`            |
+| `jatka`, `loppu`, `-> Vaihe`      | Haara jatkaa, päättyy tai palaa vaiheeseen        |
+| `+ Alaprosessi`                   | Alaprosessi, sisältö sisennettynä                 |
+| `alku`, `loppu`, `alku: Nimi`     | Alku- ja loppupiste (luodaan itse, jos puuttuvat) |
+| `---`                             | Erotin: seuraava ketju ei jatka edellistä         |
+| `// kommentti`                    | Rivi ohitetaan                                    |
+
+Samannimiset vaiheet tunnistetaan, joten tekstiä voi lisätä uudelleen tai täydentää vaiheiden tietoja ilman että syntyy kaksoiskappaleita.
+
+## Pikanäppäimet
+
+| Näppäin                                      | Toiminto                    |
+| -------------------------------------------- | --------------------------- |
+| `Ctrl+K`                                     | Pikasyöte auki/kiinni       |
+| `Ctrl+Z`, `Ctrl+Shift+Z`                     | Kumoa, tee uudelleen        |
+| `Enter`                                      | Lisää vaihe valitun jälkeen |
+| `F2`, `Delete`                               | Nimeä uudelleen, poista     |
+| `/`                                          | Hae vaiheita                |
+| `Esc`                                        | Tyhjennä valinta tai sulje  |
+| Esityksessä `←`, `→`, `Space`, `+`, `-`, `0` | Läpikäynti, zoom, sovitus   |
+
+## Tiedot ja yksityisyys
+
+- Projektit tallentuvat selaimen IndexedDB:hen. **Vie projekti JSON-tiedostoon säännöllisesti** (projektivalikko), koska selaimen tietojen tyhjennys poistaa ne.
+- Tuodut dokumentit käsitellään kokonaan selaimessa.
+- Vientitiedostot syntyvät selaimessa; mitään ei lähetetä minnekään.
+
+## Kehitys
+
+```bash
+npm run dev          # kehityspalvelin
+npm run build        # tyyppitarkistus + tuotantobuild (dist/)
+npm run typecheck    # tyyppitarkistus
+npm run lint         # ESLint
+npm test             # yksikkötestit (Vitest)
+npm run e2e          # selaintestit (Playwright, rakentaa ja käynnistää sovelluksen)
+npm run format       # Prettier
+```
+
+Jokaisen muutoksen tarkistaa CI (`.github/workflows/ci.yml`). Julkaisu GitHub Pagesiin tapahtuu `main`-haaran päivityksestä (`.github/workflows/pages.yml`).
+
+### Rakenne
+
+```
+src/
+  model/      tietomalli, operaatiot, komennot, validointi, serialisointi, esimerkit
+  store/      tila (Zustand), kumoa/tee uudelleen, UI-tila, toiminnot
+  storage/    IndexedDB (Dexie)
+  layout/     ELK-asettelu (worker), uimaradat, hierarkkinen asettelu
+  canvas/     kaavio (React Flow), solmut, reunat, kaaviomalli
+  panels/     paneelit: ominaisuudet, kysymykset, lähteet, pikasyöte, vienti, esitys
+  capture/    pikasyöte (jäsennin, suunnittelija), dokumenttituonti, ehdotusmoottori, viitteet
+  analysis/   aukkosäännöt, valmiusaste, haku
+  export/     SVG-piirtäjä, Mermaid, BPMN, dokumentti, tulostus, teemat
+e2e/          selaintestit
+docs/         suunnitelma ja arkkitehtuurimuistiinpanot
+```
+
+Arkkitehtuuriperiaatteet:
+
+1. **Malli ensin, kaavio on näkymä.** Kaikki näkymät piirretään samasta rakenteisesta mallista.
+2. **Jokainen muutos on operaatio.** Käsin muokkaus, tekstisyöte, dokumenteista poiminta ja kysymyksiin vastaaminen tuottavat samoja operaatioita, joten kumoaminen ja esikatselu toimivat yhdellä mekanismilla.
+3. **Epävarmuus näkyy.** Jokaisella vaiheella on varmuustaso ja lähdeviitteet.
+4. **Aukot lasketaan, eivät tallenneta.** Vain käyttäjän päätökset (ohitukset) tallennetaan.
+5. **Yksi renderöintiketju.** Esitystila ja kaikki viennit käyttävät samaa asettelua ja SVG-piirtäjää.
+
+Lisätietoa: [docs/suunnitelma.md](docs/suunnitelma.md).
