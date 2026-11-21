@@ -62,7 +62,10 @@ self.addEventListener('fetch', (event) => {
       const hit = await cache.match(req, { ignoreSearch: true, ignoreVary: true })
       if (hit) return hit
       try {
-        return await fetch(req)
+        const res = await fetch(req)
+        // Tekstintunnistuksen tiedostot tallennetaan käytön yhteydessä, jotta ne toimivat offline
+        if (res.ok && url.pathname.includes('/ocr/')) await cache.put(req, res.clone())
+        return res
       } catch {
         return Response.error()
       }
@@ -84,7 +87,8 @@ export function serviceWorkerPlugin(): Plugin {
       // index.html lisätään erikseen: HTML-liitännäinen tuottaa sen vasta tämän jälkeen.
       const files = new Set<string>(['index.html'])
       for (const name of Object.keys(bundle)) {
-        if (name.endsWith('.map') || name === 'sw.js') continue
+        // OCR-tiedostot (~20 Mt) eivät kuulu esilatauksen: ne tallennetaan välimuistiin vasta käytettäessä
+        if (name.endsWith('.map') || name === 'sw.js' || name.startsWith('ocr/')) continue
         files.add(name)
       }
       // public-hakemiston tiedostot kopioidaan koontiin sellaisenaan

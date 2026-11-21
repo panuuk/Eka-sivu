@@ -127,8 +127,12 @@ export function TopBar() {
         ]
       : []),
     {
-      label: 'Näkymät ja skenaariot…',
+      label: 'Tuo taulukko tai kaavio…',
       separatorBefore: true,
+      onSelect: () => useUi.getState().setImportOpen(true),
+    },
+    {
+      label: 'Näkymät ja skenaariot…',
       onSelect: () => useUi.getState().setSavedViewsOpen(true),
     },
     {

@@ -140,7 +140,7 @@ test('virheellinen ja liian outo tiedosto antaa selkeän virheen', async ({ page
   await openSources(page)
   await page
     .getByTestId('source-file-input')
-    .setInputFiles({ name: 'kuva.png', mimeType: 'image/png', buffer: Buffer.from([1, 2, 3]) })
+    .setInputFiles({ name: 'laatikko.xyz', mimeType: 'application/octet-stream', buffer: Buffer.from([1, 2, 3]) })
   await expect(page.getByRole('alert')).toContainText('ei tueta')
   await page
     .getByTestId('source-file-input')

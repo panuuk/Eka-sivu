@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Source } from '../model/types'
 import { findMentions } from '../capture/mentions'
-import { importFile, SUPPORTED_EXTENSIONS } from '../capture/importers'
+import { FileImportError, importFile, SUPPORTED_EXTENSIONS } from '../capture/importers'
 import { refsOfSource } from '../capture/refs'
 import type { Mark } from '../capture/segments'
 import { discoverEntities, type Candidate } from '../capture/discover'
@@ -41,16 +41,39 @@ const ACCEPT = SUPPORTED_EXTENSIONS.map((e) => `.${e}`).join(',')
 /** Tiedostotuonti ja muistiinpanon luonti, jaettu tyhjän tilan ja työnäkymän kesken. */
 function useSourceCreation() {
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState<string | null>(null)
+  const abort = useRef<AbortController | null>(null)
   const importFiles = async (files: FileList | File[]) => {
     setBusy(true)
     const errors: string[] = []
     for (const file of Array.from(files)) {
+      const controller = new AbortController()
+      abort.current = controller
       try {
-        const doc = await importFile(file)
+        const doc = await importFile(file, {
+          signal: controller.signal,
+          onProgress: (p) =>
+            setProgress(
+              `${p.status}: sivu ${p.page}/${p.pages} (${Math.round(p.fraction * 100)} %)`,
+            ),
+          confirmOcr: ({ pages, total }) =>
+            useUi.getState().ask({
+              title: 'Tunnistetaanko teksti kuvasta?',
+              message: `${pages === total ? `Tiedostossa on ${total} sivua` : `${pages}/${total} sivulta`} ilman tekstikerrosta (esim. skannattu paperi). Tekstintunnistus (OCR) tehdään tässä selaimessa, eikä mitään lähetetä minnekään. Ensimmäisellä kerralla ladataan suomen ja englannin kielitiedot (noin 7 Mt), ja tunnistus kestää noin 5–15 sekuntia sivua kohti. Tulos voi sisältää virheitä, joten tarkista se.`,
+              confirmLabel: 'Tunnista teksti',
+            }),
+        })
         createSource({ title: doc.title, text: doc.text, kind: 'document', fileName: doc.fileName })
       } catch (e) {
-        errors.push(`${file.name}: ${(e as Error).message}`)
+        if ((e as Error).name === 'AbortError') errors.push(`${file.name}: tunnistus peruttiin`)
+        else if (e instanceof FileImportError && e.code === 'needs-ocr')
+          errors.push(
+            `${file.name}: ${e.message} Valitse seuraavalla kerralla “Tunnista teksti”, kun sovellus kysyy.`,
+          )
+        else errors.push(`${file.name}: ${(e as Error).message}`)
       }
+      abort.current = null
+      setProgress(null)
     }
     setBusy(false)
     if (errors.length) useStore.getState().setError(errors.join(' | '))
@@ -66,7 +89,7 @@ function useSourceCreation() {
     const id = createSource({ title, text: '', kind: 'note' })
     if (id) useUi.getState().setPendingEditSource(id)
   }
-  return { busy, importFiles, newNote }
+  return { busy, progress, importFiles, newNote, cancel: () => abort.current?.abort() }
 }
 
 function FileInput({ onFiles }: { onFiles: (files: FileList) => void }) {
@@ -89,7 +112,7 @@ function FileInput({ onFiles }: { onFiles: (files: FileList) => void }) {
 export function SourcesView() {
   const project = useStore((s) => s.project)!
   const openId = useUi((s) => s.openSourceId)
-  const { busy, importFiles, newNote } = useSourceCreation()
+  const { busy, progress, importFiles, newNote, cancel } = useSourceCreation()
   const [dragging, setDragging] = useState(false)
 
   const sources = useMemo(
@@ -133,9 +156,19 @@ export function SourcesView() {
               Kirjoita muistiinpano
             </button>
           </div>
+          {progress && (
+            <p className="field__hint" role="status" data-testid="import-progress">
+              {progress}{' '}
+              <button type="button" className="linklike" onClick={cancel}>
+                Peru
+              </button>
+            </p>
+          )}
           <p className="field__hint">
-            Tuetut tiedostot: Word (.docx), PDF, tekstitiedostot (.txt, .md). Voit myös vetää
-            tiedoston tähän.
+            Tuetut tiedostot: Word (.docx), PowerPoint (.pptx), PDF (myös skannatut,
+            tekstintunnistuksella), kuvat (.png, .jpg), sähköposti (.eml) ja tekstitiedostot (.txt,
+            .md). Voit myös vetää tiedoston tähän. Excel, CSV, BPMN ja Mermaid tuodaan
+            projektivalikosta (“Tuo taulukko tai kaavio”).
           </p>
         </div>
         <FileInput onFiles={(f) => void importFiles(f)} />
@@ -155,7 +188,7 @@ function SourceWorkspace({ source, sources }: { source: Source; sources: Source[
   const flash = useUi((s) => s.flash)
   const setTab = useUi((s) => s.setSourcesTab)
   const readerWrap = useRef<HTMLDivElement>(null)
-  const { busy, importFiles, newNote } = useSourceCreation()
+  const { busy, progress, importFiles, newNote, cancel } = useSourceCreation()
 
   const [range, setRange] = useState<Range | null>(null)
   // Uusi muistiinpano aukeaa suoraan muokattavaksi.
@@ -279,6 +312,14 @@ function SourceWorkspace({ source, sources }: { source: Source; sources: Source[
           <Icon name="upload" size={16} /> {busy ? 'Tuodaan…' : 'Tuo tiedosto'}
         </label>
         <FileInput onFiles={(f) => void importFiles(f)} />
+        {progress && (
+          <span className="muted" role="status" data-testid="import-progress">
+            {progress}{' '}
+            <button type="button" className="linklike" onClick={cancel}>
+              Peru
+            </button>
+          </span>
+        )}
         <span className="sources__spacer" />
         {editing ? (
           <>

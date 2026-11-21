@@ -134,6 +134,8 @@ interface UiState extends Persisted {
   presentScenarioId: string | null
   setPresentView: (id: string | null) => void
   setPresentScenario: (id: string | null) => void
+  importOpen: boolean
+  setImportOpen: (open: boolean) => void
   entityManagerOpen: boolean
   /** Tallennus ja varmuuskopiot -ikkuna. */
   storageOpen: boolean
@@ -248,6 +250,8 @@ export const useUi = create<UiState>((set, get) => {
     presentScenarioId: null,
     setPresentView: (presentViewId) => set({ presentViewId }),
     setPresentScenario: (presentScenarioId) => set({ presentScenarioId }),
+    importOpen: false,
+    setImportOpen: (importOpen) => set({ importOpen }),
     entityManagerOpen: false,
     storageOpen: false,
     setStorageOpen: (storageOpen) => set({ storageOpen }),

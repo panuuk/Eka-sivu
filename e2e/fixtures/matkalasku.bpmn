@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="Process_1" name="Matkalasku" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_1" name="Työntekijä"><bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef><bpmn:flowNodeRef>Task_1</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_2" name="Talous"><bpmn:flowNodeRef>Task_2</bpmn:flowNodeRef><bpmn:flowNodeRef>Gateway_1</bpmn:flowNodeRef><bpmn:flowNodeRef>Task_3</bpmn:flowNodeRef><bpmn:flowNodeRef>EndEvent_1</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_1" name="Matka päättyy"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="Task_1" name="Täytä matkalasku"><bpmn:documentation>Liitä kuitit</bpmn:documentation></bpmn:userTask>
+    <bpmn:serviceTask id="Task_2" name="Tarkista kuitit" camunda:class="x"/>
+    <bpmn:exclusiveGateway id="Gateway_1" name="Kuitit kunnossa?"/>
+    <bpmn:sendTask id="Task_3" name="Maksa korvaus"/>
+    <bpmn:endEvent id="EndEvent_1" name="Korvattu"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="Task_2"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_2" targetRef="Gateway_1"/>
+    <bpmn:sequenceFlow id="Flow_4" name="Kyllä" sourceRef="Gateway_1" targetRef="Task_3"/>
+    <bpmn:sequenceFlow id="Flow_5" name="Ei" sourceRef="Gateway_1" targetRef="Task_1"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_3" targetRef="EndEvent_1"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1"><bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1"/></bpmndi:BPMNDiagram>
+</bpmn:definitions>

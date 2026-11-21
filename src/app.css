@@ -2989,3 +2989,65 @@ button.cell:hover {
 .present__select select {
   max-width: 11rem;
 }
+
+/* Tuonti */
+.dialog--import {
+  width: min(900px, 96vw);
+}
+.import__body {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.btn-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--surface);
+}
+.import__preview th {
+  vertical-align: top;
+  min-width: 8rem;
+}
+.import__preview th select {
+  width: 100%;
+}
+.import__preview td {
+  text-align: left;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.import__dsl {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  max-height: 14rem;
+  overflow: auto;
+  font-size: 0.85rem;
+}
+.import__summary {
+  padding: 0.6rem 0.75rem;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 0.4rem;
+}
+.import__dest {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.3rem;
+}
+.issue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}

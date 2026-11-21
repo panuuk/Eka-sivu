@@ -7,6 +7,7 @@ import { CompareView } from './panels/CompareView'
 import { SavedViewsDialog } from './panels/SavedViewsDialog'
 import { VersionsDialog } from './panels/VersionsDialog'
 import { AnalysisView } from './panels/AnalysisView'
+import { ImportDialog } from './panels/ImportDialog'
 import { HelpDialog } from './panels/HelpDialog'
 import { ListView } from './panels/ListView'
 import { ProcessTree } from './panels/ProcessTree'
@@ -95,6 +96,7 @@ function App() {
       <ReplaceDialog />
       <HelpDialog />
       <VersionsDialog />
+      <ImportDialog />
       <SavedViewsDialog />
       <ExportDialog />
       <QuickInput />
