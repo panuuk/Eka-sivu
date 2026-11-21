@@ -12,6 +12,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4174',
     viewport: { width: 1360, height: 820 },
+    // Palvelutyöntekijä estetään oletuksena, jottei välimuisti sotke testejä (PWA-testit sallivat sen).
+    serviceWorkers: 'block',
     launchOptions: existsSync(preinstalled)
       ? { executablePath: preinstalled, args: ['--no-sandbox'] }
       : {},

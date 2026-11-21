@@ -10,17 +10,23 @@ Tämä dokumentti kertoo, mitä on tehty, miksi ja mitä on jätetty tekemättä
 
 ## Vaiheiden tila
 
-| #   | Vaihe                    | Tila         | Keskeiset tiedostot                                                                             |
-| --- | ------------------------ | ------------ | ----------------------------------------------------------------------------------------------- |
-| 0   | Perusta                  | Valmis       | `vite.config.ts`, `eslint.config.js`, `.github/workflows/`                                      |
-| 1   | Datamalli ja tallennus   | Valmis       | `src/model/`, `src/store/`, `src/storage/`                                                      |
-| 2   | Kaavio ja käsin muokkaus | Valmis       | `src/canvas/`, `src/layout/`, `src/panels/Inspector.tsx`                                        |
-| 3   | Pikasyöte tekstinä       | Valmis       | `src/capture/syntax.ts`, `plan.ts`, `serialize.ts`, `src/panels/QuickInput.tsx`                 |
-| 4   | Dokumentit lähteinä      | Valmis       | `src/capture/importers.ts`, `suggest.ts`, `src/panels/SourcesView.tsx`                          |
-| 5   | Tarkentuminen            | Valmis       | `src/analysis/`, `src/panels/QuestionsPanel.tsx`                                                |
-| 6   | Laajat prosessit         | Valmis       | `src/canvas/useCanvasModel.ts`, `src/layout/lanes.ts`, `hierarchy.ts`, `src/analysis/search.ts` |
-| 7   | Esittäminen              | Valmis       | `src/export/`, `src/panels/PresentView.tsx`, `ExportDialog.tsx`                                 |
-| 8   | Jatkokehitys             | Ei aloitettu | Ks. alla                                                                                        |
+| #   | Vaihe                       | Tila         | Keskeiset tiedostot                                                                              |
+| --- | --------------------------- | ------------ | ------------------------------------------------------------------------------------------------ |
+| 0   | Perusta                     | Valmis       | `vite.config.ts`, `eslint.config.js`, `.github/workflows/`                                       |
+| 1   | Datamalli ja tallennus      | Valmis       | `src/model/`, `src/store/`, `src/storage/`                                                       |
+| 2   | Kaavio ja käsin muokkaus    | Valmis       | `src/canvas/`, `src/layout/`, `src/panels/Inspector.tsx`                                         |
+| 3   | Pikasyöte tekstinä          | Valmis       | `src/capture/syntax.ts`, `plan.ts`, `serialize.ts`, `src/panels/QuickInput.tsx`                  |
+| 4   | Dokumentit lähteinä         | Valmis       | `src/capture/importers.ts`, `suggest.ts`, `src/panels/SourcesView.tsx`                           |
+| 5   | Tarkentuminen               | Valmis       | `src/analysis/`, `src/panels/QuestionsPanel.tsx`                                                 |
+| 6   | Laajat prosessit            | Valmis       | `src/canvas/useCanvasModel.ts`, `src/layout/lanes.ts`, `hierarchy.ts`, `src/analysis/search.ts`  |
+| 7   | Esittäminen                 | Valmis       | `src/export/`, `src/panels/PresentView.tsx`, `ExportDialog.tsx`                                  |
+| 8   | Käyttöönotto ja datan turva | Valmis       | `src/storage/`, `src/store/storage.ts`, `src/panels/StorageDialog.tsx`, `build/serviceWorker.ts` |
+| 9   | Koekäyttö ja kitkan poisto  | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
+| 10  | Tietotyön rikkaampi malli   | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
+| 11  | Nykytila ja tavoitetila     | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
+| 14  | Esittämisen syventäminen    | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
+| 12  | Tuonnit                     | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
+| 13  | Paikallinen kielimalli      | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
 
 ## Poikkeamat alkuperäisestä suunnitelmasta
 
@@ -45,10 +51,19 @@ Tämä dokumentti kertoo, mitä on tehty, miksi ja mitä on jätetty tekemättä
 - BPMN-vienti sisältää rakenteen ja diagrammin, mutta ei suoritettavaa logiikkaa (esim. ehtolausekkeita).
 - Selaimen tallennus voi kadota tietojen tyhjennyksessä, joten JSON-vienti on tärkeä varmuuskopio.
 
-## Mahdollinen jatkokehitys (vaihe 8)
+## Jatkosuunnitelma (vaiheet 8–14)
 
-- Versiot ja vertailu (nykytila ja tavoitetila rinnakkain)
-- Asennettava offline-sovellus (PWA)
-- Tallennus suoraan tiedostoon (File System Access API)
-- Paikallinen kielimallipoimija (WebLLM tai Ollama) `Extractor`-rajapinnan taakse
-- Käsin siirrettävät solmut uimaradoissa
+Toteutusjärjestys: **8 → 9 → 10 → 11 → 14 → 12 → 13**. Lähtöoletukset (vahvistettu): Chrome tai Edge omalla koneella, materiaali on Wordia, PDF:ää ja Exceliä enimmäkseen suomeksi, esitys tehdään PowerPointilla, kielimalli tulee viimeisenä ja vain jos se mitattavasti auttaa, kaikki tietotyön ominaisuudet (luovutukset, ajat, RACI, kipupisteet) ovat tärkeitä.
+
+### Vaihe 8: Käyttöönotto ja datan turva (valmis)
+
+- **Offline-sovellus (PWA).** `build/serviceWorker.ts` tuottaa koontiin `sw.js`:n, joka esilataa kaikki tiedostot. Uusi versio odottaa, kunnes käyttäjä painaa “Päivitä nyt”: tallennus tehdään ensin, joten kesken oleva työ ei katkea. Asennus tarjotaan projektivalikossa.
+- **Varmuuskopiot.** Automaattinen kopio vähintään 10 minuutin välein muutosten jälkeen (uusimmat 20 ja jokaisen viimeisen 14 päivän uusin säilyvät), käsin otettavat kopiot, ja poistetun projektin viimeinen tila säilyy. Palautus ottaa nykyisen tilan ensin talteen. Valinta “Avaa kopiona” ei koske alkuperäiseen.
+- **Tallennus tiedostoon** (File System Access API, Chrome ja Edge). Yhdistetty tiedosto päivittyy jokaisen tallennuksen jälkeen. Jos selain vaatii luvan uudelleen, se näkyy varoituksena ja yhden klikkauksen palautuksena. Muissa selaimissa tilalla on JSON-lataus.
+- **Muistutus.** Jos tiedostokopiota ei ole otettu yli viikkoon ja projektia on muokattu, työkalu muistuttaa (voi siirtää viikolla).
+- **Pysyvä tallennus** pyydetään selaimelta ensimmäisen muutoksen jälkeen, ja tallennustilan käyttö näkyy.
+- **Kaatumissuoja.** Koko sovelluksen virhetilassa voi viedä projektin JSON-tiedostoon tai avata viimeisimmän varmuuskopion. Yksittäisen näkymän virhe ei kaada koko sovellusta. Odottamattomat asynkroniset virheet näkyvät ilmoituksena.
+- **Toinen välilehti.** Jos sovellus on auki useassa välilehdessä, siitä varoitetaan, koska ne ylikirjoittaisivat toistensa muutoksia.
+- **CI** ajaa nyt myös selaintestit.
+
+Rajoitus: GitHub Pages pitää kytkeä päälle repon asetuksista (Settings → Pages → Source: GitHub Actions) ennen kuin julkaisu onnistuu.

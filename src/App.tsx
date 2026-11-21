@@ -8,9 +8,14 @@ import { ProcessTree } from './panels/ProcessTree'
 import { SourcesView } from './panels/SourcesView'
 import { QuickInput } from './panels/QuickInput'
 import { RightPanel } from './panels/RightPanel'
+import { StorageDialog } from './panels/StorageDialog'
 import { useStore } from './store/store'
+import './store/storage'
 import { useUi } from './store/ui'
 import { ConfirmHost, PromptHost } from './ui/ConfirmHost'
+import { ErrorBoundary, ViewCrash } from './ui/ErrorBoundary'
+import { UpdateBar } from './ui/UpdateBar'
+import { BackupBar, TabsBar } from './ui/BackupBar'
 import { ErrorBar } from './ui/ErrorBar'
 import { TopBar } from './ui/TopBar'
 import { useShortcuts } from './ui/useShortcuts'
@@ -43,6 +48,9 @@ function App() {
     <div className="app">
       <TopBar />
       <ErrorBar />
+      <UpdateBar />
+      <TabsBar />
+      <BackupBar />
       <div className={`workspace ${leftOpen ? 'has-left' : ''} ${rightOpen ? 'has-right' : ''}`}>
         {leftOpen && (
           <div className="workspace__left">
@@ -50,7 +58,12 @@ function App() {
           </div>
         )}
         <main className="workspace__main" id="main">
-          {view === 'canvas' ? <Canvas /> : view === 'list' ? <ListView /> : <SourcesView />}
+          <ErrorBoundary
+            resetKey={view}
+            fallback={(error, reset) => <ViewCrash error={error} reset={reset} />}
+          >
+            {view === 'canvas' ? <Canvas /> : view === 'list' ? <ListView /> : <SourcesView />}
+          </ErrorBoundary>
         </main>
         {rightOpen && (
           <div className="workspace__right">
@@ -59,6 +72,7 @@ function App() {
         )}
       </div>
       <EntityManager />
+      <StorageDialog />
       <ExportDialog />
       <QuickInput />
       <ConfirmHost />

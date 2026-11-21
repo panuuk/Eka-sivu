@@ -4,7 +4,9 @@ import { applyOperations, OperationError, type Operation } from '../model/operat
 import { parseProjectJson } from '../model/serialize'
 import type { Project } from '../model/types'
 import { newId } from '../model/ids'
+import { runProjectActivated, runProjectSaved } from './hooks'
 import {
+  addBackup,
   deleteProject as dbDelete,
   getActiveProjectId,
   listProjects,
@@ -91,6 +93,7 @@ export const useStore = create<AppState>((set, get) => {
     })
     await setActiveProjectId(project.id)
     set({ projects: await listProjects() })
+    runProjectActivated(project)
   }
 
   return {
@@ -240,6 +243,9 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     async deleteProject(id) {
+      // Poistetun projektin viimeinen tila säilyy varmuuskopiona, jotta virheen voi perua.
+      const doomed = get().project?.id === id ? get().project : await loadProject(id)
+      if (doomed) await addBackup(doomed, 'deleted').catch(() => undefined)
       await dbDelete(id)
       const { project } = get()
       if (project?.id === id) {
@@ -287,6 +293,7 @@ export const useStore = create<AppState>((set, get) => {
       try {
         await saveProject(project)
         set({ saveStatus: 'saved', projects: await listProjects() })
+        runProjectSaved(project)
       } catch (e) {
         set({ saveStatus: 'error', error: `Tallennus epäonnistui: ${(e as Error).message}` })
       }

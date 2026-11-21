@@ -1,9 +1,9 @@
 import { useRef } from 'react'
-import { downloadText, safeFilename } from '../export/download'
 import { buildSampleProject } from '../model/sample'
-import { projectToJson } from '../model/serialize'
 import { processPath } from '../model/selectors'
+import { usePwa } from '../pwa'
 import { useAnalysis } from '../analysis/useAnalysis'
+import { useStorage } from '../store/storage'
 import { useStore } from '../store/store'
 import { useUi } from '../store/ui'
 import { Icon } from './Icon'
@@ -33,16 +33,33 @@ function ReadinessPill() {
 
 function SaveStatus() {
   const status = useStore((s) => s.saveStatus)
+  const link = useStorage((s) => s.fileLink)
+  const pending = useStorage((s) => s.fileWritePending)
   const text = {
-    idle: '',
+    idle: 'Tallennettu',
     saving: 'Tallennetaan…',
     saved: 'Tallennettu',
     error: 'Tallennus epäonnistui',
   }[status]
+  const fileNote = link
+    ? link.status === 'ok'
+      ? pending
+        ? ' · tiedosto…'
+        : ' · tiedosto ✓'
+      : ' · tiedosto ⚠'
+    : ''
   return (
-    <span className={`save-status save-status--${status}`} role="status" aria-live="polite">
-      {text}
-    </span>
+    <button
+      type="button"
+      className={`save-status save-status--${status}`}
+      aria-label="Tallennus ja varmuuskopiot"
+      title="Tallennus ja varmuuskopiot"
+      onClick={() => useUi.getState().setStorageOpen(true)}
+    >
+      <span role="status" aria-live="polite">
+        {`${text}${fileNote}`}
+      </span>
+    </button>
   )
 }
 
@@ -58,6 +75,7 @@ export function TopBar() {
   const leftOpen = useUi((s) => s.leftOpen)
   const rightOpen = useUi((s) => s.rightOpen)
   const fileRef = useRef<HTMLInputElement>(null)
+  const installPrompt = usePwa((s) => s.installPrompt)
 
   const path = processPath(project, currentProcessId)
 
@@ -96,16 +114,20 @@ export function TopBar() {
         if (name) useStore.getState().dispatch({ type: 'renameProject', name })
       },
     },
+    ...(installPrompt
+      ? [
+          {
+            label: 'Asenna sovellus…',
+            onSelect: () => void usePwa.getState().install(),
+          },
+        ]
+      : []),
     {
-      label: 'Vie projekti (JSON)',
+      label: 'Tallennus ja varmuuskopiot…',
       separatorBefore: true,
-      onSelect: () =>
-        downloadText(
-          projectToJson(project),
-          `${safeFilename(project.name)}.prosessikartta.json`,
-          'application/json',
-        ),
+      onSelect: () => useUi.getState().setStorageOpen(true),
     },
+    { label: 'Vie projekti (JSON)', onSelect: () => void useStorage.getState().exportJson() },
     { label: 'Tuo projekti (JSON)…', onSelect: () => fileRef.current?.click() },
     {
       label: 'Poista projekti…',
