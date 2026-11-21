@@ -46,7 +46,7 @@ Tämä dokumentti kertoo, mitä on tehty, miksi ja mitä on jätetty tekemättä
 ## Tunnetut rajoitukset
 
 - Ehdotusmoottori on sääntöpohjainen ja suomenkielinen. Se löytää tyypilliset prosessikuvaukset, mutta ei ymmärrä merkitystä. Ehdotukset ovat aina vain ehdotuksia.
-- Dokumenttituonti ei tee tekstintunnistusta (OCR): kuvapohjaisesta PDF:stä ei löydy tekstiä.
+- Tekstintunnistus (OCR) on mitattu siistillä skannauksella. Huono kuvanlaatu tai käsinkirjoitus heikentää tulosta (vaihe 12).
 - Uimaradoissa ja kokonaiskuvassa asettelu on automaattinen eikä solmuja voi siirtää käsin.
 - BPMN-vienti sisältää rakenteen ja diagrammin, mutta ei suoritettavaa logiikkaa (esim. ehtolausekkeita).
 - Selaimen tallennus voi kadota tietojen tyhjennyksessä, joten JSON-vienti on tärkeä varmuuskopio.
