@@ -14,6 +14,7 @@ Kaikki data pysyy omassa selaimessa. Mitään ei lähetetä palvelimelle, eikä 
 | **Lähteet**            | Tuo Word-, PDF-, teksti- ja Markdown-tiedostoja tai kirjoita muistiinpanoja. Työkalu ehdottaa tekstistä vaiheita, päätöksiä, rooleja ja järjestelmiä (sääntöpohjaisesti, suomen taivutukset huomioiden). Jokainen poiminta muistaa lähdekohdan, ja siihen pääsee takaisin kaaviosta. |
 | **Tarkentuminen**      | Työkalu löytää mallin aukot (puuttuva rooli, umpikuja, päätös ilman haaraa, arvaus ilman lähdettä, lähteen ja mallin ristiriita ym.) ja esittää ne kysymyksinä. Vastaus korjaa mallin. Valmiusaste näkyy koko ajan.                                                                  |
 | **Laajat prosessit**   | Hierarkia (alaprosessit), haku ja suodattimet, uimaradat, kokonaiskuva, ristiviittaukset (missä rooli tai järjestelmä on käytössä). Sujuva yli 500 vaiheen malleilla.                                                                                                                |
+| **Tallennus**          | Automaattitallennus selaimeen, automaattiset varmuuskopiot, tallennus suoraan tiedostoon (Chrome, Edge), poistetun projektin palautus ja muistutus tiedostokopiosta. Toimii myös ilman verkkoa (asennettava PWA).                                                                    |
 | **Esittäminen**        | _Esitystila_ (siisti koko ruudun näkymä, läpikäynti vaihe vaiheelta) sekä viennit: SVG, PNG, PDF, prosessidokumentti, itsenäinen HTML, Mermaid ja BPMN 2.0.                                                                                                                          |
 
 ## Aloitus
@@ -72,7 +73,9 @@ Samannimiset vaiheet tunnistetaan, joten tekstiä voi lisätä uudelleen tai tä
 
 ## Tiedot ja yksityisyys
 
-- Projektit tallentuvat selaimen IndexedDB:hen. **Vie projekti JSON-tiedostoon säännöllisesti** (projektivalikko), koska selaimen tietojen tyhjennys poistaa ne.
+- Projektit tallentuvat selaimen IndexedDB:hen. Työkalu ottaa automaattisia varmuuskopioita (valikko “Tallennus ja varmuuskopiot”). **Yhdistä projekti tiedostoon** (Chrome, Edge) tai **vie se JSON-tiedostoon säännöllisesti**, koska selaimen tietojen tyhjennys poistaa selaimen sisäiset kopiot.
+- Sovelluksen voi asentaa (projektivalikko → Asenna sovellus), ja se toimii ilman verkkoa. Uusi versio ilmoitetaan, eikä se tule käyttöön ennen kuin painat “Päivitä nyt”.
+- Älä pidä samaa projektia auki usean välilehden kautta.
 - Tuodut dokumentit käsitellään kokonaan selaimessa.
 - Vientitiedostot syntyvät selaimessa; mitään ei lähetetä minnekään.
 

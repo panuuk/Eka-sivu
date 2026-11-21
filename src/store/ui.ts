@@ -101,6 +101,9 @@ interface UiState extends Persisted {
   }) => Promise<string | null>
   closePrompt: (value: string | null) => void
   entityManagerOpen: boolean
+  /** Tallennus ja varmuuskopiot -ikkuna. */
+  storageOpen: boolean
+  setStorageOpen: (open: boolean) => void
   /** Esitystila: siisti koko ruudun näkymä. */
   presenting: boolean
   setPresenting: (on: boolean) => void
@@ -189,6 +192,8 @@ export const useUi = create<UiState>((set, get) => {
       r.resolve(value)
     },
     entityManagerOpen: false,
+    storageOpen: false,
+    setStorageOpen: (storageOpen) => set({ storageOpen }),
     presenting: false,
     setPresenting: (presenting) => set({ presenting }),
     setTheme: (patch) => {

@@ -167,6 +167,9 @@
   color: var(--muted);
   min-width: 7.5em;
   text-align: right;
+  background: transparent;
+  border-color: transparent;
+  padding: 0.25rem 0.4rem;
 }
 .save-status--error {
   color: var(--danger);
@@ -2245,4 +2248,135 @@
 }
 .present__svg {
   margin: 0 auto;
+}
+
+/* Ilmoitusrivi (muistutukset, tiedostoyhteys) */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.45rem 0.9rem;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+.notice > span {
+  flex: 1;
+  min-width: 14em;
+}
+.notice--warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+  border-bottom-color: var(--warn);
+}
+
+/* Tallennus ja varmuuskopiot */
+.dialog--storage {
+  width: min(760px, 94vw);
+}
+.storage__section {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+}
+.storage__section:first-of-type {
+  border-top: 0;
+}
+.storage__section h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.4rem;
+}
+.storage__section p {
+  margin: 0 0 0.6rem;
+}
+.storage__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+.storage__meta {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+.storage__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+.storage__linked {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  flex-wrap: wrap;
+}
+.storage__linked > div:nth-child(2) {
+  flex: 1;
+  min-width: 12em;
+}
+.storage__linked-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.backups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.backup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.backup:first-child {
+  border-top: 0;
+}
+.backup__info {
+  display: grid;
+  min-width: 12em;
+}
+.backup__actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+/* Kaatumissuoja */
+.crash {
+  max-width: 560px;
+  margin: 12vh auto;
+  padding: 1.5rem;
+}
+.crash h1 {
+  font-size: 1.4rem;
+  margin: 0 0 0.6rem;
+}
+.crash pre {
+  background: var(--surface-2);
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  overflow: auto;
+  max-height: 160px;
+  font-size: 0.8rem;
+}
+.crash__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 1rem 0;
 }
