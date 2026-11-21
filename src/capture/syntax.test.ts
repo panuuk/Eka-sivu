@@ -1,13 +1,80 @@
 import { describe, expect, it } from 'vitest'
 import { extractAnnotations, parseSyntax, walkItems } from './syntax'
 
+describe('extractAnnotations: tietotyön merkinnät', () => {
+  it('poimii työajan, odotusajan, toistuvuuden ja tunnisteet', () => {
+    const r = extractAnnotations(
+      'Hyväksy lasku @Esimies =1-2 pv ^3 pv %viikoittain #talous #kriittinen [ERP]',
+    )
+    expect(r.label).toBe('Hyväksy lasku')
+    expect(r.ann.duration).toEqual({ min: 480, max: 960 })
+    expect(r.ann.waiting).toEqual({ typical: 1440 })
+    expect(r.ann.frequency).toBe('viikoittain')
+    expect(r.ann.tags).toEqual(['talous', 'kriittinen'])
+    expect(r.ann.systems).toEqual(['ERP'])
+    expect(r.ann.role).toBe('Esimies')
+  })
+
+  it('poimii kipupisteen vakavuuden ja idean, ja teksti saa sisältää välimerkkejä', () => {
+    const a = extractAnnotations(
+      'Tarkista lasku !3 Viivästyy usein, koska kuitit puuttuvat => Pakota kuitti @Talous',
+    )
+    expect(a.ann.pains).toEqual([
+      { text: 'Viivästyy usein, koska kuitit puuttuvat', severity: 3, idea: 'Pakota kuitti' },
+    ])
+    expect(a.ann.role).toBe('Talous')
+    expect(a.label).toBe('Tarkista lasku')
+    expect(extractAnnotations('A ! Hidas').ann.pains[0].severity).toBe(2)
+  })
+
+  it('kipupisteen teksti päättyy myös RACI-merkintään', () => {
+    const r = extractAnnotations('A !3 Hidas => Automatisoi A@Johtaja I@Esimies #rekry')
+    expect(r.ann.pains).toEqual([{ text: 'Hidas', severity: 3, idea: 'Automatisoi' }])
+    expect(r.ann.raci.a).toEqual(['Johtaja'])
+    expect(r.ann.raci.i).toEqual(['Esimies'])
+    expect(r.ann.tags).toEqual(['rekry'])
+  })
+
+  it('poimii RACI-roolit erillään suorittajasta', () => {
+    const r = extractAnnotations(
+      'Hyväksy @Esimies A@Talousjohtaja C@(Lakiosasto) I@Myynti I@Tuotanto',
+    )
+    expect(r.ann.role).toBe('Esimies')
+    expect(r.ann.raci).toEqual({
+      a: ['Talousjohtaja'],
+      c: ['Lakiosasto'],
+      i: ['Myynti', 'Tuotanto'],
+    })
+  })
+
+  it('tavallinen teksti ei muutu merkinnöiksi', () => {
+    for (const t of [
+      'Summa = 100 €',
+      'Alennus 10 % kaikista',
+      'Hälytys!',
+      'Tilaus#123',
+      'Laske 2 + 2',
+      'Kesto = pitkä',
+    ]) {
+      const r = extractAnnotations(t)
+      expect(r.label).toBe(t)
+      expect(r.ann.pains).toEqual([])
+      expect(r.ann.duration).toBeUndefined()
+    }
+  })
+
+  it('tuntematon kestoyksikkö jää tekstiin', () => {
+    expect(extractAnnotations('Odota =3 apinaa').label).toBe('Odota =3 apinaa')
+  })
+})
+
 describe('extractAnnotations', () => {
   it('poimii rooli, järjestelmät, syötteet, tuotokset ja varmuuden', () => {
     const r = extractAnnotations(
       'Tarkista lasku @Talous [ERP, Sähköposti] < Ostolasku, Ostotilaus > Tarkistettu lasku ~arvaus',
     )
     expect(r.label).toBe('Tarkista lasku')
-    expect(r.ann).toEqual({
+    expect(r.ann).toMatchObject({
       role: 'Talous',
       systems: ['ERP', 'Sähköposti'],
       inputs: ['Ostolasku', 'Ostotilaus'],

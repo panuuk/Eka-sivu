@@ -2,10 +2,12 @@ import { create } from 'zustand'
 import { EMPTY_FILTER, type Filter } from '../analysis/search'
 import { DEFAULT_THEME, sanitizeTheme, type Theme } from '../export/theme'
 
-export type ViewMode = 'canvas' | 'list' | 'sources'
+export type ViewMode = 'canvas' | 'list' | 'sources' | 'analysis' | 'compare'
 export type Direction = 'DOWN' | 'RIGHT'
 /** Kaavion asettelutapa: vapaa (muokattava), uimaradat (rooleittain) tai kokonaiskuva (alaprosessit auki). */
 export type LayoutMode = 'free' | 'lanes' | 'overview'
+/** Lämpökartta kaavion päällä: aika, kipupisteet tai luovutukset. */
+export type Heatmap = 'off' | 'time' | 'pain' | 'handoff'
 
 export interface PresentOptions {
   /** Avaa alaprosessit samaan kuvaan. */
@@ -16,6 +18,12 @@ export interface PresentOptions {
   showSystems: boolean
   /** Varmuus näkyviin (arvaus katkoviivalla). Esityksessä oletuksena pois. */
   showUncertainty: boolean
+  /** Kestot ja kipupisteet vaiheissa. */
+  showMetrics: boolean
+  /** Lämpökartta esityksessä ja viennissä. */
+  heat: Heatmap
+  /** Korosta muutokset lähtötilanteeseen verrattuna. */
+  changes: boolean
 }
 
 export const DEFAULT_PRESENT: PresentOptions = {
@@ -24,6 +32,9 @@ export const DEFAULT_PRESENT: PresentOptions = {
   showRoles: true,
   showSystems: true,
   showUncertainty: false,
+  showMetrics: false,
+  heat: 'off',
+  changes: false,
 }
 
 interface Persisted {
@@ -32,6 +43,7 @@ interface Persisted {
   view: ViewMode
   direction: Direction
   layoutMode: LayoutMode
+  heatmap: Heatmap
   leftOpen: boolean
   rightOpen: boolean
 }
@@ -47,6 +59,7 @@ function load(): Persisted {
     view: 'canvas',
     direction: 'DOWN',
     layoutMode: 'free',
+    heatmap: 'off',
     leftOpen: !small,
     rightOpen: !small,
   }
@@ -100,6 +113,29 @@ interface UiState extends Persisted {
     confirmLabel?: string
   }) => Promise<string | null>
   closePrompt: (value: string | null) => void
+  /** Leikepöydällä olevien vaiheiden määrä (liitä-painikkeen tila). */
+  clipSize: number
+  setClipSize: (n: number) => void
+  replaceOpen: boolean
+  setReplaceOpen: (open: boolean) => void
+  helpOpen: boolean
+  setHelpOpen: (open: boolean) => void
+  versionsOpen: boolean
+  setVersionsOpen: (open: boolean) => void
+  /** Vertailun lähtötila (version tunniste) ja kohde (version tunniste tai 'current'). */
+  compareBaseId: string | null
+  compareTargetId: string
+  setCompare: (base: string | null, target?: string) => void
+  /** Tallennetut näkymät ja skenaariot -ikkuna. */
+  savedViewsOpen: boolean
+  setSavedViewsOpen: (open: boolean) => void
+  /** Esityksessä valittu tallennettu näkymä ja korostettu skenaario. */
+  presentViewId: string | null
+  presentScenarioId: string | null
+  setPresentView: (id: string | null) => void
+  setPresentScenario: (id: string | null) => void
+  importOpen: boolean
+  setImportOpen: (open: boolean) => void
   entityManagerOpen: boolean
   /** Tallennus ja varmuuskopiot -ikkuna. */
   storageOpen: boolean
@@ -119,6 +155,10 @@ interface UiState extends Persisted {
   centerRequest: { nodeId: string; nonce: number } | null
   requestCenter: (nodeId: string) => void
   clearCenterRequest: () => void
+  /** Kaavio vierittää vaiheen näkyviin (ei muuta zoomia), esim. nuolinäppäinnavigoinnin jälkeen. */
+  revealRequest: { nodeId: string; nonce: number } | null
+  requestReveal: (nodeId: string) => void
+  clearRevealRequest: () => void
   rightTab: 'props' | 'questions'
   setRightTab: (t: 'props' | 'questions') => void
   /** Avaa oikean paneelin annetulle välilehdelle. */
@@ -150,6 +190,7 @@ interface UiState extends Persisted {
   setView: (v: ViewMode) => void
   setDirection: (d: Direction) => void
   setLayoutMode: (m: LayoutMode) => void
+  setHeatmap: (h: Heatmap) => void
   toggleLeft: () => void
   toggleRight: () => void
   setRightOpen: (open: boolean) => void
@@ -166,8 +207,8 @@ interface UiState extends Persisted {
 
 export const useUi = create<UiState>((set, get) => {
   const save = () => {
-    const { theme, present, view, direction, layoutMode, leftOpen, rightOpen } = get()
-    persist({ theme, present, view, direction, layoutMode, leftOpen, rightOpen })
+    const { theme, present, view, direction, layoutMode, heatmap, leftOpen, rightOpen } = get()
+    persist({ theme, present, view, direction, layoutMode, heatmap, leftOpen, rightOpen })
   }
   return {
     ...load(),
@@ -191,6 +232,26 @@ export const useUi = create<UiState>((set, get) => {
       set({ promptReq: null })
       r.resolve(value)
     },
+    clipSize: 0,
+    setClipSize: (clipSize) => set({ clipSize }),
+    replaceOpen: false,
+    setReplaceOpen: (replaceOpen) => set({ replaceOpen }),
+    helpOpen: false,
+    setHelpOpen: (helpOpen) => set({ helpOpen }),
+    versionsOpen: false,
+    setVersionsOpen: (versionsOpen) => set({ versionsOpen }),
+    compareBaseId: null,
+    compareTargetId: 'current',
+    setCompare: (compareBaseId, compareTargetId = 'current') =>
+      set({ compareBaseId, compareTargetId }),
+    savedViewsOpen: false,
+    setSavedViewsOpen: (savedViewsOpen) => set({ savedViewsOpen }),
+    presentViewId: null,
+    presentScenarioId: null,
+    setPresentView: (presentViewId) => set({ presentViewId }),
+    setPresentScenario: (presentScenarioId) => set({ presentScenarioId }),
+    importOpen: false,
+    setImportOpen: (importOpen) => set({ importOpen }),
     entityManagerOpen: false,
     storageOpen: false,
     setStorageOpen: (storageOpen) => set({ storageOpen }),
@@ -212,6 +273,9 @@ export const useUi = create<UiState>((set, get) => {
     centerRequest: null,
     requestCenter: (nodeId) => set({ centerRequest: { nodeId, nonce: Date.now() } }),
     clearCenterRequest: () => set({ centerRequest: null }),
+    revealRequest: null,
+    requestReveal: (nodeId) => set({ revealRequest: { nodeId, nonce: Date.now() } }),
+    clearRevealRequest: () => set({ revealRequest: null }),
     rightTab: 'props',
     setRightTab: (rightTab) => set({ rightTab }),
     showRight: (rightTab) => {
@@ -262,6 +326,10 @@ export const useUi = create<UiState>((set, get) => {
     },
     setLayoutMode: (layoutMode) => {
       set({ layoutMode })
+      save()
+    },
+    setHeatmap: (heatmap) => {
+      set({ heatmap })
       save()
     },
     toggleLeft: () => {

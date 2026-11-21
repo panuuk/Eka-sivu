@@ -1,10 +1,12 @@
 import { NODE_SIZE } from '../canvas/geometry'
 import { layoutHierarchy, type HierarchyLayout } from '../layout/hierarchy'
 import type { LayoutRunner } from '../layout/elk'
+import { metricsOf } from '../analysis/metrics'
+import { formatMinutes, formatRange, typicalOf } from '../model/duration'
 import { descendantProcessIds } from '../model/operations'
 import { edgesOf, nodesOf } from '../model/selectors'
 import type { Confidence, NodeKind, Point, Project } from '../model/types'
-import type { Direction } from '../store/ui'
+import type { Direction, Heatmap } from '../store/ui'
 
 /**
  * Renderöintigraafi: malli suodatettuna ja asetteluineen. Esitystila ja kaikki viennit käyttävät samaa,
@@ -18,12 +20,15 @@ export interface RenderOptions {
   /** Näytä vain vahvistetut vaiheet (alku ja loppu aina). Piilotettujen yli yhdistetään. */
   onlyConfirmed: boolean
   direction: Direction
+  /** Lämpökartta: vaiheille lasketaan arvo 0..1. */
+  heat?: Heatmap
 }
 
 export const DEFAULT_RENDER: Omit<RenderOptions, 'processId'> = {
   expand: false,
   onlyConfirmed: false,
   direction: 'DOWN',
+  heat: 'off',
 }
 
 export interface RNode {
@@ -48,6 +53,12 @@ export interface RNode {
   h: number
   /** Tämä vaihe on alaprosessi, jolla on sisältöä (avattavissa). */
   hasChild: boolean
+  /** "2 pv · ⏳ 1 pv" */
+  timeText?: string
+  /** Kipupisteiden suurin vakavuus 1..3. */
+  pain?: number
+  /** Lämpökartan arvo 0..1. */
+  heat?: number
 }
 
 export interface REdge {
@@ -138,6 +149,35 @@ export function filterProcess(
   return { nodes, edges: result }
 }
 
+function nodeExtras(
+  p: Project,
+  n: Project['nodes'][string],
+  heat: Heatmap,
+  metrics: ReturnType<typeof metricsOf>,
+): Pick<RNode, 'timeText' | 'pain' | 'heat'> {
+  const out: Pick<RNode, 'timeText' | 'pain' | 'heat'> = {}
+  const dur = typicalOf(n.duration)
+  const wait = typicalOf(n.waiting)
+  const text = [
+    dur !== undefined ? formatRange(n.duration) : '',
+    wait !== undefined ? `⏳ ${formatMinutes(wait)}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  if (text) out.timeText = text
+  const pain = Math.max(0, ...(n.painPoints ?? []).map((x) => x.severity))
+  if (pain > 0) out.pain = pain
+  if (heat === 'pain' && pain > 0) out.heat = pain / 3
+  else if (heat === 'handoff' && metrics.handoffTargets.has(n.id)) out.heat = 1
+  else if (heat === 'time') {
+    const t = metrics.nodeTime.get(n.id)
+    if (t !== undefined && metrics.maxNodeTime > 0)
+      out.heat = Math.max(0.12, t / metrics.maxNodeTime)
+  }
+  void p
+  return out
+}
+
 export async function buildRenderGraph(
   p: Project,
   opts: RenderOptions,
@@ -184,6 +224,7 @@ export async function buildRenderGraph(
     return v
   }
 
+  const metrics = metricsOf(p)
   const scope = new Set(opts.expand ? descendantProcessIds(p, opts.processId) : [opts.processId])
   const nodes: RNode[] = []
   for (const item of layout.items) {
@@ -210,6 +251,7 @@ export async function buildRenderGraph(
       w: item.width,
       h: item.height,
       hasChild: !!n.childProcessId && nodesOf(p, n.childProcessId).length > 0,
+      ...nodeExtras(p, n, opts.heat ?? 'off', metrics),
     })
   }
 

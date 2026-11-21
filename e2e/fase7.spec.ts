@@ -100,7 +100,7 @@ test('Mermaid-, BPMN- ja HTML-viennit', async ({ page }) => {
   const html = await download(page, 'html')
   expect(html.name).toBe('ostolaskun-kasittely.html')
   expect(html.text).toContain('<!doctype html>')
-  expect(html.text).toContain('Vastuumatriisi')
+  expect(html.text).toContain('RACI-matriisi')
   expect(html.text).toContain('<script>') // interaktiivinen
   expect(html.text.match(/<svg /g)!.length).toBe(2) // päätaso + alaprosessi
 })
@@ -136,7 +136,7 @@ test('tulostus: PDF ja prosessidokumentti avaavat tulostusikkunan', async ({ pag
   await page.waitForFunction(() => (window as unknown as { __printed?: string }).__printed)
   const printed = await page.evaluate(() => (window as unknown as { __printed: string }).__printed)
   expect(printed).toContain('Ostolaskun käsittely')
-  expect(printed).toContain('Vastuumatriisi')
+  expect(printed).toContain('RACI-matriisi')
   expect(printed).toContain('Avoimet kysymykset')
 })
 

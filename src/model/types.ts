@@ -17,6 +17,30 @@ export interface Point {
   y: number
 }
 
+/** Arvio minuutteina: vähintään, tyypillinen ja enintään. Työpäivä = 480 min, viikko = 5 työpäivää. */
+export interface DurationRange {
+  min?: number
+  typical?: number
+  max?: number
+}
+
+export type PainSeverity = 1 | 2 | 3
+
+/** Kipupiste: vaiheen ongelma ja mahdollinen parannusidea. */
+export interface PainPoint {
+  id: string
+  text: string
+  severity: PainSeverity
+  idea?: string
+}
+
+/** RACI: rooli (`roleId`) on vastuullinen suorittaja (R). Muut roolit tallennetaan tähän. */
+export interface Raci {
+  accountableIds?: string[]
+  consultedIds?: string[]
+  informedIds?: string[]
+}
+
 export interface ProcessNode {
   id: string
   processId: string
@@ -35,6 +59,16 @@ export interface ProcessNode {
   /** Käsin asetettu sijainti. Käytössä vain, kun `locked` on tosi. */
   position?: Point
   locked?: boolean
+  /** Muut RACI-roolit kuin suorittaja. */
+  raci?: Raci
+  /** Vaiheen työaika. */
+  duration?: DurationRange
+  /** Odotusaika ennen vaihetta (jonotus, vastausta odottaminen). */
+  waiting?: DurationRange
+  /** Toistuvuus vapaana tekstinä: "päivittäin", "viikoittain", "tapahtumapohjainen". */
+  frequency?: string
+  painPoints?: PainPoint[]
+  tags?: string[]
 }
 
 export interface ProcessEdge {
@@ -87,6 +121,58 @@ export interface Question {
   key: string
 }
 
+export type HeatKind = 'off' | 'time' | 'pain' | 'handoff'
+
+/**
+ * Skenaariopolku: valinnat päätöksissä ("luottoraja ylittyy"). Polku kulkee alusta loppuun
+ * valittuja haaroja pitkin; valitsemattomissa päätöksissä seurataan ensimmäistä haaraa.
+ */
+export interface Scenario {
+  id: string
+  name: string
+  description?: string
+  processId: string
+  /** Päätössolmun tunniste -> valittu lähtevä yhteys. */
+  choices: Record<string, string>
+}
+
+/** Tallennettu näkymä: rajaus, asettelu ja korostukset, joista esitys ja PowerPoint koostetaan. */
+export interface SavedView {
+  id: string
+  name: string
+  /** Puhujan muistiinpano ja dian kuvaus. */
+  note?: string
+  processId: string
+  expand: boolean
+  onlyConfirmed: boolean
+  showMetrics: boolean
+  heat: HeatKind
+  changes: boolean
+  /** Korostettava skenaariopolku. */
+  scenarioId?: string
+  /** Rajaa kuvan näihin vaiheisiin (ja niiden ympäristöön). */
+  focusNodeIds?: string[]
+}
+
+/** Prosessin rakenne ilman lähteitä, kysymyksiä ja versioita: sitä verrataan ja se voidaan palauttaa. */
+export interface ProjectSnapshot {
+  rootProcessId: string
+  processes: Record<string, Process>
+  nodes: Record<string, ProcessNode>
+  edges: Record<string, ProcessEdge>
+  entities: Record<string, Entity>
+}
+
+/** Nimetty versio: projektin tila tiettynä hetkenä. `baseline` on tavoitetilaprojektin lähtötilanne. */
+export interface Version {
+  id: string
+  name: string
+  comment?: string
+  createdAt: number
+  kind: 'manual' | 'baseline'
+  snapshot: ProjectSnapshot
+}
+
 export interface Project {
   schemaVersion: number
   id: string
@@ -100,9 +186,14 @@ export interface Project {
   entities: Record<string, Entity>
   sources: Record<string, Source>
   questions: Record<string, Question>
+  /** Nimetyt versiot (valinnainen). Ne kulkevat projektin mukana vienneissä ja varmuuskopioissa. */
+  versions?: Record<string, Version>
+  scenarios?: Record<string, Scenario>
+  /** Tallennetut näkymät esityksen järjestyksessä. */
+  views?: SavedView[]
 }
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 4
 
 export const CONFIDENCE_LABELS: Record<Confidence, string> = {
   guess: 'Arvaus',

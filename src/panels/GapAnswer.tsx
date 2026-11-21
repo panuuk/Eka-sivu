@@ -259,6 +259,49 @@ export function GapAnswer({ gap, project }: { gap: Gap; project: Project }) {
         </div>
       )
 
+    case 'output-unused': {
+      const steps = Object.values(project.nodes).filter(
+        (n) => (n.kind === 'step' || n.kind === 'subprocess') && n.id !== gap.targetId,
+      )
+      return (
+        <div className="gap-answer">
+          <label className="gap-select">
+            <span className="field__label">Käyttäjä (vaihe, joka tarvitsee tuotoksen)</span>
+            <select value={pick} onChange={(e) => setPick(e.target.value)}>
+              <option value="">Valitse vaihe…</option>
+              {steps.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.label} ({project.processes[n.processId]?.name})
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="gap-row">
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={!pick}
+              onClick={() => {
+                const n = project.nodes[pick]
+                if (n && gap.entityId && !n.inputIds.includes(gap.entityId)) {
+                  dispatch([
+                    {
+                      type: 'updateNode',
+                      id: pick,
+                      patch: { inputIds: [...n.inputIds, gap.entityId] },
+                    },
+                  ])
+                }
+              }}
+            >
+              Merkitse syötteeksi
+            </button>
+            {dismiss('On prosessin lopputulos')}
+          </div>
+        </div>
+      )
+    }
+
     case 'artifact-source': {
       const steps = Object.values(project.nodes).filter(
         (n) => (n.kind === 'step' || n.kind === 'subprocess') && n.id !== gap.targetId,

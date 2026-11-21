@@ -1,4 +1,8 @@
+import type { Comparison } from '../analysis/compare'
 import type { Gap } from '../analysis/gaps'
+import { metricsOf, summarizeScope } from '../analysis/metrics'
+import { raciStateOf } from '../model/commands'
+import { formatRange, formatTotal } from '../model/duration'
 import { flowOrder } from '../model/flow'
 import { processTree } from '../model/selectors'
 import type { Project } from '../model/types'
@@ -17,7 +21,23 @@ export interface DocumentOptions {
   /** Klikkaus kaaviossa korostaa taulukon rivin. Itsenäiseen HTML-tiedostoon. */
   interactive: boolean
   generatedAt?: Date
+  /** Muutosluettelo lähtötilaan verrattuna. */
+  comparison?: { comparison: Comparison; baseName: string }
 }
+
+const INTERACTIVE_CSS = `
+.pk-toolbar { position: sticky; top: 0; z-index: 5; display: flex; gap: .75rem; align-items: center; padding: .5rem .75rem; margin: -1rem 0 1rem; background: var(--bg); border-bottom: 1px solid var(--border); }
+.pk-toolbar input { padding: .3rem .5rem; border: 1px solid var(--border); border-radius: 6px; min-width: 14rem; font: inherit; }
+.pk-toolbar button, .pk-panel button { font: inherit; padding: .25rem .6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface2); color: var(--text); cursor: pointer; }
+.pk-panel { position: fixed; right: 1rem; bottom: 1rem; width: min(24rem, calc(100vw - 2rem)); max-height: 70vh; overflow: auto; padding: 1rem; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 30px rgb(0 0 0 / 20%); z-index: 10; }
+.pk-panel h3 { margin: 0 2rem .5rem 0; }
+.pk-panel dl { margin: 0 0 .5rem; display: grid; grid-template-columns: auto 1fr; gap: .2rem .75rem; font-size: .9rem; }
+.pk-panel dt { color: var(--muted); }
+.pk-panel dd { margin: 0; }
+#pk-close { position: absolute; top: .5rem; right: .5rem; }
+svg g[data-id] { cursor: pointer; }
+@media print { .pk-toolbar, .pk-panel { display: none !important; } }
+`
 
 const CONF = { guess: 'arvaus', likely: 'todennäköinen', confirmed: 'vahvistettu' } as const
 
@@ -47,6 +67,42 @@ export function buildDocumentHtml(p: Project, opts: DocumentOptions): string {
   const root = p.processes[opts.processId]
   const when = (opts.generatedAt ?? new Date()).toLocaleDateString('fi-FI')
   const sections: string[] = []
+  const metrics = metricsOf(p)
+  const anyTiming = Object.values(p.nodes).some((n) => n.duration || n.waiting)
+  const anyRaci = Object.values(p.nodes).some(
+    (n) =>
+      n.raci?.accountableIds?.length || n.raci?.consultedIds?.length || n.raci?.informedIds?.length,
+  )
+
+  const processMetricsHtml = (id: string) => {
+    const m = metrics.perProcess.get(id)
+    if (!m) return ''
+    const items: string[] = []
+    if (m.lead.typicalHigh !== undefined) {
+      const range =
+        m.lead.typicalLow !== undefined && m.lead.typicalLow !== m.lead.typicalHigh
+          ? `${formatTotal(m.lead.typicalLow)}–${formatTotal(m.lead.typicalHigh)}`
+          : formatTotal(m.lead.typicalHigh)
+      items.push(
+        `<li><strong>Läpimenoaika:</strong> ${esc(range)} (nopeimmillaan ${esc(formatTotal(m.lead.best ?? 0))}, hitaimmillaan ${esc(formatTotal(m.lead.worst ?? 0))}). Arvio kattaa ${m.lead.coveredSteps}/${m.lead.pathSteps} vaihetta pisimmällä polulla.</li>`,
+      )
+    }
+    if (m.handoffs.length) {
+      const pairs = summarizeScope(p, metrics.perProcess, [id])
+        .rolePairs.slice(0, 5)
+        .map(
+          (r) =>
+            `${esc(p.entities[r.fromRoleId]?.name ?? '')} → ${esc(p.entities[r.toRoleId]?.name ?? '')} (${r.count})`,
+        )
+        .join(', ')
+      items.push(`<li><strong>Luovutukset:</strong> ${m.handoffs.length}. ${pairs}</li>`)
+    }
+    if (m.loops.length)
+      items.push(
+        `<li><strong>Uudelleenkierrokset:</strong> ${m.loops.length}${m.loops.map((l) => ` · ${esc(p.nodes[l.fromId]?.label ?? '')} → ${esc(p.nodes[l.toId]?.label ?? '')}${l.extraMinutes !== undefined ? ` (+${esc(formatTotal(l.extraMinutes))})` : ''}`).join('')}</li>`,
+      )
+    return items.length ? `<h4>Mittarit</h4><ul class="metrics">${items.join('')}</ul>` : ''
+  }
 
   processes.forEach(({ id, depth }, index) => {
     const proc = p.processes[id]
@@ -66,12 +122,23 @@ export function buildDocumentHtml(p: Project, opts: DocumentOptions): string {
   <td>${esc(names(p, node.systemIds))}</td>
   <td>${esc(names(p, node.inputIds))}</td>
   <td>${esc(names(p, node.outputIds))}</td>
+  ${anyTiming ? `<td>${esc(formatRange(node.duration))}</td><td>${esc(formatRange(node.waiting))}</td>` : ''}
   <td>${nextText}</td>
   <td>${esc(node.description ?? '')}${node.confidence !== 'confirmed' ? ` <span class="conf conf--${node.confidence}">${CONF[node.confidence]}</span>` : ''}</td>
 </tr>`
       })
       .join('\n')
 
+    // Matriisiin otetaan mukaan myös RACI-roolit
+    if (anyRaci) {
+      for (const { node } of rows)
+        for (const r of [
+          ...(node.raci?.accountableIds ?? []),
+          ...(node.raci?.consultedIds ?? []),
+          ...(node.raci?.informedIds ?? []),
+        ])
+          if (!roleIds.includes(r)) roleIds.push(r)
+    }
     const matrixHead = roleIds
       .map((r) => `<th scope="col">${esc(p.entities[r]?.name ?? '')}</th>`)
       .join('')
@@ -80,7 +147,10 @@ export function buildDocumentHtml(p: Project, opts: DocumentOptions): string {
       .map(
         ({ node }) =>
           `<tr><th scope="row">${numbering.get(node.id)}. ${esc(node.label)}</th>${roleIds
-            .map((r) => `<td class="mark">${node.roleId === r ? '●' : ''}</td>`)
+            .map((r) => {
+              const st = raciStateOf(p, node.id, r)
+              return `<td class="mark">${anyRaci ? st : st === 'R' ? '●' : ''}</td>`
+            })
             .join('')}</tr>`,
       )
       .join('\n')
@@ -92,15 +162,16 @@ ${opts.svgs[id] ? `<figure class="diagram">${opts.svgs[id]}</figure>` : ''}
 ${
   rows.length
     ? `<h4>Vaiheet</h4>
-<table class="steps"><thead><tr><th>#</th><th scope="col">Vaihe</th><th scope="col">Rooli</th><th scope="col">Järjestelmät</th><th scope="col">Syötteet</th><th scope="col">Tuotokset</th><th scope="col">Seuraava</th><th scope="col">Huomiot</th></tr></thead>
+<table class="steps"><thead><tr><th>#</th><th scope="col">Vaihe</th><th scope="col">Rooli</th><th scope="col">Järjestelmät</th><th scope="col">Syötteet</th><th scope="col">Tuotokset</th>${anyTiming ? '<th scope="col">Kesto</th><th scope="col">Odotus</th>' : ''}<th scope="col">Seuraava</th><th scope="col">Huomiot</th></tr></thead>
 <tbody>
 ${tr}
 </tbody></table>`
     : '<p class="muted">Ei vaiheita.</p>'
 }
+${processMetricsHtml(id)}
 ${
   roleIds.length
-    ? `<h4>Vastuumatriisi</h4>
+    ? `<h4>${anyRaci ? 'RACI-matriisi' : 'Vastuumatriisi'}</h4>
 <table class="matrix"><thead><tr><th scope="col">Vaihe</th>${matrixHead}</tr></thead>
 <tbody>
 ${matrixRows}
@@ -127,6 +198,45 @@ ${matrixRows}
   }
   const appendix = `<section class="appendix"><h2>Liite: roolit, järjestelmät ja tuotokset</h2>${entityList('role', 'Roolit')}${entityList('system', 'Järjestelmät')}${entityList('artifact', 'Syötteet ja tuotokset')}</section>`
 
+  const scopeIds = processes.map((x) => x.id)
+  const pains = summarizeScope(p, metrics.perProcess, scopeIds).painPoints
+  const painSection = pains.length
+    ? `<section class="appendix"><h2>Liite: kipupisteet ja parannusideat</h2><table class="pains"><thead><tr><th scope="col">Vaihe</th><th scope="col">Kipupiste</th><th scope="col">Vakavuus</th><th scope="col">Parannusidea</th></tr></thead><tbody>${pains
+        .map(
+          (x) =>
+            `<tr><th scope="row">${esc(p.nodes[x.nodeId]?.label ?? '')}</th><td>${esc(x.text)}</td><td>${['', 'pieni', 'kohtalainen', 'vakava'][x.severity]}</td><td>${esc(x.idea ?? '')}</td></tr>`,
+        )
+        .join('')}</tbody></table></section>`
+    : ''
+
+  const changeSection = (() => {
+    const cm = opts.comparison
+    if (!cm) return ''
+    const c = cm.comparison
+    const KIND = { added: 'Lisätty', removed: 'Poistettu', changed: 'Muuttunut' } as const
+    const nodeRows = c.nodes
+      .map(
+        (n) =>
+          `<tr class="chg chg--${n.kind}"><td>${KIND[n.kind]}</td><th scope="row">${esc(n.label)}</th><td>${esc(n.processName)}</td><td>${n.fields.map((f) => `${esc(f.label)}: ${esc(f.before)} → ${esc(f.after)}`).join('<br>')}</td></tr>`,
+      )
+      .join('')
+    const edgeRows = c.edges
+      .map(
+        (e) =>
+          `<li>${KIND[e.kind]}: ${esc(e.fromLabel)} → ${esc(e.toLabel)}${e.kind === 'changed' ? ` (${esc(e.before ?? '')} → ${esc(e.after ?? '')})` : ''}</li>`,
+      )
+      .join('')
+    const metric = (label: string, a: string, b: string) =>
+      `<li><strong>${label}:</strong> ${a} → ${b}</li>`
+    const t = (n?: number) => (n === undefined ? '–' : formatTotal(n))
+    return `<section class="appendix"><h2>Muutokset lähtötilaan “${esc(cm.baseName)}” verrattuna</h2>
+<p>${c.counts.added} lisätty, ${c.counts.removed} poistettu, ${c.counts.changed} muuttunut vaihe; ${c.counts.edgesAdded} uutta ja ${c.counts.edgesRemoved} poistunutta yhteyttä.</p>
+<ul class="metrics">${metric('Vaiheet', String(c.base.steps), String(c.target.steps))}${metric('Luovutukset', String(c.base.handoffs), String(c.target.handoffs))}${metric('Kierrokset', String(c.base.loops), String(c.target.loops))}${metric('Läpimeno', t(c.base.lead?.high), t(c.target.lead?.high))}${metric('Työaika', t(c.base.effort), t(c.target.effort))}${metric('Odotus', t(c.base.waiting), t(c.target.waiting))}</ul>
+${c.nodes.length ? `<table class="changes"><thead><tr><th scope="col">Muutos</th><th scope="col">Vaihe</th><th scope="col">Prosessi</th><th scope="col">Tiedot</th></tr></thead><tbody>${nodeRows}</tbody></table>` : '<p class="muted">Ei muutoksia vaiheissa.</p>'}
+${edgeRows ? `<h4>Yhteydet</h4><ul>${edgeRows}</ul>` : ''}
+</section>`
+  })()
+
   const questions =
     opts.includeQuestions && opts.questions?.length
       ? `<section class="appendix"><h2>Avoimet kysymykset</h2><ul class="questions">${opts.questions
@@ -137,15 +247,137 @@ ${matrixRows}
           .join('')}</ul></section>`
       : ''
 
+  /** Vaiheiden tiedot interaktiiviseen tiedostoon. JSON upotetaan skriptilohkoon, joten merkit < > & ja rivinvaihtomerkit koodataan. */
+  const nodeData: Record<string, unknown> = {}
+  if (opts.interactive) {
+    const ids = new Set(processes.map((x) => x.id))
+    for (const n of Object.values(p.nodes)) {
+      if (!ids.has(n.processId) || n.kind === 'start' || n.kind === 'end') continue
+      const list = (xs: string[]) => xs.map((i) => p.entities[i]?.name).filter(Boolean)
+      nodeData[n.id] = {
+        label: n.label,
+        kind: n.kind,
+        process: p.processes[n.processId]?.name ?? '',
+        child:
+          n.childProcessId && ids.has(n.childProcessId) ? `process-${n.childProcessId}` : undefined,
+        role: n.roleId ? p.entities[n.roleId]?.name : undefined,
+        systems: list(n.systemIds),
+        inputs: list(n.inputIds),
+        outputs: list(n.outputIds),
+        duration: n.duration ? formatRange(n.duration) : undefined,
+        waiting: n.waiting ? formatRange(n.waiting) : undefined,
+        frequency: n.frequency,
+        confidence: CONF[n.confidence],
+        description: n.description,
+        pains: (n.painPoints ?? []).map((x) => ({ text: x.text, idea: x.idea })),
+      }
+    }
+  }
+  const dataJson = JSON.stringify(nodeData)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
+
+  const toolbar = opts.interactive
+    ? `<div class="pk-toolbar" role="search"><label>Hae vaiheita <input id="pk-search" type="search" placeholder="Nimi, rooli, järjestelmä…" autocomplete="off"></label><span id="pk-count" class="muted" role="status"></span><button type="button" id="pk-back" hidden>← Takaisin</button></div>`
+    : ''
+  const panel = opts.interactive
+    ? `<aside id="pk-panel" class="pk-panel" hidden aria-live="polite"><button type="button" id="pk-close" aria-label="Sulje tiedot">×</button><h3 id="pk-title"></h3><dl id="pk-details"></dl><button type="button" id="pk-open" hidden>Avaa alaprosessi</button></aside>`
+    : ''
+
   const script = opts.interactive
-    ? `<script>
+    ? `<script type="application/json" id="pk-data">${dataJson}</script>
+<script>
 (function () {
+  var data = JSON.parse(document.getElementById('pk-data').textContent)
+  var panel = document.getElementById('pk-panel')
+  var title = document.getElementById('pk-title')
+  var details = document.getElementById('pk-details')
+  var openBtn = document.getElementById('pk-open')
+  var back = document.getElementById('pk-back')
+  var search = document.getElementById('pk-search')
+  var count = document.getElementById('pk-count')
+  var history = []
+  var currentChild = null
+
+  function clearHl() { document.querySelectorAll('tr.hl').forEach(function (r) { r.classList.remove('hl') }) }
+  function addRow(label, value) {
+    if (!value || (Array.isArray(value) && !value.length)) return
+    var dt = document.createElement('dt'); dt.textContent = label
+    var dd = document.createElement('dd'); dd.textContent = Array.isArray(value) ? value.join(', ') : value
+    details.appendChild(dt); details.appendChild(dd)
+  }
+  function show(id) {
+    var d = data[id]
+    if (!d) { panel.hidden = true; return }
+    title.textContent = d.label
+    details.textContent = ''
+    addRow('Prosessi', d.process)
+    addRow('Rooli', d.role)
+    addRow('Järjestelmät', d.systems)
+    addRow('Syötteet', d.inputs)
+    addRow('Tuotokset', d.outputs)
+    addRow('Työaika', d.duration)
+    addRow('Odotus', d.waiting)
+    addRow('Toistuvuus', d.frequency)
+    addRow('Varmuus', d.confidence)
+    addRow('Kuvaus', d.description)
+    ;(d.pains || []).forEach(function (p) { addRow('Kipupiste', p.text + (p.idea ? ' → ' + p.idea : '')) })
+    currentChild = d.child || null
+    openBtn.hidden = !currentChild
+    panel.hidden = false
+  }
+  function goTo(sectionId) {
+    var el = document.getElementById(sectionId)
+    if (!el) return
+    history.push(window.scrollY)
+    back.hidden = false
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   document.addEventListener('click', function (e) {
     var g = e.target.closest ? e.target.closest('svg [data-id]') : null
-    document.querySelectorAll('tr.hl').forEach(function (r) { r.classList.remove('hl') })
+    clearHl()
     if (!g) return
-    var row = document.getElementById('row-' + g.getAttribute('data-id'))
+    var id = g.getAttribute('data-id')
+    var row = document.getElementById('row-' + id)
     if (row) { row.classList.add('hl'); row.scrollIntoView({ block: 'center', behavior: 'smooth' }) }
+    show(id)
+    // Alaprosessiin porautuminen: kaksoisnapsautus avaa sen osion
+  })
+  document.addEventListener('dblclick', function (e) {
+    var g = e.target.closest ? e.target.closest('svg [data-id]') : null
+    var d = g && data[g.getAttribute('data-id')]
+    if (d && d.child) goTo(d.child)
+  })
+  openBtn.addEventListener('click', function () { if (currentChild) goTo(currentChild) })
+  back.addEventListener('click', function () {
+    var y = history.pop()
+    if (y !== undefined) window.scrollTo({ top: y, behavior: 'smooth' })
+    if (!history.length) back.hidden = true
+  })
+  document.getElementById('pk-close').addEventListener('click', function () { panel.hidden = true; clearHl() })
+
+  function norm(s) { return String(s || '').toLocaleLowerCase('fi') }
+  search.addEventListener('input', function () {
+    var q = norm(search.value).trim()
+    var hits = 0
+    document.querySelectorAll('svg g[data-id]').forEach(function (g) {
+      var d = data[g.getAttribute('data-id')]
+      var text = d ? norm([d.label, d.role, (d.systems || []).join(' '), (d.inputs || []).join(' '), (d.outputs || []).join(' '), d.description].join(' ')) : ''
+      var match = !q || (d && text.indexOf(q) >= 0)
+      if (q && match) hits++
+      g.style.opacity = match ? '' : '0.18'
+    })
+    document.querySelectorAll('table.steps tbody tr').forEach(function (r) {
+      var id = (r.getAttribute('data-node') || '')
+      var d = data[id]
+      var text = d ? norm([d.label, d.role, (d.systems || []).join(' '), (d.description || '')].join(' ')) : norm(r.textContent)
+      r.style.display = !q || text.indexOf(q) >= 0 ? '' : 'none'
+    })
+    count.textContent = q ? hits + ' osumaa' : ''
   })
 })()
 </script>`
@@ -177,6 +409,7 @@ thead th { background: var(--surface2); }
 .tag, .conf { font-size: .72rem; padding: 0 .45em; border-radius: 999px; background: var(--surface2); color: var(--muted); }
 .conf--guess { color: var(--warn); }
 tr.hl { outline: 3px solid var(--accent); background: var(--surface2); }
+${opts.interactive ? INTERACTIVE_CSS : ''}
 svg [data-id] { cursor: ${opts.interactive ? 'pointer' : 'default'}; }
 .entities { columns: 2; }
 @media print {
@@ -191,6 +424,7 @@ svg [data-id] { cursor: ${opts.interactive ? 'pointer' : 'default'}; }
 </head>
 <body>
 <main>
+${toolbar}
 <header>
 <h1>${esc(root?.name ?? 'Prosessi')}</h1>
 <p class="meta">${esc(p.name)} · ${esc(when)}</p>
@@ -198,8 +432,11 @@ ${root?.description ? `<p class="lead">${esc(root.description)}</p>` : ''}
 </header>
 ${sections.join('\n')}
 ${appendix}
+${painSection}
+${changeSection}
 ${questions}
 </main>
+${panel}
 ${script}
 </body>
 </html>

@@ -16,6 +16,19 @@ export const SYNTAX_HELP: { syntax: string; meaning: string }[] = [
   { syntax: '[CRM, ERP]', meaning: 'Käytetyt järjestelmät' },
   { syntax: '< Syöte   > Tuotos', meaning: 'Mitä tarvitaan ja mitä syntyy (pilkulla useita)' },
   { syntax: '~arvaus  ~vahvistettu', meaning: 'Varmuus (oletus: todennäköinen)' },
+  {
+    syntax: '=2 pv  ^1-3 pv',
+    meaning: 'Työaika (=) ja odotusaika (^): min, h, pv, vk; väli 1-3 pv',
+  },
+  { syntax: '%viikoittain  #tunniste', meaning: 'Toistuvuus ja tunnisteet' },
+  {
+    syntax: '!3 Ongelma => Idea',
+    meaning: 'Kipupiste ja parannusidea. Vakavuus 1-3 (oletus 2).',
+  },
+  {
+    syntax: 'A@Rooli  C@Rooli  I@Rooli',
+    meaning: 'RACI: vastuullinen, konsultoitava, informoitava',
+  },
   { syntax: '? Kysymys', meaning: 'Päätös. Haarat sisennettynä muodossa "kyllä: Vaihe".' },
   {
     syntax: 'ei: jatka | loppu | -> Vaihe',

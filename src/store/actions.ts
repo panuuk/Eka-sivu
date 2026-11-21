@@ -7,7 +7,10 @@ import {
   opsInsertAfter,
 } from '../model/commands'
 import type { NodePatch, Operation } from '../model/operations'
-import { incoming, nodesOf } from '../model/selectors'
+import { copyNodes, opsPaste, type Clip } from '../model/clipboard'
+import { createVersion, forkAsTarget } from '../model/commands'
+import { flowOrder } from '../model/flow'
+import { incoming, nodesOf, outgoing } from '../model/selectors'
 import type { NodeKind, Project } from '../model/types'
 import { useStore } from './store'
 import { useUi } from './ui'
@@ -222,4 +225,104 @@ export function goToNode(nodeId: string, view: 'canvas' | 'list' = 'canvas') {
   if (ui.view === 'sources' || view === 'canvas') ui.setView(ui.view === 'list' ? 'list' : 'canvas')
   ui.setRightTab('props')
   ui.requestCenter(nodeId)
+}
+
+// --- Leikepöytä ---
+
+let clip: Clip | null = null
+
+export const hasClip = () => clip !== null
+
+/** Kopioi valitut vaiheet (ei järjestelmän leikepöydälle, jottei tekstin kopiointi häiriinny). */
+export function copySelection(): boolean {
+  const { project, selection } = st()
+  if (!project) return false
+  const next = copyNodes(project, selection.nodeIds)
+  if (!next) return false
+  clip = next
+  useUi.getState().setClipSize(next.nodes.length)
+  return true
+}
+
+/** Liittää kopion nykyiseen prosessiin. Yksi valittu vaihe on liitoskohta. */
+export function pasteSelection(): boolean {
+  const { project, currentProcessId, selection } = st()
+  if (!project || !clip) return false
+  const picked = selection.nodeIds.length === 1 ? selection.nodeIds[0] : undefined
+  const anchor = picked ? resolveAnchor(project, currentProcessId, selection, picked) : undefined
+  const { ops, nodeIds } = opsPaste(project, clip, currentProcessId, anchor)
+  if (!st().dispatch(ops)) return false
+  st().select({ nodeIds, edgeIds: [] })
+  nodeIds.forEach((id) => useUi.getState().requestReveal(id))
+  return true
+}
+
+// --- Nuolinäppäinnavigointi ---
+
+export type MoveDirection = 'next' | 'prev' | 'sibling-next' | 'sibling-prev'
+
+/** Siirtää valinnan prosessin kulussa: eteen, taakse tai vaihtoehtoiseen haaraan. */
+export function moveSelection(dir: MoveDirection): string | undefined {
+  const { project, currentProcessId, selection } = st()
+  if (!project) return undefined
+  const current = selection.nodeIds.length === 1 ? project.nodes[selection.nodeIds[0]] : undefined
+  let target: string | undefined
+  if (!current) {
+    // Ei valintaa: aloita prosessin alusta
+    target = flowOrder(project, currentProcessId)[0]?.node.id
+  } else if (dir === 'next') {
+    target = outgoing(project, current.id)[0]?.to
+  } else if (dir === 'prev') {
+    target = incoming(project, current.id)[0]?.from
+  } else {
+    const parent = incoming(project, current.id)[0]?.from
+    const siblings = parent
+      ? outgoing(project, parent).map((e) => e.to)
+      : nodesOf(project, current.processId)
+          .filter((n) => incoming(project, n.id).length === 0)
+          .map((n) => n.id)
+    const i = siblings.indexOf(current.id)
+    const step = dir === 'sibling-next' ? 1 : -1
+    if (i >= 0 && siblings.length > 1)
+      target = siblings[(i + step + siblings.length) % siblings.length]
+  }
+  if (!target || !project.nodes[target] || project.nodes[target].processId !== currentProcessId)
+    return undefined
+  st().select({ nodeIds: [target], edgeIds: [] })
+  useUi.getState().requestReveal(target)
+  return target
+}
+
+// --- Versiot ---
+
+export function saveVersion(name: string, comment?: string): string | undefined {
+  const { project } = st()
+  if (!project) return undefined
+  const version = createVersion(project, name, comment)
+  return st().dispatch({ type: 'addVersion', version }) ? version.id : undefined
+}
+
+export async function restoreVersionAction(id: string): Promise<boolean> {
+  const { project } = st()
+  const v = project?.versions?.[id]
+  if (!project || !v) return false
+  const ok = await useUi.getState().ask({
+    title: `Palautetaanko “${v.name}”?`,
+    message:
+      'Prosessin rakenne (vaiheet, yhteydet, roolit) korvataan version sisällöllä. Lähteet ja versiot säilyvät. Voit kumota palautuksen (Ctrl+Z).',
+    confirmLabel: 'Palauta',
+  })
+  if (!ok) return false
+  return st().dispatch({ type: 'restoreVersion', id })
+}
+
+/** Tekee nykytilasta kopion tavoitetilaksi ja avaa vertailun. */
+export async function createTargetProject() {
+  const { project } = st()
+  if (!project) return
+  const target = forkAsTarget(project)
+  await st().adoptProject(target)
+  const baseline = Object.values(target.versions ?? {})[0]
+  useUi.getState().setCompare(baseline?.id ?? null, 'current')
+  useUi.getState().setView('compare')
 }

@@ -35,6 +35,22 @@ export function validateProject(p: Project): ValidationIssue[] {
       if (p.entities[id]?.kind !== 'artifact')
         add('node-artifact', `Solmun "${n.label}" syöte/tuotos puuttuu`, n.id)
     }
+    for (const id of [
+      ...(n.raci?.accountableIds ?? []),
+      ...(n.raci?.consultedIds ?? []),
+      ...(n.raci?.informedIds ?? []),
+    ]) {
+      if (p.entities[id]?.kind !== 'role')
+        add('node-raci', `Solmun "${n.label}" RACI-rooli puuttuu`, n.id)
+    }
+    for (const r of [n.duration, n.waiting]) {
+      if (!r) continue
+      const vals = [r.min, r.typical, r.max]
+      if (vals.some((v) => v !== undefined && (!Number.isFinite(v) || v < 0)))
+        add('node-duration', `Solmun "${n.label}" kesto on virheellinen`, n.id)
+      else if (r.min !== undefined && r.max !== undefined && r.min > r.max)
+        add('node-duration', `Solmun "${n.label}" kesto: vähintään on suurempi kuin enintään`, n.id)
+    }
     if (n.childProcessId) {
       const child = p.processes[n.childProcessId]
       if (!child) add('child-missing', `Solmun "${n.label}" alaprosessia ei löydy`, n.id)

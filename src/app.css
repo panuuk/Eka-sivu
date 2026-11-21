@@ -2380,3 +2380,708 @@
   flex-wrap: wrap;
   margin: 1rem 0;
 }
+
+/* Löydetyt roolit ja järjestelmät */
+.candidates {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.75rem;
+  background: var(--accent-soft);
+}
+.candidates h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.9rem;
+}
+.candidates__list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.4rem 0 0.6rem;
+  padding: 0;
+}
+.candidates__group {
+  margin-top: 0.4rem;
+}
+.candidates__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.chip-check {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.chip-check.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.chip-check input {
+  margin: 0;
+}
+
+.bulk {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.6rem;
+}
+.bulk__title {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Etsi ja korvaa */
+.replace__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.replace__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  align-items: end;
+  margin: 0.75rem 0;
+}
+.replace__preview {
+  min-height: 4.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-2);
+}
+.replace__preview ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+.replace__preview del {
+  color: var(--danger);
+}
+.replace__preview ins {
+  color: var(--ok);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.canvas__start {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  text-align: left;
+  max-width: 34rem;
+}
+.canvas__start h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.4rem;
+}
+.canvas__start ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.25rem;
+  color: var(--muted);
+}
+.help__section h3 {
+  font-size: 0.95rem;
+  margin: 0.9rem 0 0.35rem;
+}
+.help__rows {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+}
+.help__rows > div {
+  display: grid;
+  grid-template-columns: 14rem 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+.help__rows dd {
+  margin: 0;
+  color: var(--muted);
+}
+kbd {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface-2);
+}
+@media (max-width: 640px) {
+  .help__rows > div {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+}
+
+/* Tietotyön kentät */
+.work {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+  background: var(--surface-2);
+}
+.work > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.work__body {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.6rem;
+}
+.field__hint--error {
+  color: var(--danger);
+}
+input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+.pain-list {
+  list-style: none;
+  margin: 0 0 0.3rem;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.pain {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.3rem;
+  padding: 0.4rem;
+  border-left: 4px solid var(--warn);
+  background: var(--surface);
+  border-radius: 6px;
+}
+.pain--3 {
+  border-left-color: var(--danger);
+}
+.pain--1 {
+  border-left-color: var(--border-strong);
+}
+.pain__idea {
+  grid-column: 1 / -1;
+}
+
+/* Kesto, kipupiste ja lämpökartta solmussa */
+.node__time {
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 4px;
+  padding: 0 0.3rem;
+  white-space: nowrap;
+}
+.node__badge--pain {
+  top: auto;
+  bottom: -8px;
+  left: -8px;
+  right: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #fff;
+  background: var(--warn);
+}
+.node__badge--pain-3 {
+  background: var(--danger);
+}
+.node__badge--pain-1 {
+  background: var(--border-strong);
+}
+.node.has-heat.heat--time {
+  background: color-mix(in srgb, hsl(8 80% 50%) calc(var(--heat) * 55%), var(--surface));
+}
+.node.has-heat.heat--pain {
+  background: color-mix(in srgb, hsl(0 78% 48%) calc(var(--heat) * 45%), var(--surface));
+}
+.node.has-heat.heat--handoff {
+  background: color-mix(in srgb, hsl(268 70% 52%) 28%, var(--surface));
+}
+.canvas__heat {
+  position: absolute;
+  z-index: 5;
+  right: 0.75rem;
+  top: 3.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow);
+}
+.canvas__heat select {
+  padding: 0.15rem 0.3rem;
+}
+
+/* Analyysinäkymä */
+.analysis {
+  height: 100%;
+  overflow: auto;
+  padding: 1rem 1.25rem 3rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.analysis__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.analysis h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+.acards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.acard {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.acard__title {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.acard__value {
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+.acard__hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.asection {
+  margin-top: 1.5rem;
+}
+.asection h3 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+.atable,
+.matrix {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.atable th,
+.atable td,
+.matrix th,
+.matrix td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.3rem 0.6rem;
+  text-align: left;
+}
+.matrix-wrap {
+  overflow-x: auto;
+}
+.matrix thead th {
+  vertical-align: bottom;
+}
+.matrix thead th span {
+  display: inline-block;
+  max-width: 7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.matrix td {
+  text-align: center;
+  padding: 0.15rem 0.3rem;
+}
+.matrix__group th {
+  background: var(--surface-2);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.cell {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.9rem;
+  height: 1.7rem;
+  padding: 0;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+button.cell {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+button.cell:hover {
+  border-color: var(--border-strong);
+}
+.cell--R {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.cell--A {
+  background: hsl(8 75% 50%);
+  color: #fff;
+}
+.cell--C {
+  background: hsl(40 90% 55%);
+  color: #222;
+}
+.cell--I {
+  background: hsl(200 60% 55%);
+  color: #fff;
+}
+.cell--count {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.critical,
+.loops,
+.loads,
+.pains {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.3rem;
+}
+.loops,
+.loads,
+.pains {
+  list-style: none;
+  padding-left: 0;
+}
+.loads li {
+  display: grid;
+  grid-template-columns: 9rem minmax(6rem, 1fr) 14rem;
+  gap: 0.6rem;
+  align-items: center;
+}
+.loads__bar {
+  display: flex;
+  height: 0.7rem;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.loads__work {
+  background: var(--accent);
+}
+.loads__wait {
+  background: hsl(40 90% 55%);
+}
+.loads__text {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.pains .pain {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+@media (max-width: 700px) {
+  .loads li {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}
+
+/* Versiot ja vertailu */
+.versions__form {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+@media (max-width: 700px) {
+  .versions__form {
+    grid-template-columns: 1fr;
+  }
+}
+.compare {
+  height: 100%;
+  overflow: auto;
+  padding: 1rem 1.25rem 3rem;
+}
+.compare--empty {
+  max-width: 34rem;
+  margin: 3rem auto;
+}
+.compare__head {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.compare__head h2 {
+  font-size: 1.2rem;
+  margin: 0;
+  align-self: center;
+}
+.cmpmetrics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.9rem;
+}
+.delta--good {
+  color: var(--ok);
+  font-weight: 600;
+}
+.delta--bad {
+  color: var(--danger);
+  font-weight: 600;
+}
+.changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+.change {
+  padding: 0.35rem 0.6rem;
+  border-left: 4px solid var(--border-strong);
+  background: var(--surface);
+  border-radius: 6px;
+}
+.change--added {
+  border-left-color: var(--ok);
+}
+.change--removed {
+  border-left-color: var(--danger);
+}
+.change--changed {
+  border-left-color: var(--warn);
+}
+.change__kind {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-right: 0.4rem;
+}
+.change__fields {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+  font-size: 0.88rem;
+}
+.change del {
+  color: var(--danger);
+}
+.change ins {
+  color: var(--ok);
+  text-decoration: none;
+  font-weight: 600;
+}
+.compare__panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+@media (max-width: 1000px) {
+  .compare__panes {
+    grid-template-columns: 1fr;
+  }
+}
+.comparepane {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+.comparepane figcaption {
+  padding: 0.4rem 0.75rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.comparepane__svg {
+  overflow: auto;
+  max-height: 70vh;
+  padding: 0.5rem;
+}
+.comparepane__svg svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.scenario-editor {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  background: var(--surface-2);
+}
+.scenario-editor h4 {
+  margin: 0 0 0.5rem;
+}
+.scenario-choices {
+  list-style: none;
+  margin: 0.6rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.scenario-choices li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.scenario-choices__q {
+  font-weight: 600;
+}
+.deck-options {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+}
+
+.present__select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--p-muted);
+}
+.present__select select {
+  max-width: 11rem;
+}
+
+/* Tuonti */
+.dialog--import {
+  width: min(900px, 96vw);
+}
+.import__body {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.btn-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--surface);
+}
+.import__preview th {
+  vertical-align: top;
+  min-width: 8rem;
+}
+.import__preview th select {
+  width: 100%;
+}
+.import__preview td {
+  text-align: left;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.import__dsl {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  max-height: 14rem;
+  overflow: auto;
+  font-size: 0.85rem;
+}
+.import__summary {
+  padding: 0.6rem 0.75rem;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 0.4rem;
+}
+.import__dest {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.3rem;
+}
+.issue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+/* Kielimalli */
+.llm {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.7rem;
+  margin-bottom: 0.75rem;
+  background: var(--surface);
+}
+.llm > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.llm__body {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+.llm__row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.llm__model {
+  flex: 1;
+  min-width: 10rem;
+}
+.atable__sum th,
+.atable__sum td {
+  font-weight: 700;
+  border-top: 2px solid var(--border-strong);
+}

@@ -17,7 +17,7 @@ function signature(p: Project, processId: string): string[] {
   const lines: string[] = []
   for (const n of nodesOf(p, processId)) {
     lines.push(
-      `N ${n.kind} ${n.label} | role=${nm(n.roleId)} | sys=${n.systemIds.map(nm).sort().join(',')} | in=${n.inputIds.map(nm).sort().join(',')} | out=${n.outputIds.map(nm).sort().join(',')} | ${n.confidence}`,
+      `N ${n.kind} ${n.label} | role=${nm(n.roleId)} | sys=${n.systemIds.map(nm).sort().join(',')} | in=${n.inputIds.map(nm).sort().join(',')} | out=${n.outputIds.map(nm).sort().join(',')} | ${n.confidence} | dur=${JSON.stringify(n.duration ?? null)} | wait=${JSON.stringify(n.waiting ?? null)} | freq=${n.frequency ?? ''} | tags=${(n.tags ?? []).join(',')} | pain=${(n.painPoints ?? []).map((x) => `${x.severity}:${x.text}:${x.idea ?? ''}`).join(';')} | raci=${[n.raci?.accountableIds, n.raci?.consultedIds, n.raci?.informedIds].map((l) => (l ?? []).map(nm).sort().join('+')).join('/')}`,
     )
     if (n.childProcessId)
       lines.push(...signature(p, n.childProcessId).map((l) => `  [${n.label}] ${l}`))
@@ -132,5 +132,39 @@ describe('processToText', () => {
     expect(signature(back, back.rootProcessId)).toEqual(signature(p, p.rootProcessId))
     const step = Object.values(back.nodes).find((n) => n.label === 'Vaihe')!
     expect(step.description).toBe('lisätieto yksi\nlisätieto kaksi')
+  })
+})
+
+describe('tietotyön merkinnät', () => {
+  const TEXT = `- Hyväksy lasku @Esimies A@Talousjohtaja C@(Lakiosasto) I@Myynti =1-2 pv ^3 pv %viikoittain #talous !3 Viivästyy usein => Automatisoi
+- Maksa lasku @Talous =30 min %(kerran kuussa) !1 Käsin tehtävää`
+
+  it('teksti -> malli -> teksti -> malli säilyttää kaikki kentät', () => {
+    const p = fromText(TEXT)
+    const root = p.rootProcessId
+    const n = nodesOf(p, root).find((x) => x.label === 'Hyväksy lasku')!
+    expect(n.duration).toEqual({ min: 480, max: 960 })
+    expect(n.waiting).toEqual({ typical: 1440 })
+    expect(n.frequency).toBe('viikoittain')
+    expect(n.tags).toEqual(['talous'])
+    expect(n.painPoints).toMatchObject([
+      { text: 'Viivästyy usein', severity: 3, idea: 'Automatisoi' },
+    ])
+    expect(p.entities[n.raci!.accountableIds![0]].name).toBe('Talousjohtaja')
+    expect(validateProject(p)).toEqual([])
+
+    const back = roundTrip(p)
+    expect(signature(back, back.rootProcessId)).toEqual(signature(p, root))
+  })
+
+  it('saman tekstin lisääminen uudelleen ei kasvata listoja (idempotentti)', () => {
+    const p = fromText(TEXT)
+    const again = applyOperations(p, planText(p, TEXT, { processId: p.rootProcessId }).ops)
+    const before = nodesOf(p, p.rootProcessId).find((x) => x.label === 'Hyväksy lasku')!
+    const after = nodesOf(again, p.rootProcessId).find((x) => x.label === 'Hyväksy lasku')!
+    expect(after.painPoints).toHaveLength(1)
+    expect(after.tags).toEqual(before.tags)
+    expect(after.raci).toEqual(before.raci)
+    expect(Object.keys(again.entities)).toHaveLength(Object.keys(p.entities).length)
   })
 })

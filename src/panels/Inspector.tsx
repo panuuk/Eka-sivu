@@ -16,6 +16,7 @@ import { ChipPicker } from '../ui/ChipPicker'
 import { Icon } from '../ui/Icon'
 import { Segmented, TextField } from './fields'
 import { ReadinessCard } from './QuestionsPanel'
+import { WorkSection } from './WorkFields'
 
 const KINDS: NodeKind[] = ['step', 'decision', 'subprocess', 'start', 'end']
 
@@ -116,6 +117,8 @@ function NodeInspector({ node }: { node: ProcessNode }) {
           />
         </>
       )}
+
+      {node.kind !== 'start' && node.kind !== 'end' && <WorkSection node={node} patch={patch} />}
 
       <TextField
         label="Kuvaus"
@@ -269,6 +272,59 @@ function ProcessInspector() {
   )
 }
 
+/** Usean valitun vaiheen yhteiset kentät: rooli, järjestelmä ja varmuus kerralla kaikille. */
+function BulkEdit({ nodeIds }: { nodeIds: string[] }) {
+  const dispatch = useStore((s) => s.dispatch)
+  const project = useStore((s) => s.project)!
+  const nodes = nodeIds
+    .map((id) => project.nodes[id])
+    .filter((n): n is ProcessNode => !!n && n.kind !== 'start' && n.kind !== 'end')
+  if (nodes.length < 2) return null
+
+  const roles = new Set(nodes.map((n) => n.roleId))
+  const commonRole = roles.size === 1 ? [...roles][0] : undefined
+  const confs = new Set(nodes.map((n) => n.confidence))
+  const commonConf = confs.size === 1 ? [...confs][0] : undefined
+
+  const apply = (patch: (n: ProcessNode) => NodePatch, extra: Operation[] = []) =>
+    dispatch([
+      ...extra,
+      ...nodes.map((n) => ({ type: 'updateNode' as const, id: n.id, patch: patch(n) })),
+    ])
+
+  return (
+    <div className="bulk" data-testid="bulk-edit">
+      <h3 className="bulk__title">Muokkaa {nodes.length} vaihetta kerralla</h3>
+      <ChipPicker
+        kind="role"
+        label="Vastuu (rooli)"
+        single
+        value={commonRole ? [commonRole] : []}
+        placeholder={roles.size > 1 ? 'Eri rooleja: valitse yhteinen' : 'Kuka tekee?'}
+        onChange={(ids, ops) => apply(() => ({ roleId: ids[0] }), ops)}
+      />
+      <ChipPicker
+        kind="system"
+        label="Lisää järjestelmä kaikille"
+        value={[]}
+        placeholder="Mitä järjestelmää käytetään?"
+        onChange={(ids, ops) =>
+          apply((n) => ({ systemIds: [...new Set([...n.systemIds, ...ids])] }), ops)
+        }
+      />
+      <Segmented<Confidence>
+        label={commonConf ? 'Varmuus' : 'Varmuus (vaihtelee)'}
+        value={commonConf ?? ('' as Confidence)}
+        options={(['guess', 'likely', 'confirmed'] as Confidence[]).map((c) => ({
+          value: c,
+          label: CONFIDENCE_LABELS[c],
+        }))}
+        onChange={(c) => apply(() => ({ confidence: c }))}
+      />
+    </div>
+  )
+}
+
 export function Inspector() {
   const selection = useStore((s) => s.selection)
   const project = useStore((s) => s.project)!
@@ -289,6 +345,7 @@ export function Inspector() {
         <p>
           {selection.nodeIds.length} vaihetta ja {selection.edgeIds.length} yhteyttä valittu.
         </p>
+        <BulkEdit nodeIds={selection.nodeIds} />
         <div className="inspector__actions">
           <button type="button" onClick={groupSelection} disabled={selection.nodeIds.length < 2}>
             <Icon name="group" size={16} /> Ryhmitä alaprosessiksi

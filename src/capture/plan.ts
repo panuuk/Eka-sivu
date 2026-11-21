@@ -242,6 +242,36 @@ class Planner {
     if (outputs) patch.outputIds = outputs
     if (ann.confidence && ann.confidence !== cur.confidence)
       patch.confidence = ann.confidence as Confidence
+    // Tietotyön merkinnät: arvot asetetaan, listat yhdistetään (idempotentti)
+    if (ann.duration && JSON.stringify(ann.duration) !== JSON.stringify(cur.duration))
+      patch.duration = ann.duration
+    if (ann.waiting && JSON.stringify(ann.waiting) !== JSON.stringify(cur.waiting))
+      patch.waiting = ann.waiting
+    if (ann.frequency && ann.frequency !== cur.frequency) patch.frequency = ann.frequency
+    const tags = [...new Set([...(cur.tags ?? []), ...ann.tags])]
+    if (tags.length !== (cur.tags ?? []).length) patch.tags = tags
+    const pains = [...(cur.painPoints ?? [])]
+    for (const pp of ann.pains) {
+      const same = pains.find(
+        (x) => x.text.toLocaleLowerCase('fi') === pp.text.toLocaleLowerCase('fi'),
+      )
+      if (!same) pains.push({ id: newId('pp'), ...pp })
+      else if (same.severity !== pp.severity || (pp.idea && same.idea !== pp.idea)) {
+        pains[pains.indexOf(same)] = { ...same, severity: pp.severity, idea: pp.idea ?? same.idea }
+      }
+    }
+    if (JSON.stringify(pains) !== JSON.stringify(cur.painPoints ?? [])) patch.painPoints = pains
+    const raciKeys = [
+      ['a', 'accountableIds'],
+      ['c', 'consultedIds'],
+      ['i', 'informedIds'],
+    ] as const
+    let raci = cur.raci
+    for (const [letter, key] of raciKeys) {
+      const next = union(raci?.[key] ?? [], 'role', ann.raci[letter])
+      if (next) raci = { ...raci, [key]: next }
+    }
+    if (raci !== cur.raci) patch.raci = raci
     if (item.notes.length) {
       const text = item.notes.join('\n')
       if (!cur.description) patch.description = text

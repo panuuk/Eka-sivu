@@ -2,7 +2,15 @@ import { createEdge, createEntity, createNode, createProcess } from './factory'
 import { newId } from './ids'
 import { descendantProcessIds, type Operation } from './operations'
 import { findEntity, incoming, normalizeName, outgoing } from './selectors'
-import type { Entity, EntityKind, NodeKind, Process, Project } from './types'
+import type {
+  Entity,
+  EntityKind,
+  NodeKind,
+  Process,
+  Project,
+  ProjectSnapshot,
+  Version,
+} from './types'
 
 /** Korkeamman tason komennot, jotka rakentavat operaatiolistoja mallin nykytilan perusteella. */
 
@@ -275,3 +283,125 @@ export function opsMergeEntities(p: Project, fromId: string, intoId: string): Op
 }
 
 export { descendantProcessIds }
+
+export type RaciState = 'R' | 'A' | 'C' | 'I' | ''
+
+/** Rooli vaiheen RACI-matriisissa: R (suorittaja), A, C, I tai tyhjä. */
+export function raciStateOf(p: Project, nodeId: string, roleId: string): RaciState {
+  const n = p.nodes[nodeId]
+  if (!n) return ''
+  if (n.roleId === roleId) return 'R'
+  if (n.raci?.accountableIds?.includes(roleId)) return 'A'
+  if (n.raci?.consultedIds?.includes(roleId)) return 'C'
+  if (n.raci?.informedIds?.includes(roleId)) return 'I'
+  return ''
+}
+
+/**
+ * Seuraava tila matriisisolua napsautettaessa: tyhjä -> R -> A -> C -> I -> tyhjä. Jos vaiheella on
+ * jo toinen suorittaja, R ohitetaan, jottei kiertäminen vahingossa vaihda suorittajaa.
+ */
+export const nextRaciState = (s: RaciState, otherPerformer = false): RaciState =>
+  ({ '': otherPerformer ? 'A' : 'R', R: 'A', A: 'C', C: 'I', I: '' })[s] as RaciState
+
+/**
+ * Asettaa roolin tilan vaiheessa. Rooli poistetaan ensin kaikista RACI-luokista. Suorittajaksi (R)
+ * asetettaessa edellinen suorittaja jää pois, koska vaiheella on yksi suorittaja.
+ */
+export function opsSetRaci(
+  p: Project,
+  nodeId: string,
+  roleId: string,
+  state: RaciState,
+): Operation[] {
+  const n = p.nodes[nodeId]
+  if (!n || p.entities[roleId]?.kind !== 'role') return []
+  const strip = (ids?: string[]) => (ids ?? []).filter((x) => x !== roleId)
+  const raci = {
+    accountableIds: strip(n.raci?.accountableIds),
+    consultedIds: strip(n.raci?.consultedIds),
+    informedIds: strip(n.raci?.informedIds),
+  }
+  const add = (key: keyof typeof raci) => void raci[key].push(roleId)
+  let primary = n.roleId === roleId ? undefined : n.roleId
+  if (state === 'R') primary = roleId
+  else if (state === 'A') add('accountableIds')
+  else if (state === 'C') add('consultedIds')
+  else if (state === 'I') add('informedIds')
+  const empty = !raci.accountableIds.length && !raci.consultedIds.length && !raci.informedIds.length
+  return [
+    {
+      type: 'updateNode',
+      id: nodeId,
+      patch: {
+        roleId: primary,
+        raci: empty
+          ? undefined
+          : {
+              accountableIds: raci.accountableIds.length ? raci.accountableIds : undefined,
+              consultedIds: raci.consultedIds.length ? raci.consultedIds : undefined,
+              informedIds: raci.informedIds.length ? raci.informedIds : undefined,
+            },
+      },
+    },
+  ]
+}
+
+// --- Versiot ---
+
+/** Prosessin rakenne tilannekuvaksi. Muuttumattomat oliot jaetaan, joten kuva ei kopioi dataa. */
+export function snapshotOf(p: Project): ProjectSnapshot {
+  return {
+    rootProcessId: p.rootProcessId,
+    processes: p.processes,
+    nodes: p.nodes,
+    edges: p.edges,
+    entities: p.entities,
+  }
+}
+
+/** Tilannekuva tavallisena projektina (esim. analyysiä ja piirtoa varten). Lähteet ja kysymykset jätetään pois. */
+export function projectFromSnapshot(base: Project, snap: ProjectSnapshot): Project {
+  return { ...base, ...snap, sources: {}, questions: {}, versions: undefined }
+}
+
+export function createVersion(
+  p: Project,
+  name: string,
+  comment?: string,
+  kind: Version['kind'] = 'manual',
+): Version {
+  return {
+    id: newId('ver'),
+    name: name.trim() || 'Versio',
+    ...(comment?.trim() ? { comment: comment.trim() } : {}),
+    createdAt: Date.now(),
+    kind,
+    snapshot: snapshotOf(p),
+  }
+}
+
+/**
+ * Tavoitetilaprojekti: nykytilan kopio, jossa vaiheet, yhteydet ja roolit säilyttävät tunnisteensa,
+ * jolloin vertailu tunnistaa vaiheet samoiksi. Lähtötilanne tallennetaan versioksi.
+ */
+export function forkAsTarget(p: Project, name?: string): Project {
+  const baseline = createVersion(p, 'Nykytila (lähtötilanne)', undefined, 'baseline')
+  const now = Date.now()
+  return {
+    ...p,
+    id: newId('proj'),
+    name: name?.trim() || `${p.name} – tavoitetila`,
+    createdAt: now,
+    updatedAt: now,
+    versions: { [baseline.id]: baseline },
+  }
+}
+
+/** Oletusvertailukohta: tavoitetilaprojektin lähtötilanne, muuten uusin versio. */
+export function pickBaseline(p: Project): Version | undefined {
+  const all = Object.values(p.versions ?? {})
+  return (
+    all.find((v) => v.kind === 'baseline') ?? [...all].sort((a, b) => b.createdAt - a.createdAt)[0]
+  )
+}

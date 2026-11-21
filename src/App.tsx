@@ -3,10 +3,17 @@ import { Canvas } from './canvas/Canvas'
 import { EntityManager } from './panels/EntityManager'
 import { ExportDialog } from './panels/ExportDialog'
 import { PresentView } from './panels/PresentView'
+import { CompareView } from './panels/CompareView'
+import { SavedViewsDialog } from './panels/SavedViewsDialog'
+import { VersionsDialog } from './panels/VersionsDialog'
+import { AnalysisView } from './panels/AnalysisView'
+import { ImportDialog } from './panels/ImportDialog'
+import { HelpDialog } from './panels/HelpDialog'
 import { ListView } from './panels/ListView'
 import { ProcessTree } from './panels/ProcessTree'
 import { SourcesView } from './panels/SourcesView'
 import { QuickInput } from './panels/QuickInput'
+import { ReplaceDialog } from './panels/ReplaceDialog'
 import { RightPanel } from './panels/RightPanel'
 import { StorageDialog } from './panels/StorageDialog'
 import { useStore } from './store/store'
@@ -40,6 +47,9 @@ function App() {
       <div className="app app--present">
         <PresentView />
         <ExportDialog />
+        <SavedViewsDialog />
+        <ConfirmHost />
+        <PromptHost />
       </div>
     )
   }
@@ -62,7 +72,17 @@ function App() {
             resetKey={view}
             fallback={(error, reset) => <ViewCrash error={error} reset={reset} />}
           >
-            {view === 'canvas' ? <Canvas /> : view === 'list' ? <ListView /> : <SourcesView />}
+            {view === 'canvas' ? (
+              <Canvas />
+            ) : view === 'list' ? (
+              <ListView />
+            ) : view === 'analysis' ? (
+              <AnalysisView />
+            ) : view === 'compare' ? (
+              <CompareView />
+            ) : (
+              <SourcesView />
+            )}
           </ErrorBoundary>
         </main>
         {rightOpen && (
@@ -73,6 +93,11 @@ function App() {
       </div>
       <EntityManager />
       <StorageDialog />
+      <ReplaceDialog />
+      <HelpDialog />
+      <VersionsDialog />
+      <ImportDialog />
+      <SavedViewsDialog />
       <ExportDialog />
       <QuickInput />
       <ConfirmHost />

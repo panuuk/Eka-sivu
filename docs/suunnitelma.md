@@ -10,23 +10,23 @@ Tämä dokumentti kertoo, mitä on tehty, miksi ja mitä on jätetty tekemättä
 
 ## Vaiheiden tila
 
-| #   | Vaihe                       | Tila         | Keskeiset tiedostot                                                                              |
-| --- | --------------------------- | ------------ | ------------------------------------------------------------------------------------------------ |
-| 0   | Perusta                     | Valmis       | `vite.config.ts`, `eslint.config.js`, `.github/workflows/`                                       |
-| 1   | Datamalli ja tallennus      | Valmis       | `src/model/`, `src/store/`, `src/storage/`                                                       |
-| 2   | Kaavio ja käsin muokkaus    | Valmis       | `src/canvas/`, `src/layout/`, `src/panels/Inspector.tsx`                                         |
-| 3   | Pikasyöte tekstinä          | Valmis       | `src/capture/syntax.ts`, `plan.ts`, `serialize.ts`, `src/panels/QuickInput.tsx`                  |
-| 4   | Dokumentit lähteinä         | Valmis       | `src/capture/importers.ts`, `suggest.ts`, `src/panels/SourcesView.tsx`                           |
-| 5   | Tarkentuminen               | Valmis       | `src/analysis/`, `src/panels/QuestionsPanel.tsx`                                                 |
-| 6   | Laajat prosessit            | Valmis       | `src/canvas/useCanvasModel.ts`, `src/layout/lanes.ts`, `hierarchy.ts`, `src/analysis/search.ts`  |
-| 7   | Esittäminen                 | Valmis       | `src/export/`, `src/panels/PresentView.tsx`, `ExportDialog.tsx`                                  |
-| 8   | Käyttöönotto ja datan turva | Valmis       | `src/storage/`, `src/store/storage.ts`, `src/panels/StorageDialog.tsx`, `build/serviceWorker.ts` |
-| 9   | Koekäyttö ja kitkan poisto  | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
-| 10  | Tietotyön rikkaampi malli   | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
-| 11  | Nykytila ja tavoitetila     | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
-| 14  | Esittämisen syventäminen    | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
-| 12  | Tuonnit                     | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
-| 13  | Paikallinen kielimalli      | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
+| #   | Vaihe                       | Tila        | Keskeiset tiedostot                                                                                 |
+| --- | --------------------------- | ----------- | --------------------------------------------------------------------------------------------------- |
+| 0   | Perusta                     | Valmis      | `vite.config.ts`, `eslint.config.js`, `.github/workflows/`                                          |
+| 1   | Datamalli ja tallennus      | Valmis      | `src/model/`, `src/store/`, `src/storage/`                                                          |
+| 2   | Kaavio ja käsin muokkaus    | Valmis      | `src/canvas/`, `src/layout/`, `src/panels/Inspector.tsx`                                            |
+| 3   | Pikasyöte tekstinä          | Valmis      | `src/capture/syntax.ts`, `plan.ts`, `serialize.ts`, `src/panels/QuickInput.tsx`                     |
+| 4   | Dokumentit lähteinä         | Valmis      | `src/capture/importers.ts`, `suggest.ts`, `src/panels/SourcesView.tsx`                              |
+| 5   | Tarkentuminen               | Valmis      | `src/analysis/`, `src/panels/QuestionsPanel.tsx`                                                    |
+| 6   | Laajat prosessit            | Valmis      | `src/canvas/useCanvasModel.ts`, `src/layout/lanes.ts`, `hierarchy.ts`, `src/analysis/search.ts`     |
+| 7   | Esittäminen                 | Valmis      | `src/export/`, `src/panels/PresentView.tsx`, `ExportDialog.tsx`                                     |
+| 8   | Käyttöönotto ja datan turva | Valmis      | `src/storage/`, `src/store/storage.ts`, `src/panels/StorageDialog.tsx`, `build/serviceWorker.ts`    |
+| 9   | Koekäyttö ja kitkan poisto  | Valmis      | `src/capture/discover.ts`, `src/capture/eval/`, `src/model/clipboard.ts`, `src/analysis/replace.ts` |
+| 10  | Tietotyön rikkaampi malli   | Valmis      | `src/model/duration.ts`, `src/analysis/metrics.ts`, `src/panels/AnalysisView.tsx`, `WorkFields.tsx` |
+| 11  | Nykytila ja tavoitetila     | Valmis      | `src/analysis/compare.ts`, `src/panels/CompareView.tsx`, `VersionsDialog.tsx`                       |
+| 14  | Esittämisen syventäminen    | Valmis      | `src/export/deck.ts`, `pptx.ts`, `tiles.ts`, `views.ts`, `src/panels/SavedViewsDialog.tsx`          |
+| 12  | Tuonnit                     | Valmis      | `src/capture/table.ts`, `diagram.ts`, `bpmnImport.ts`, `mermaidImport.ts`, `office.ts`, `ocr.ts`    |
+| 13  | Paikallinen kielimalli      | Valmis osin | `src/capture/llm.ts`, `src/capture/eval/`, `src/panels/LlmPanel.tsx`, `src/store/llm.ts`            |
 
 ## Poikkeamat alkuperäisestä suunnitelmasta
 
@@ -46,7 +46,7 @@ Tämä dokumentti kertoo, mitä on tehty, miksi ja mitä on jätetty tekemättä
 ## Tunnetut rajoitukset
 
 - Ehdotusmoottori on sääntöpohjainen ja suomenkielinen. Se löytää tyypilliset prosessikuvaukset, mutta ei ymmärrä merkitystä. Ehdotukset ovat aina vain ehdotuksia.
-- Dokumenttituonti ei tee tekstintunnistusta (OCR): kuvapohjaisesta PDF:stä ei löydy tekstiä.
+- Tekstintunnistus (OCR) on mitattu siistillä skannauksella. Huono kuvanlaatu tai käsinkirjoitus heikentää tulosta (vaihe 12).
 - Uimaradoissa ja kokonaiskuvassa asettelu on automaattinen eikä solmuja voi siirtää käsin.
 - BPMN-vienti sisältää rakenteen ja diagrammin, mutta ei suoritettavaa logiikkaa (esim. ehtolausekkeita).
 - Selaimen tallennus voi kadota tietojen tyhjennyksessä, joten JSON-vienti on tärkeä varmuuskopio.
@@ -67,3 +67,75 @@ Toteutusjärjestys: **8 → 9 → 10 → 11 → 14 → 12 → 13**. Lähtöoletu
 - **CI** ajaa nyt myös selaintestit.
 
 Rajoitus: GitHub Pages pitää kytkeä päälle repon asetuksista (Settings → Pages → Source: GitHub Actions) ennen kuin julkaisu onnistuu.
+
+### Vaihe 9: Koekäyttö ja kitkan poisto (valmis)
+
+Oikeaa prosessiasi ei ollut käytettävissä, joten kitka mitattiin realistisella suomenkielisellä rekrytointikuvauksella (`src/capture/eval/rekrytointi.ts`, 7 kappaletta ja 8 roolia ja järjestelmää, 32 odotettua vaihetta + 9 hienojakoisempaa). Aineisto toimii myös sääntömoottorin arviointiaineistona: `eval.test.ts` vaatii recall ≥ 90 % ja precision ≥ 85 %.
+
+| Mittari                             | Ennen                             | Nyt                                                                                |
+| ----------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------- |
+| Vaiheiden löytyminen (recall)       | 75 %                              | 98 %                                                                               |
+| Ehdotusten osuvuus (precision)      | ei mitattu                        | 95 %                                                                               |
+| Roolit vaiheilla                    | käsin jokaiselle vaiheelle        | löydetyt roolit yhdellä klikkauksella, > 70 % vaiheista saa roolin automaattisesti |
+| Toimenpiteitä dokumentista kaavioon | tuonti + lisää kaikki + n × rooli | 4: tuo, lisää löydetyt roolit, lisää kaikki, katso (e2e mittaa ~0,5 s)             |
+
+Mitä muutettiin:
+
+- **Roolien ja järjestelmien löytäminen tekstistä** (`discover.ts`): subjektit toimintaverbin edestä, roolisanat taivutusmuodoissa ja järjestelmät (-järjestelmä, -systeemi jne.). Löydöt näytetään valintalistana ennen ehdotuksia, jolloin ehdotukset saavat roolinsa ja järjestelmänsä.
+- **Yhdistettyjen lauseiden pilkkominen** (“A ja B” → kaksi vaihetta, jälkimmäinen perii roolin), “kun”-lauseet ajankohtana eivätkä päätöksinä, ja vaiheen nimestä pudotetaan rooli ja johdantofraasit (“Haastattelun jälkeen …”).
+- **Nuolinäppäinnavigointi**, **kopioi ja liitä** vaiheet prosessien välillä, **joukkomuokkaus** (rooli, järjestelmä, varmuus usealle vaiheelle), **etsi ja korvaa** esikatselulla, **sumea kaksoisvaiheiden tunnistus** (“Tarkista lasku” ja “Laskun tarkistus”) sekä aloitusohje ja pikanäppäinohje.
+- Pitkä ketju avautuu alusta luettavalla zoomilla eikä koko kuvaan kutistettuna.
+
+Jätettiin tekemättä: solmujen käsin siirto uimaradoissa (vaatii oman raidoille sidotun asettelun, jää tunnetuksi rajoitukseksi). Palaan tähän, jos oikea käyttö osoittaa sen tarpeelliseksi.
+
+### Vaihe 10: Tietotyön rikkaampi malli ja analyysit (valmis)
+
+- **Malli** (skeema 2, vanhat projektit avautuvat sellaisenaan): vaiheelle työaika ja odotusaika (`DurationRange`: min, tyypillinen, max minuutteina; päivä = 8 h, viikko = 5 päivää), toistuvuus, RACI (rooli on suorittaja R, muut roolit `raci`-kentässä), kipupisteet (vakavuus 1–3 ja parannusidea) ja tunnisteet. Roolin poisto siivoaa viitteet.
+- **Syöttö.** Pikasyötteessä `=2 pv`, `^1-3 pv`, `%viikoittain`, `#tunniste`, `!3 Ongelma => Idea` ja `A@Rooli`/`C@Rooli`/`I@Rooli`; viety teksti ja takaisin tuotu teksti ovat samat (testattu), ja uudelleenlisäys on idempotentti. Ehdotusmoottori tunnistaa lähdetekstistä aikailmaisut (“kahden päivän kuluessa” on odotusaikaa), toistuvuuden ja ongelmalauseet (liitetään edelliseen vaiheeseen kipupisteeksi).
+- **Analyysit** (`metrics.ts`): luovutukset roolien välillä ja niihin liittyvä odotus, läpimenoaika (nopein polku minimiarvoilla, lyhin ja pisin polku tyypillisillä arvoilla, hitain polku maksimiarvoilla, kriittinen polku, alaprosessit rekursiivisesti), uudelleenkierrokset ja yhden kierroksen kesto, roolien kuormitus. Uusi aukkosääntö: tuotos, jota mikään vaihe ei käytä syötteenä.
+- **Näkymät.** Analyysi-näkymä (kortit, kriittinen polku, luovutustaulukko, kierrokset, kuormitus, muokattava RACI-matriisi, rooli × järjestelmä, kipupisteet). Lämpökartta kaaviossa (aika, kipupisteet, luovutukset) ja kestot ja kipupistemerkit vaiheissa.
+- **Viennit.** Esitys ja SVG/PNG/PDF: kestot, kipupistemerkit ja lämpökartta valittavissa. Prosessidokumentti: kesto- ja odotussarakkeet, mittarit, RACI-matriisi ja kipupisteliite (vain, jos tietoja on, joten vanhat projektit tuottavat saman dokumentin kuin ennen).
+
+Rajoitus: arviot ovat vain niin hyviä kuin annetut kestot. Päätösten haarojen todennäköisyyksiä ei mallinneta, joten läpimenoaika esitetään välinä eikä odotusarvona. Kestot ovat työaikaa, eivät kalenteriaikaa.
+
+### Vaihe 11: Nykytila ja tavoitetila (valmis)
+
+- **Versiot** (`Project.versions`, skeema 3) ovat nimettyjä tilannekuvia prosessin rakenteesta (prosessit, vaiheet, yhteydet, roolit ja muut entiteetit). Ne kulkevat projektin mukana JSON-viennissä, varmuuskopioissa ja tiedostoyhteydessä, ja ne ovat tavallisia operaatioita (`addVersion`, `updateVersion`, `deleteVersion`, `restoreVersion`), joten kumoaminen toimii. Palautus korvaa rakenteen, mutta säilyttää lähteet ja versiot ja siivoaa viitteet, joita ei enää ole. Vioittunut versio pudotetaan tuonnissa, eikä se estä projektin avaamista.
+- **Tavoitetila** on nykytilan kopio uutena projektina. Vaiheet, yhteydet ja roolit säilyttävät tunnisteensa, joten vertailu tunnistaa ne samoiksi luotettavasti. Lähtötilanne tallentuu kopion versioksi (`baseline`), ja alkuperäinen projekti ei muutu.
+- **Vertailu** (`compare.ts`): lisätyt, poistetut ja muuttuneet vaiheet kenttätasolla (nimi, tyyppi, rooli, järjestelmät, syötteet, tuotokset, kestot, RACI, kipupisteet, tunnisteet), yhteydet, prosessit, roolimuutokset sekä mittarien muutos molemmista tiloista laskettuna. Jos vaihe on luotu uudelleen samalla nimellä ja tyypillä, se tunnistetaan samaksi eikä näy poistettuna ja lisättynä.
+- **Näkymät.** Vertailu-näkymässä muutosluettelo ja kaaviot rinnakkain (lisätty vihreä, poistettu punainen katkoviiva, muuttunut keltainen). Versiot ja tavoitetila löytyvät projektivalikosta.
+- **Esitys ja viennit.** “Korosta muutokset lähtötilaan verrattuna” värjää vaiheet esityksessä ja kuvaviennissä, ja prosessidokumenttiin tulee muutosluettelo mittareineen.
+
+Rajoitus: versio sisältää vain prosessin rakenteen, ei lähteitä tai kysymyksiä. Vertailu tunnistaa vaiheet tunnisteen tai nimen perusteella, joten täysin uudelleen kirjoitettu ja uudelleen nimetty vaihe näkyy poistettuna ja lisättynä.
+
+### Vaihe 14: Esittämisen syventäminen (valmis)
+
+- **PowerPoint-vienti** (`deck.ts` suunnittelee, `pptx.ts` kirjoittaa pptxgenjs:llä, joka ladataan vasta tarvittaessa). 16:9-diat: otsikkodia, kaaviot kuvina (vaaka- tai pystyasettelu valitaan sen mukaan, kumpi mahtuu diaan isompana), mittarit ja kipupisteet taulukkoina, muutosluettelo ja vaihe vaiheelta -läpikäyntidiat korostettuine vaiheineen sekä puhujan muistiinpanot (vaiheiden tiedot, skenaarion polku). Dioja voi valita vientiikkunassa. Tuloksen oikeellisuus testataan python-pptx:llä ja piirtyminen LibreOfficella. `pptxgenjs`:n riippuvuus `image-size` ohitetaan selainpaketissa, ja sen haavoittuvuus on korjattu `overrides`-asetuksella.
+- **Tallennetut näkymät** (`Project.views`, skeema 4): prosessi, asettelu (alaprosessit auki, vain vahvistetut), kestot ja lämpökartta, muutosten korostus, valinnainen rajaus valittuihin vaiheisiin ja skenaario sekä puhujan muistiinpano. Näkymiä voi järjestää, ja esitys ja PowerPoint koostetaan niistä. Esityksessä näkymä valitaan yläpalkista.
+- **Skenaariopolut** (`Project.scenarios`, `scenario.ts`): valinnat päätöksissä, esim. “luottoraja ylittyy”. Polku korostetaan ja numeroidaan kaaviossa, ja läpikäynti kulkee vain polun vaiheissa. Poistuneiden prosessien näkymät ja skenaariot siivotaan, ja vioittuneet tietueet pudotetaan tuonnissa.
+- **Interaktiivinen HTML.** Haku himmentää ei-osuvat vaiheet ja suodattaa rivit, vaiheen napsautus avaa tietopaneelin (rooli, järjestelmät, kestot, kipupisteet ja niin edelleen), alaprosessiin pääsee tietopaneelin painikkeesta tai kaksoisnapsautuksella ja takaisin “Takaisin”-painikkeella. Vaiheiden tiedot ovat turvallisesti koodattuna JSON-lohkona (`<`, `>`, `&` koodattu, tekstit lisätään `textContent`-kentällä).
+- **Suurten kaavioiden tulostus** (`tiles.ts`): PDF-vienti voi jakaa kuvan A4- tai A3-sivuille (vaaka tai pysty, mittakaava “sovita leveys” tai 100 %). Jokaisella sivulla on sivu- ja rivi/sarake-merkintä, ja arvio sivumäärästä näkyy valinnoissa. Sivut voi liittää yhteen isoksi seinäkaavioksi.
+
+Rajoitus: PowerPoint-diat ovat kuvia eivätkä muokattavia muotoja. Hyvin suuri prosessi (satoja vaiheita) mahtuu yhteen diaan vain pienenä, joten ne kannattaa jakaa alaprosesseihin tai tallennettuihin rajattuihin näkymiin.
+
+### Vaihe 12: Tuonnit olemassa olevasta materiaalista (valmis)
+
+- **Taulukot** (`table.ts`, `ImportDialog`): Excel (.xlsx luetaan JSZipillä ilman ulkoista Excel-kirjastoa: jaetut ja sisäkkäiset merkkijonot, luvut, totuusarvot ja päivämäärät), CSV/TSV (erotin tunnistetaan, UTF-8 tai Windows-1252) ja leikepöydältä liitetty taulukko. Sarakkeet tunnistetaan otsikoista (suomi ja englanti) ja ne voi yhdistää käsin: vaihe, tyyppi, rooli, järjestelmät, syötteet, tuotokset, työaika, odotus, kuvaus, varmuus, alaprosessi (ryhmä) ja seuraava vaihe. Taulukko muunnetaan pikasyötteen tekstiksi ja avataan pikasyötteessä, joten esikatselu, nimiyhdistys ja idempotenssi toimivat kuten käsin kirjoitetulla tekstillä. Solujen sisältö ei voi tulkita itseään merkinnäksi.
+- **BPMN 2.0** (`bpmnImport.ts`): tapahtumat, tehtävätyypit, yhdyskäytävät, alaprosessit, uimaradat rooleiksi, dokumentaatio kuvaukseksi ja sekvenssivirrat nimikkeineen. Nimettömät yhdistävät yhdyskäytävät sivuutetaan, useampi prosessi tuodaan alaprosesseina ja viestivirrat, dataobjektit ja reunatapahtumat jätetään pois (kerrotaan yhteenvedossa). **Mermaid** (`mermaidImport.ts`): solmumuodot, nuolinimikkeet, ketjut ja subgraph alaprosessina. Oma vienti kiertää takaisin samaksi rakenteeksi (testattu). Tuonti uutena projektina tai lisäys nykyiseen prosessiin yhtenä kumottavana erä.
+- **PowerPoint ja sähköposti lähteiksi** (`office.ts`): .pptx (diat järjestyksessä, puhujan muistiinpanot mukana) ja .eml (otsikot, MIME-osat, quoted-printable ja base64, merkistöt).
+- **Tekstintunnistus** (`ocr.ts`, tesseract.js): skannatut PDF:t (vain tekstittömät sivut) ja kuvat (.png, .jpg). Suomen ja englannin kielitiedot, työntekijä ja WebAssembly-ydin tulevat sovelluksen mukana (`ocr/`, noin 19 Mt, ladataan vasta käytettäessä, tallennetaan välimuistiin eikä kuulu esilatauksen piiriin), joten mitään ei lähetetä minnekään ja tunnistus toimii offline ensimmäisen käytön jälkeen. Sovellus kysyy luvan ennen tunnistusta ja näyttää edistymisen ja peruutuksen. Tulos tarkistetaan käsin, koska tunnistus voi virhetyä.
+
+Rajoitukset: vanhat .xls, .doc, .ppt ja .msg eivät ole tuettuja (kerrotaan käyttäjälle), BPMN-tuonti ei lue suoritettavaa logiikkaa (ehtolausekkeet, skriptit) eikä Mermaidin muita kaaviotyyppejä kuin vuokaavio, ja OCR on mitattu siistillä skannauksella: huono kuvanlaatu tai käsinkirjoitus heikentää tulosta.
+
+### Vaihe 13: Paikallinen kielimalli (valmis osin)
+
+Tämä vaihe oli suunnitelmassa valinnainen ja ehdollinen mittaukselle. Toteutettu on infrastruktuuri ja mittari, mutta kielimallia ei ole mitattu oikealla mallilla, koska tässä ympäristössä ei ole kielimallipalvelinta. Päätös käyttöönotosta jää sinulle, ja sitä varten sovelluksessa on valmis mittari.
+
+- **Arviointiaineisto** (`src/capture/eval/corpus.ts`): 12 suomenkielistä prosessikuvausta (proosa, luettelo, passiivi, ehtolauseet, englanninkieliset termit) odotettuine vaiheineen ja rooleineen, ja mittari (`metrics.ts`: löydetyt odotetuista, oikeiden osuus ehdotuksista ja F1). Sama mittari ajetaan sääntömoottorille ja kielimallille.
+- **Sääntömoottorin parannus aineiston avulla**: lisää toimintaverbejä, roolien ja yksiköiden tunnistus yksittäisistä maininnoista (ehdotetaan valitsemattomana). Mittaustulos aineistolla: vaiheiden löytyminen 100 %, ehdotusten osuvuus 94,5 % ja roolien löytyminen 85 %. **Luvut ovat optimistisia**, koska sääntöjä on kehitetty samaa aineistoa vasten. Aineisto on tehty sääntöjen kehityksen rinnalla eikä kata sotkuista oikeaa materiaalia, joten arvioi tuloksia omilla teksteilläsi.
+- **Kielimalliadapteri** (`llm.ts`): OpenAI-yhteensopiva `/v1/chat/completions` (Ollama, LM Studio, llama.cpp). Teksti pilkotaan kappalerajoilta, malli palauttaa JSON-skeeman mukaiset vaiheet (nimi, täsmällinen lainaus, rooli, järjestelmät, haara, kesto ja odotus), ja lainaus etsitään lähdetekstistä (täsmällisesti, väljästi ja lauseiden sanapäällekkäisyydellä). Ehdotus, jota ei löydy tekstistä, hylätään, jotta lähdeviite on aina luotettava. Palvelimen, joka ei tunne skeemaa, vastausmuotoa kevennetään automaattisesti.
+- **Yksityisyys**: osoitteen on oletuksena oltava omalla koneella tai paikallisessa verkossa. Muulle osoitteelle sovellus varoittaa ja pyytää vahvistuksen joka ajolla. Asetukset (osoite ja malli) tallentuvat vain tähän selaimeen.
+- **Käyttö** (lähdenäkymän ehdotusvälilehti): hae mallit, valitse malli, “Aja kielimallilla” tai “Mittaa aineistolla”. Mittaus näyttää dokumenteittain säännöt ja kielimallin rinnakkain sekä päätelmän. Mallin tulos ja säännöt ovat vaihdettavissa lähteen sisällä.
+- **Testaus**: adapteri on testattu simuloidulla palvelimella (jäsennys, sijainnin etsintä, pilkkominen, virheet, kevennys) ja koko selainpolku Playwrightin simuloimalla OpenAI-rajapinnalla. Oikealla mallilla sitä ei ole ajettu.
+
+Ei toteutettu: selaimessa toimiva malli (WebLLM). Se vaatisi WebGPU:n ja 2–5 Gt latauksen, eikä sitä voi varmistaa täällä, joten se jätettiin pois. Samaan rajapintaan voi ajaa myös muut paikalliset palvelimet. Huomaa myös, että selain voi pyytää lupaa paikalliseen verkkoon yhdistämiseen, kun sovellus avataan verkkosivulta (Chromen “paikallisen verkon käyttö”), ja Ollama pitää sallia selaimen pyynnöille (`OLLAMA_ORIGINS`).

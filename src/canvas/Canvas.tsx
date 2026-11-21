@@ -16,18 +16,21 @@ import {
 import '@xyflow/react/dist/style.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createEdge } from '../model/factory'
+import { buildSampleProject } from '../model/sample'
 import { outgoing } from '../model/selectors'
 import type { Point } from '../model/types'
 import { FilterBar } from '../panels/FilterBar'
 import {
   addNode,
+  copySelection,
   deleteSelection,
   groupSelection,
+  pasteSelection,
   releaseLayout,
   startProcessSkeleton,
 } from '../store/actions'
 import { useStore } from '../store/store'
-import { useUi, type LayoutMode } from '../store/ui'
+import { useUi, type Heatmap, type LayoutMode } from '../store/ui'
 import { Icon } from '../ui/Icon'
 import { LaneView } from './LaneView'
 import { ProcessGroupView } from './ProcessGroupView'
@@ -58,8 +61,17 @@ const MODE_HINT: Record<LayoutMode, string> = {
 function CanvasInner() {
   const processId = useStore((s) => s.currentProcessId)
   const selection = useStore((s) => s.selection)
+  const clipSize = useUi((s) => s.clipSize)
+  const heatmap = useUi((s) => s.heatmap)
+  const projectIsEmpty = useStore(
+    (s) =>
+      !!s.project &&
+      Object.keys(s.project.nodes).length === 0 &&
+      Object.keys(s.project.sources).length === 0,
+  )
   const project = useStore((s) => s.project)!
-  const { fitView } = useReactFlow()
+  const { fitView, getInternalNode, getViewport, setViewport } = useReactFlow()
+  const wrapRef = useRef<HTMLDivElement>(null)
   const model = useCanvasModel()
   const { mode } = model
   const editable = mode === 'free'
@@ -119,8 +131,24 @@ function CanvasInner() {
   useEffect(() => {
     if (fitPending.current && model.ready && model.scopeCount > 0) {
       fitPending.current = false
-      requestAnimationFrame(() => fitView({ ...FIT_OPTIONS, duration: 250 }))
+      requestAnimationFrame(() => {
+        // Pitkä ketju kutistuisi koko kuvaan sovitettuna lukukelvottomaksi: näytetään alku sopivalla zoomilla.
+        if (model.scopeCount > 24) {
+          const lead = [...model.nodes]
+            .filter((n) => n.type === 'process')
+            .sort((a, b) =>
+              useUi.getState().direction === 'RIGHT'
+                ? a.position.x - b.position.x || a.position.y - b.position.y
+                : a.position.y - b.position.y || a.position.x - b.position.x,
+            )
+            .slice(0, 12)
+            .map((n) => ({ id: n.id }))
+          if (lead.length) return void fitView({ ...FIT_OPTIONS, nodes: lead, duration: 250 })
+        }
+        void fitView({ ...FIT_OPTIONS, duration: 250 })
+      })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solmujen sijainnit eivät saa laukaista uutta sovitusta
   }, [model.ready, model.structureKey, model.scopeCount, fitView])
 
   // Keskitä kaavio pyydettyyn vaiheeseen, kun asettelu on valmis.
@@ -139,6 +167,33 @@ function CanvasInner() {
       }),
     )
   }, [centerRequest, model.ready, model.nodes, fitView])
+
+  // Vieritä pyydetty vaihe näkyviin muuttamatta zoomia (nuolinäppäinnavigointi, liittäminen).
+  const revealRequest = useUi((s) => s.revealRequest)
+  useEffect(() => {
+    if (!revealRequest || !model.ready) return
+    const node = getInternalNode(revealRequest.nodeId)
+    const box = wrapRef.current?.getBoundingClientRect()
+    if (!node || !box) return
+    useUi.getState().clearRevealRequest()
+    const { x, y, zoom } = getViewport()
+    const w = node.measured.width ?? 160
+    const h = node.measured.height ?? 60
+    const { x: nx, y: ny } = node.internals.positionAbsolute
+    const margin = 80
+    // Vaiheen sijainti näytöllä
+    const left = nx * zoom + x
+    const top = ny * zoom + y
+    const right = left + w * zoom
+    const bottom = top + h * zoom
+    let dx = 0
+    let dy = 0
+    if (left < margin) dx = margin - left
+    else if (right > box.width - margin) dx = box.width - margin - right
+    if (top < margin) dy = margin - top
+    else if (bottom > box.height - margin) dy = box.height - margin - bottom
+    if (dx || dy) void setViewport({ x: x + dx, y: y + dy, zoom }, { duration: 200 })
+  }, [revealRequest, model.ready, getInternalNode, getViewport, setViewport])
 
   const onConnect = useCallback((c: Connection) => {
     const { project, currentProcessId, dispatch } = useStore.getState()
@@ -190,7 +245,7 @@ function CanvasInner() {
   const empty = model.ownCount === 0
 
   return (
-    <div className="canvas" data-testid="canvas" data-mode={mode}>
+    <div className="canvas" data-testid="canvas" data-mode={mode} ref={wrapRef}>
       <ReactFlow
         nodes={nodes}
         edges={model.edges}
@@ -240,6 +295,22 @@ function CanvasInner() {
         </button>
         <button
           type="button"
+          onClick={() => copySelection()}
+          disabled={selection.nodeIds.length === 0}
+          title="Kopioi valitut vaiheet (Ctrl+C)"
+        >
+          <Icon name="copy" size={16} /> Kopioi
+        </button>
+        <button
+          type="button"
+          onClick={() => pasteSelection()}
+          disabled={clipSize === 0 || !editable}
+          title="Liitä kopioidut vaiheet (Ctrl+V)"
+        >
+          <Icon name="plus" size={16} /> Liitä{clipSize > 0 ? ` (${clipSize})` : ''}
+        </button>
+        <button
+          type="button"
           onClick={() => void deleteSelection()}
           disabled={selection.nodeIds.length + selection.edgeIds.length === 0}
           title="Poista valinta (Delete)"
@@ -271,6 +342,19 @@ function CanvasInner() {
           </button>
         ))}
       </div>
+      <label className="canvas__heat">
+        Väritys
+        <select
+          value={heatmap}
+          onChange={(e) => useUi.getState().setHeatmap(e.target.value as Heatmap)}
+          aria-label="Väritys"
+        >
+          <option value="off">Ei väritystä</option>
+          <option value="time">Aika (työ ja odotus)</option>
+          <option value="pain">Kipupisteet</option>
+          <option value="handoff">Luovutukset</option>
+        </select>
+      </label>
       {MODE_HINT[mode] && <p className="canvas__hint">{MODE_HINT[mode]}</p>}
 
       {empty && (
@@ -288,6 +372,36 @@ function CanvasInner() {
               Kirjoita tekstinä
             </button>
           </div>
+          {projectIsEmpty && (
+            <div className="canvas__start" data-testid="getting-started">
+              <h3>Nopein tapa aloittaa</h3>
+              <ol>
+                <li>
+                  <button
+                    type="button"
+                    className="linklike"
+                    onClick={() => useUi.getState().setView('sources')}
+                  >
+                    Tuo dokumentti tai kirjoita muistiinpano
+                  </button>{' '}
+                  ja lisää löydetyt roolit sekä ehdotetut vaiheet yhdellä klikkauksella.
+                </li>
+                <li>Vastaa kysymyksiin, joita työkalu esittää puuttuvista kohdista.</li>
+                <li>Esitä tai vie valmis kaavio kuvana, dokumenttina tai BPMN-tiedostona.</li>
+              </ol>
+              <div className="canvas__empty-actions">
+                <button
+                  type="button"
+                  onClick={() => void useStore.getState().adoptProject(buildSampleProject())}
+                >
+                  Kokeile esimerkkiprojektilla
+                </button>
+                <button type="button" onClick={() => useUi.getState().setHelpOpen(true)}>
+                  Pikanäppäimet ja ohje
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -103,6 +103,10 @@ export function TopBar() {
       onSelect: () => void useStore.getState().adoptProject(buildSampleProject()),
     },
     {
+      label: 'Pikanäppäimet ja ohje',
+      onSelect: () => useUi.getState().setHelpOpen(true),
+    },
+    {
       label: 'Nimeä projekti uudelleen…',
       onSelect: async () => {
         const name = await useUi.getState().prompt({
@@ -123,8 +127,20 @@ export function TopBar() {
         ]
       : []),
     {
-      label: 'Tallennus ja varmuuskopiot…',
+      label: 'Tuo taulukko tai kaavio…',
       separatorBefore: true,
+      onSelect: () => useUi.getState().setImportOpen(true),
+    },
+    {
+      label: 'Näkymät ja skenaariot…',
+      onSelect: () => useUi.getState().setSavedViewsOpen(true),
+    },
+    {
+      label: 'Versiot ja tavoitetila…',
+      onSelect: () => useUi.getState().setVersionsOpen(true),
+    },
+    {
+      label: 'Tallennus ja varmuuskopiot…',
       onSelect: () => useUi.getState().setStorageOpen(true),
     },
     { label: 'Vie projekti (JSON)', onSelect: () => void useStorage.getState().exportJson() },
@@ -256,6 +272,24 @@ export function TopBar() {
           onClick={() => useUi.getState().setView('sources')}
         >
           <Icon name="file" size={16} /> <span className="hide-sm">Lähteet</span>
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={view === 'analysis'}
+          className={view === 'analysis' ? 'is-on' : ''}
+          onClick={() => useUi.getState().setView('analysis')}
+        >
+          <Icon name="graph" size={16} /> <span className="hide-sm">Analyysi</span>
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={view === 'compare'}
+          className={view === 'compare' ? 'is-on' : ''}
+          onClick={() => useUi.getState().setView('compare')}
+        >
+          <Icon name="merge" size={16} /> <span className="hide-sm">Vertailu</span>
         </button>
       </div>
 

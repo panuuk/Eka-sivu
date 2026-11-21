@@ -26,6 +26,7 @@ export function buildSampleProject(): Project {
   }
   const reskontra = role('Ostoreskontra')
   const esimies = role('Esimies')
+  const talousjohtaja = role('Talousjohtaja')
   const operaattori = sys('Verkkolaskuoperaattori')
   const erp = sys('ERP')
   const lasku = art('Ostolasku')
@@ -49,27 +50,62 @@ export function buildSampleProject(): Project {
   const receive = mk(
     'Vastaanota lasku',
     'step',
-    { roleId: reskontra, systemIds: [operaattori], outputIds: [lasku] },
+    {
+      roleId: reskontra,
+      systemIds: [operaattori],
+      outputIds: [lasku],
+      duration: { typical: 5 },
+      frequency: 'päivittäin',
+    },
     'confirmed',
   )
   const check = mk(
     'Tarkista laskun tiedot',
     'step',
-    { roleId: reskontra, systemIds: [erp], inputIds: [lasku, tilaus] },
+    {
+      roleId: reskontra,
+      systemIds: [erp],
+      inputIds: [lasku, tilaus],
+      duration: { min: 15, max: 60 },
+      painPoints: [
+        {
+          id: 'pp_sample_1',
+          text: 'Laskulta puuttuu usein tilausnumero',
+          severity: 3,
+          idea: 'Vaadi tilausnumero verkkolaskun pakollisena kenttänä',
+        },
+      ],
+    },
     'confirmed',
   )
   const ok = mk('Tiedot kunnossa?', 'decision', {}, 'confirmed')
   // Rooli puuttuu tarkoituksella: esimerkki näyttää, miten kysymysjono ohjaa täydentämään mallia.
-  const request = mk('Pyydä korjaus toimittajalta', 'step', {}, 'guess')
+  const request = mk(
+    'Pyydä korjaus toimittajalta',
+    'step',
+    { duration: { typical: 10 }, waiting: { min: 480, max: 2400 } },
+    'guess',
+  )
   const approval = mk('Hyväksyntäkierto', 'subprocess', { roleId: esimies }, 'likely')
   const approved = mk('Hyväksytty?', 'decision', {}, 'likely')
   const post = mk(
     'Kirjaa ja vie maksuun',
     'step',
-    { roleId: reskontra, systemIds: [erp], outputIds: [maksu] },
+    {
+      roleId: reskontra,
+      systemIds: [erp],
+      outputIds: [maksu],
+      duration: { typical: 20 },
+      raci: { accountableIds: [talousjohtaja], informedIds: [esimies] },
+    },
     'likely',
   )
-  const reject = mk('Palauta laskun tarkistajalle', 'step', { roleId: esimies }, 'guess')
+  const reject = mk(
+    'Palauta laskun tarkistajalle',
+    'step',
+    { roleId: esimies, duration: { typical: 10 } },
+    'guess',
+  )
   const end = mk('Lasku maksettu', 'end', {}, 'confirmed')
 
   link(start, receive)
@@ -95,11 +131,22 @@ export function buildSampleProject(): Project {
     label: 'Lähetä esimiehelle',
     roleId: reskontra,
     systemIds: [erp],
+    duration: { typical: 5 },
     confidence: 'likely',
   })
   const decide = createNode(processId, {
     label: 'Esimies hyväksyy',
     roleId: esimies,
+    duration: { typical: 15 },
+    waiting: { min: 480, typical: 960, max: 2400 },
+    painPoints: [
+      {
+        id: 'pp_sample_2',
+        text: 'Hyväksyntä viivästyy, kun esimies on poissa',
+        severity: 3,
+        idea: 'Nimeä varahyväksyjä',
+      },
+    ],
     confidence: 'guess',
   })
   const subOps: Operation[] = [

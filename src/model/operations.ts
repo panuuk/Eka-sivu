@@ -1,4 +1,16 @@
-import type { Entity, Process, ProcessEdge, ProcessNode, Project, Question, Source } from './types'
+import type {
+  Entity,
+  Process,
+  ProcessEdge,
+  ProcessNode,
+  Project,
+  ProjectSnapshot,
+  Question,
+  SavedView,
+  Scenario,
+  Source,
+  Version,
+} from './types'
 
 /**
  * Kaikki mallin muutokset ovat operaatioita. Käsin muokkaus, tekstisyöte, dokumenteista poiminta
@@ -33,6 +45,23 @@ export type Operation =
   | { type: 'addQuestion'; question: Question }
   | { type: 'updateQuestion'; id: string; patch: Partial<Omit<Question, 'id'>> }
   | { type: 'deleteQuestion'; id: string }
+  | { type: 'addVersion'; version: Version }
+  | { type: 'updateVersion'; id: string; patch: Partial<Pick<Version, 'name' | 'comment'>> }
+  | { type: 'deleteVersion'; id: string }
+  /** Palauttaa prosessin rakenteen versiosta. Lähteet säilyvät, versiot säilyvät. */
+  | { type: 'restoreVersion'; id: string }
+  | { type: 'addScenario'; scenario: Scenario }
+  | {
+      type: 'updateScenario'
+      id: string
+      patch: Partial<Pick<Scenario, 'name' | 'description' | 'choices' | 'processId'>>
+    }
+  | { type: 'deleteScenario'; id: string }
+  | { type: 'addView'; view: SavedView }
+  | { type: 'updateView'; id: string; patch: Partial<Omit<SavedView, 'id'>> }
+  | { type: 'deleteView'; id: string }
+  /** Siirtää näkymän esityksen järjestyksessä annettuun kohtaan. */
+  | { type: 'moveView'; id: string; index: number }
   | { type: 'batch'; ops: Operation[] }
 
 export class OperationError extends Error {
@@ -103,7 +132,25 @@ function removeProcesses(p: Project, ids: string[]): Project {
   }
   const processes: Record<string, Process> = {}
   for (const pr of Object.values(p.processes)) if (!idSet.has(pr.id)) processes[pr.id] = pr
-  return { ...p, processes, nodes, edges, questions }
+  // Poistuneisiin prosesseihin sidotut skenaariot ja näkymät poistuvat mukana
+  const scenarios = p.scenarios
+    ? Object.fromEntries(Object.entries(p.scenarios).filter(([, sc]) => !idSet.has(sc.processId)))
+    : undefined
+  const views = p.views?.filter((v) => !idSet.has(v.processId))
+  const droppedScenarios = new Set(Object.keys(p.scenarios ?? {}).filter((id) => !scenarios?.[id]))
+  return {
+    ...p,
+    processes,
+    nodes,
+    edges,
+    questions,
+    scenarios: scenarios && Object.keys(scenarios).length ? scenarios : undefined,
+    views: views?.length
+      ? views.map((v) =>
+          v.scenarioId && droppedScenarios.has(v.scenarioId) ? { ...v, scenarioId: undefined } : v,
+        )
+      : undefined,
+  }
 }
 
 function stripEntityRefs(n: ProcessNode, entityId: string): ProcessNode {
@@ -111,16 +158,53 @@ function stripEntityRefs(n: ProcessNode, entityId: string): ProcessNode {
     n.roleId !== entityId &&
     !n.systemIds.includes(entityId) &&
     !n.inputIds.includes(entityId) &&
-    !n.outputIds.includes(entityId)
+    !n.outputIds.includes(entityId) &&
+    !n.raci?.accountableIds?.includes(entityId) &&
+    !n.raci?.consultedIds?.includes(entityId) &&
+    !n.raci?.informedIds?.includes(entityId)
   ) {
     return n
   }
+  const raci = n.raci
+    ? {
+        accountableIds: n.raci.accountableIds?.filter((x) => x !== entityId),
+        consultedIds: n.raci.consultedIds?.filter((x) => x !== entityId),
+        informedIds: n.raci.informedIds?.filter((x) => x !== entityId),
+      }
+    : undefined
   return {
     ...n,
+    raci,
     roleId: n.roleId === entityId ? undefined : n.roleId,
     systemIds: n.systemIds.filter((x) => x !== entityId),
     inputIds: n.inputIds.filter((x) => x !== entityId),
     outputIds: n.outputIds.filter((x) => x !== entityId),
+  }
+}
+
+/** Korvaa prosessin rakenteen tilannekuvalla ja siivoaa viitteet, jotka eivät enää päde. */
+export function restoreSnapshot(p: Project, snap: ProjectSnapshot): Project {
+  const nodes: Record<string, ProcessNode> = {}
+  for (const n of Object.values(snap.nodes)) {
+    // Lähde on voitu poistaa version ottamisen jälkeen
+    nodes[n.id] = n.sources.some((s) => !p.sources[s.sourceId])
+      ? { ...n, sources: n.sources.filter((s) => p.sources[s.sourceId]) }
+      : n
+  }
+  const questions: Record<string, Question> = {}
+  for (const q of Object.values(p.questions)) {
+    if (!snap.processes[q.processId]) continue
+    if (q.targetId && !nodes[q.targetId]) continue
+    questions[q.id] = q
+  }
+  return {
+    ...p,
+    rootProcessId: snap.rootProcessId,
+    processes: snap.processes,
+    nodes,
+    edges: snap.edges,
+    entities: snap.entities,
+    questions,
   }
 }
 
@@ -269,6 +353,71 @@ export function applyOperation(p: Project, op: Operation): Project {
       need(p.questions, op.id, 'Kysymys')
       return { ...p, questions: omit(p.questions, op.id) }
     }
+    case 'addVersion': {
+      if (p.versions?.[op.version.id])
+        throw new OperationError(`Versio on jo olemassa: ${op.version.id}`)
+      return { ...p, versions: { ...p.versions, [op.version.id]: op.version } }
+    }
+    case 'updateVersion': {
+      const cur = need(p.versions ?? {}, op.id, 'Versio')
+      return { ...p, versions: { ...p.versions, [op.id]: applyPatch(cur, op.patch) } }
+    }
+    case 'deleteVersion': {
+      need(p.versions ?? {}, op.id, 'Versio')
+      const rest = omit(p.versions!, op.id)
+      return { ...p, versions: Object.keys(rest).length ? rest : undefined }
+    }
+    case 'restoreVersion': {
+      const v = need(p.versions ?? {}, op.id, 'Versio')
+      return restoreSnapshot(p, v.snapshot)
+    }
+
+    case 'addScenario': {
+      if (p.scenarios?.[op.scenario.id])
+        throw new OperationError(`Skenaario on jo olemassa: ${op.scenario.id}`)
+      need(p.processes, op.scenario.processId, 'Prosessi')
+      return { ...p, scenarios: { ...p.scenarios, [op.scenario.id]: op.scenario } }
+    }
+    case 'updateScenario': {
+      const cur = need(p.scenarios ?? {}, op.id, 'Skenaario')
+      return { ...p, scenarios: { ...p.scenarios, [op.id]: applyPatch(cur, op.patch) } }
+    }
+    case 'deleteScenario': {
+      need(p.scenarios ?? {}, op.id, 'Skenaario')
+      const rest = omit(p.scenarios!, op.id)
+      // Näkymät, jotka viittasivat skenaarioon, menettävät korostuksen
+      const views = p.views?.map((v) =>
+        v.scenarioId === op.id ? { ...v, scenarioId: undefined } : v,
+      )
+      return { ...p, scenarios: Object.keys(rest).length ? rest : undefined, views }
+    }
+    case 'addView': {
+      if (p.views?.some((v) => v.id === op.view.id))
+        throw new OperationError(`Näkymä on jo olemassa: ${op.view.id}`)
+      need(p.processes, op.view.processId, 'Prosessi')
+      return { ...p, views: [...(p.views ?? []), op.view] }
+    }
+    case 'updateView': {
+      const cur = p.views?.find((v) => v.id === op.id)
+      if (!cur) throw new OperationError(`Näkymää ei löydy: ${op.id}`)
+      if (op.patch.processId) need(p.processes, op.patch.processId, 'Prosessi')
+      return { ...p, views: p.views!.map((v) => (v.id === op.id ? applyPatch(v, op.patch) : v)) }
+    }
+    case 'deleteView': {
+      if (!p.views?.some((v) => v.id === op.id))
+        throw new OperationError(`Näkymää ei löydy: ${op.id}`)
+      const views = p.views.filter((v) => v.id !== op.id)
+      return { ...p, views: views.length ? views : undefined }
+    }
+    case 'moveView': {
+      const list = [...(p.views ?? [])]
+      const from = list.findIndex((v) => v.id === op.id)
+      if (from < 0) throw new OperationError(`Näkymää ei löydy: ${op.id}`)
+      const [v] = list.splice(from, 1)
+      list.splice(Math.max(0, Math.min(op.index, list.length)), 0, v)
+      return { ...p, views: list }
+    }
+
     case 'batch':
       return op.ops.reduce(applyOperation, p)
   }

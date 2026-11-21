@@ -1,3 +1,4 @@
+import { formatRange } from '../model/duration'
 import { edgesOf, nodesOf } from '../model/selectors'
 import type { ProcessNode, Project } from '../model/types'
 
@@ -13,6 +14,10 @@ function annotationText(p: Project, n: ProcessNode, io: boolean): string {
     const name = safe(p.entities[n.roleId].name)
     parts.push(/[\s@[\]<>~,;()"]/.test(name) ? `@(${name.replace(/[()]/g, '')})` : `@${name}`)
   }
+  const roleName = (id: string) => {
+    const name = safe(p.entities[id]?.name ?? '').replace(/[()]/g, '')
+    return name ? (/[\s@[\]<>~,;"]/.test(name) ? `(${name})` : name) : ''
+  }
   const names = (ids: string[]) =>
     ids.map((id) => safe(p.entities[id]?.name ?? '').replace(/[,;\]]/g, ' ')).filter(Boolean)
   const systems = names(n.systemIds)
@@ -22,6 +27,33 @@ function annotationText(p: Project, n: ProcessNode, io: boolean): string {
     if (inputs.length) parts.push(`< ${inputs.join(', ')}`)
     const outputs = names(n.outputIds)
     if (outputs.length) parts.push(`> ${outputs.join(', ')}`)
+  }
+  for (const [letter, ids] of [
+    ['A', n.raci?.accountableIds],
+    ['C', n.raci?.consultedIds],
+    ['I', n.raci?.informedIds],
+  ] as const) {
+    for (const id of ids ?? []) {
+      const name = roleName(id)
+      if (name) parts.push(`${letter}@${name}`)
+    }
+  }
+  if (n.duration) parts.push(`=${formatRange(n.duration)}`)
+  if (n.waiting) parts.push(`^${formatRange(n.waiting)}`)
+  if (n.frequency) {
+    const f = safe(n.frequency).replace(/[()]/g, '')
+    parts.push(/\s/.test(f) ? `%(${f})` : `%${f}`)
+  }
+  for (const t of n.tags ?? []) parts.push(`#${t.replace(/\s+/g, '_')}`)
+  for (const pp of n.painPoints ?? []) {
+    // Merkintätekstistä poistetaan merkinnän erottimet, jotta rivi jäsentyy takaisin samaksi.
+    const strip = (x: string) =>
+      safe(x)
+        .replace(/\s[@[<>~#%^=!]|[@[\]<>~]/g, ' ')
+        .trim()
+    const text = strip(pp.text)
+    if (!text) continue
+    parts.push(`!${pp.severity} ${text}${pp.idea ? ` => ${strip(pp.idea)}` : ''}`)
   }
   if (n.confidence !== 'likely')
     parts.push(`~${n.confidence === 'guess' ? 'arvaus' : 'vahvistettu'}`)

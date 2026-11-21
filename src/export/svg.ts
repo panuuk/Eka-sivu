@@ -9,6 +9,20 @@ export interface SvgOptions {
   showSystems: boolean
   /** Varmuus näkyviin: arvaus katkoviivalla, vahvistettu vihreällä. Pois päältä kaikki on yhtenäistä. */
   showUncertainty: boolean
+  /** Kestot ja kipupisteet vaiheissa. */
+  showMetrics?: boolean
+  /** Lämpökartan tyyppi (värisävy). */
+  heat?: 'off' | 'time' | 'pain' | 'handoff'
+  /** Vertailun merkinnät: lisätty (vihreä), poistettu (punainen katkoviiva), muuttunut (keltainen). */
+  marks?: ReadonlyMap<string, 'added' | 'removed' | 'changed'>
+  /** Skenaariopolku: polun vaiheet ja yhteydet korostetaan, muut himmennetään ja vaiheet numeroidaan. */
+  path?: {
+    nodes: ReadonlySet<string>
+    edges: ReadonlySet<string>
+    order: ReadonlyMap<string, number>
+  }
+  /** Rajaa kuvan tähän alueeseen (graafin koordinaatit, marginaali lisätään). */
+  crop?: { x: number; y: number; width: number; height: number }
   title?: string
   margin?: number
   /** Läpikäynti: korostettu vaihe ja jo käydyt; muut himmennetään. */
@@ -67,19 +81,24 @@ export function renderSvg(graph: RenderGraph, opts: SvgOptions): string {
   const c = themeColors(opts.theme)
   const print = opts.theme.palette === 'print'
   const margin = opts.margin ?? 32
-  const width = Math.ceil(graph.width + margin * 2)
-  const height = Math.ceil(graph.height + margin * 2)
+  const area = opts.crop ?? { x: 0, y: 0, width: graph.width, height: graph.height }
+  const width = Math.ceil(area.width + margin * 2)
+  const height = Math.ceil(area.height + margin * 2)
+  const vx = Math.floor(area.x - margin)
+  const vy = Math.floor(area.y - margin)
   const hl = opts.highlight
+  const pathSet = opts.path
   const dimmed = (id: string) =>
-    !!hl && hl.current !== undefined && id !== hl.current && !hl.visited?.has(id)
+    (!!hl && hl.current !== undefined && id !== hl.current && !hl.visited?.has(id)) ||
+    (!!pathSet && !pathSet.nodes.has(id))
 
   const parts: string[] = []
   const title = opts.title ?? 'Prosessikaavio'
   parts.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-margin} ${-margin} ${width} ${height}" width="${width}" height="${height}" font-family="${esc(fontStack(opts.theme))}" role="img" aria-label="${esc(title)}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${width} ${height}" width="${width}" height="${height}" font-family="${esc(fontStack(opts.theme))}" role="img" aria-label="${esc(title)}">`,
     `<title>${esc(title)}</title>`,
     `<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${c.borderStrong}"/></marker></defs>`,
-    `<rect x="${-margin}" y="${-margin}" width="${width}" height="${height}" fill="${c.bg}"/>`,
+    `<rect x="${vx}" y="${vy}" width="${width}" height="${height}" fill="${c.bg}"/>`,
   )
 
   // Ryhmät (avatut alaprosessit) ensin: syvyysjärjestyksessä, jotta sisäkkäiset ryhmät piirtyvät päälle.
@@ -101,9 +120,12 @@ export function renderSvg(graph: RenderGraph, opts: SvgOptions): string {
       hl &&
       hl.current !== undefined &&
       !(hl.visited?.has(e.from) && (hl.visited?.has(e.to) || hl.current === e.to))
+    const onPath = !pathSet || pathSet.edges.has(e.id)
     parts.push(
-      `<g data-edge="${esc(e.id)}" opacity="${faded ? 0.25 : 1}">`,
-      `<path d="${path}" fill="none" stroke="${c.borderStrong}" stroke-width="1.6" marker-end="url(#arrow)"/>`,
+      `<g data-edge="${esc(e.id)}" opacity="${faded || !onPath ? 0.25 : 1}">`,
+      pathSet && onPath
+        ? `<path d="${path}" fill="none" stroke="${c.accent}" stroke-width="3" marker-end="url(#arrow)"/>`
+        : `<path d="${path}" fill="none" stroke="${c.borderStrong}" stroke-width="1.6" marker-end="url(#arrow)"/>`,
     )
     if (e.label) {
       const lp = labelPoint(e.points)
@@ -120,6 +142,13 @@ export function renderSvg(graph: RenderGraph, opts: SvgOptions): string {
   for (const n of graph.nodes) {
     if (n.group) continue
     parts.push(renderNode(n, opts, c, print, dimmed(n.id), hl?.current === n.id))
+    const order = pathSet?.order.get(n.id)
+    if (order !== undefined) {
+      parts.push(
+        `<g data-order="${order}"><circle cx="${n.x + n.w - 4}" cy="${n.y + 4}" r="11" fill="${c.accent}"/>` +
+          `<text x="${n.x + n.w - 4}" y="${n.y + 8.5}" font-size="12" font-weight="800" text-anchor="middle" fill="#fff">${order}</text></g>`,
+      )
+    }
   }
   parts.push('</svg>')
   return parts.join('\n')
@@ -141,9 +170,12 @@ function renderNode(
   current: boolean,
 ): string {
   const s = strokeFor(n, opts, c)
-  const stroke = current ? c.accent : s.stroke
-  const sw = current ? 3 : s.width
-  const dash = s.dash ? ` stroke-dasharray="${s.dash}"` : ''
+  const mark = opts.marks?.get(n.id)
+  const markColor = mark === 'added' ? c.ok : mark === 'removed' ? c.danger : c.warn
+  const stroke = current ? c.accent : mark ? markColor : s.stroke
+  const sw = current ? 3 : mark ? 3 : s.width
+  const dash =
+    mark === 'removed' ? ' stroke-dasharray="6 4"' : s.dash ? ` stroke-dasharray="${s.dash}"` : ''
   const open = `<g data-id="${esc(n.id)}" data-kind="${n.kind}" opacity="${dim ? 0.25 : 1}"${n.hasChild && n.kind === 'subprocess' ? ' data-has-child="1"' : ''}>`
   const out: string[] = [open]
   const glow = current ? ` filter="drop-shadow(0 0 6px ${c.accent})"` : ''
@@ -151,7 +183,7 @@ function renderNode(
   if (n.kind === 'decision') {
     const { x, y, w, h } = n
     out.push(
-      `<polygon points="${x + w / 2},${y} ${x + w},${y + h / 2} ${x + w / 2},${y + h} ${x},${y + h / 2}" fill="${c.surface}" stroke="${stroke}" stroke-width="${sw}"${dash}${glow}/>`,
+      `<polygon points="${x + w / 2},${y} ${x + w},${y + h / 2} ${x + w / 2},${y + h} ${x},${y + h / 2}" fill="${mark && !print ? tint(markColor, c.surface, 0.16) : c.surface}" stroke="${stroke}" stroke-width="${sw}"${dash}${glow}/>`,
     )
     const lines = wrapLabel(n.label, charsFor(w * 0.62, 12.5), 3)
     const start = y + h / 2 - ((lines.length - 1) * 15) / 2 + 4
@@ -183,8 +215,18 @@ function renderNode(
         `<rect x="${n.x + 5}" y="${n.y + 5}" width="${n.w}" height="${n.h}" rx="12" fill="${c.surface}" stroke="${c.borderStrong}" stroke-width="1.4"/>`,
       )
     }
+    const heatFill =
+      mark && !print
+        ? tint(markColor, c.surface, 0.16)
+        : n.heat !== undefined && opts.heat && opts.heat !== 'off' && !print
+          ? tint(
+              opts.heat === 'pain' ? '#c62828' : opts.heat === 'handoff' ? '#7e3fd0' : '#e04a2f',
+              c.surface,
+              opts.heat === 'handoff' ? 0.28 : 0.1 + n.heat * 0.45,
+            )
+          : c.surface
     out.push(
-      `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="12" fill="${c.surface}" stroke="${stroke}" stroke-width="${sw}"${dash}${glow}/>`,
+      `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="12" fill="${heatFill}" stroke="${stroke}" stroke-width="${sw}"${dash}${glow}/>`,
     )
     if (n.roleId && opts.showRoles && !print) {
       out.push(
@@ -195,6 +237,7 @@ function renderNode(
     const textW = n.w - 28
     const meta: string[] = []
     if (opts.showRoles && n.roleName) meta.push(n.roleName)
+    if (opts.showMetrics && n.timeText) meta.push(n.timeText)
     if (opts.showSystems && n.systems.length)
       meta.push(
         n.systems.slice(0, 2).join(', ') +
@@ -213,6 +256,13 @@ function renderNode(
       const line = fitText(meta.join(' · '), charsFor(textW, 11))
       out.push(`<text x="${tx}" y="${y + 1}" font-size="11" fill="${c.muted}">${esc(line)}</text>`)
     }
+  }
+  if (opts.showMetrics && n.pain && n.kind !== 'start' && n.kind !== 'end') {
+    const col = n.pain === 3 ? c.danger : n.pain === 2 ? '#c27a00' : c.borderStrong
+    out.push(
+      `<circle cx="${n.x + 2}" cy="${n.y + n.h - 2}" r="9" fill="${col}"/>`,
+      `<text x="${n.x + 2}" y="${n.y + n.h + 2}" font-size="12" font-weight="800" text-anchor="middle" fill="#fff">!</text>`,
+    )
   }
   out.push('</g>')
   return out.join('\n')

@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Source } from '../model/types'
 import { findMentions } from '../capture/mentions'
-import { importFile, SUPPORTED_EXTENSIONS } from '../capture/importers'
+import { FileImportError, importFile, SUPPORTED_EXTENSIONS } from '../capture/importers'
 import { refsOfSource } from '../capture/refs'
 import type { Mark } from '../capture/segments'
+import { discoverEntities, type Candidate } from '../capture/discover'
+import { LlmPanel } from './LlmPanel'
+import { useLlm } from '../store/llm'
+import { ensureEntity } from '../model/commands'
+import type { Operation } from '../model/operations'
 import { ruleExtractor, type Suggestion } from '../capture/suggest'
 import { resolveAnchor } from '../store/actions'
 import {
@@ -38,16 +43,39 @@ const ACCEPT = SUPPORTED_EXTENSIONS.map((e) => `.${e}`).join(',')
 /** Tiedostotuonti ja muistiinpanon luonti, jaettu tyhjän tilan ja työnäkymän kesken. */
 function useSourceCreation() {
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState<string | null>(null)
+  const abort = useRef<AbortController | null>(null)
   const importFiles = async (files: FileList | File[]) => {
     setBusy(true)
     const errors: string[] = []
     for (const file of Array.from(files)) {
+      const controller = new AbortController()
+      abort.current = controller
       try {
-        const doc = await importFile(file)
+        const doc = await importFile(file, {
+          signal: controller.signal,
+          onProgress: (p) =>
+            setProgress(
+              `${p.status}: sivu ${p.page}/${p.pages} (${Math.round(p.fraction * 100)} %)`,
+            ),
+          confirmOcr: ({ pages, total }) =>
+            useUi.getState().ask({
+              title: 'Tunnistetaanko teksti kuvasta?',
+              message: `${pages === total ? `Tiedostossa on ${total} sivua` : `${pages}/${total} sivulta`} ilman tekstikerrosta (esim. skannattu paperi). Tekstintunnistus (OCR) tehdään tässä selaimessa, eikä mitään lähetetä minnekään. Ensimmäisellä kerralla ladataan suomen ja englannin kielitiedot (noin 7 Mt), ja tunnistus kestää noin 5–15 sekuntia sivua kohti. Tulos voi sisältää virheitä, joten tarkista se.`,
+              confirmLabel: 'Tunnista teksti',
+            }),
+        })
         createSource({ title: doc.title, text: doc.text, kind: 'document', fileName: doc.fileName })
       } catch (e) {
-        errors.push(`${file.name}: ${(e as Error).message}`)
+        if ((e as Error).name === 'AbortError') errors.push(`${file.name}: tunnistus peruttiin`)
+        else if (e instanceof FileImportError && e.code === 'needs-ocr')
+          errors.push(
+            `${file.name}: ${e.message} Valitse seuraavalla kerralla “Tunnista teksti”, kun sovellus kysyy.`,
+          )
+        else errors.push(`${file.name}: ${(e as Error).message}`)
       }
+      abort.current = null
+      setProgress(null)
     }
     setBusy(false)
     if (errors.length) useStore.getState().setError(errors.join(' | '))
@@ -63,7 +91,7 @@ function useSourceCreation() {
     const id = createSource({ title, text: '', kind: 'note' })
     if (id) useUi.getState().setPendingEditSource(id)
   }
-  return { busy, importFiles, newNote }
+  return { busy, progress, importFiles, newNote, cancel: () => abort.current?.abort() }
 }
 
 function FileInput({ onFiles }: { onFiles: (files: FileList) => void }) {
@@ -86,7 +114,7 @@ function FileInput({ onFiles }: { onFiles: (files: FileList) => void }) {
 export function SourcesView() {
   const project = useStore((s) => s.project)!
   const openId = useUi((s) => s.openSourceId)
-  const { busy, importFiles, newNote } = useSourceCreation()
+  const { busy, progress, importFiles, newNote, cancel } = useSourceCreation()
   const [dragging, setDragging] = useState(false)
 
   const sources = useMemo(
@@ -130,9 +158,19 @@ export function SourcesView() {
               Kirjoita muistiinpano
             </button>
           </div>
+          {progress && (
+            <p className="field__hint" role="status" data-testid="import-progress">
+              {progress}{' '}
+              <button type="button" className="linklike" onClick={cancel}>
+                Peru
+              </button>
+            </p>
+          )}
           <p className="field__hint">
-            Tuetut tiedostot: Word (.docx), PDF, tekstitiedostot (.txt, .md). Voit myös vetää
-            tiedoston tähän.
+            Tuetut tiedostot: Word (.docx), PowerPoint (.pptx), PDF (myös skannatut,
+            tekstintunnistuksella), kuvat (.png, .jpg), sähköposti (.eml) ja tekstitiedostot (.txt,
+            .md). Voit myös vetää tiedoston tähän. Excel, CSV, BPMN ja Mermaid tuodaan
+            projektivalikosta (“Tuo taulukko tai kaavio”).
           </p>
         </div>
         <FileInput onFiles={(f) => void importFiles(f)} />
@@ -152,7 +190,7 @@ function SourceWorkspace({ source, sources }: { source: Source; sources: Source[
   const flash = useUi((s) => s.flash)
   const setTab = useUi((s) => s.setSourcesTab)
   const readerWrap = useRef<HTMLDivElement>(null)
-  const { busy, importFiles, newNote } = useSourceCreation()
+  const { busy, progress, importFiles, newNote, cancel } = useSourceCreation()
 
   const [range, setRange] = useState<Range | null>(null)
   // Uusi muistiinpano aukeaa suoraan muokattavaksi.
@@ -187,9 +225,23 @@ function SourceWorkspace({ source, sources }: { source: Source; sources: Source[
   // Tunnistus ja ehdotukset riippuvat vain entiteeteistä, ei koko projektista.
   const entityScope = useMemo(() => ({ entities: project.entities }), [project.entities])
   const mentions = useMemo(() => findMentions(entityScope, source.text), [entityScope, source.text])
-  const allSuggestions = useMemo(
+  const ruleSuggestions = useMemo(
     () => ruleExtractor.suggest(entityScope, source.id, source.text),
     [entityScope, source.text, source.id],
+  )
+  const llmResult = useLlm((s) => s.results[source.id])
+  const llmMode = useLlm((s) => s.mode[source.id] ?? 'rules')
+  // Kielimallin tulos on voimassa vain, kun lähdeteksti ei ole muuttunut ajon jälkeen
+  const allSuggestions = useMemo(
+    () =>
+      llmMode === 'llm' && llmResult && llmResult.textLength === source.text.length
+        ? llmResult.suggestions
+        : ruleSuggestions,
+    [llmMode, llmResult, ruleSuggestions, source.text.length],
+  )
+  const candidates = useMemo(
+    () => discoverEntities(entityScope, source.text),
+    [entityScope, source.text],
   )
   const allMatching = useMemo(() => {
     const covered = (s: Suggestion) =>
@@ -272,6 +324,14 @@ function SourceWorkspace({ source, sources }: { source: Source; sources: Source[
           <Icon name="upload" size={16} /> {busy ? 'Tuodaan…' : 'Tuo tiedosto'}
         </label>
         <FileInput onFiles={(f) => void importFiles(f)} />
+        {progress && (
+          <span className="muted" role="status" data-testid="import-progress">
+            {progress}{' '}
+            <button type="button" className="linklike" onClick={cancel}>
+              Peru
+            </button>
+          </span>
+        )}
         <span className="sources__spacer" />
         {editing ? (
           <>
@@ -535,6 +595,8 @@ function SourceWorkspace({ source, sources }: { source: Source; sources: Source[
 
           {tab === 'suggestions' && (
             <div className="side-section">
+              <LlmPanel source={source} />
+              {candidates.length > 0 && <CandidatePanel candidates={candidates} />}
               <div className="side-actions side-actions--row">
                 <button
                   type="button"
@@ -697,4 +759,66 @@ function scrollToOffset(container: HTMLElement | null, offset: number) {
     else break
   }
   target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+}
+
+/** Tekstistä löydetyt uudet roolit ja järjestelmät: yhdellä klikkauksella malliin, jolloin ehdotukset saavat roolinsa. */
+function CandidatePanel({ candidates }: { candidates: Candidate[] }) {
+  const [off, setOff] = useState<Set<string>>(new Set())
+  const key = (c: Candidate) => `${c.kind}:${c.name}`
+  const chosen = candidates.filter((c) => (c.likely ? !off.has(key(c)) : off.has(key(c))))
+  const toggle = (c: Candidate) =>
+    setOff((prev) => {
+      const next = new Set(prev)
+      if (next.has(key(c))) next.delete(key(c))
+      else next.add(key(c))
+      return next
+    })
+  const addChosen = () => {
+    const project = useStore.getState().project
+    if (!project) return
+    const ops: Operation[] = []
+    for (const c of chosen) ops.push(...ensureEntity(project, c.kind, c.name, ops).ops)
+    useStore.getState().dispatch(ops)
+  }
+  return (
+    <div className="candidates" data-testid="candidates">
+      <h4>Löydetyt roolit ja järjestelmät</h4>
+      <p className="field__hint">
+        Lisää nämä ensin, niin ehdotukset saavat roolinsa ja järjestelmänsä automaattisesti.
+      </p>
+      {(['role', 'system'] as const).map((kind) => {
+        const group = candidates.filter((c) => c.kind === kind)
+        if (group.length === 0) return null
+        return (
+          <div key={kind} className="candidates__group">
+            <span className="candidates__label">{kind === 'role' ? 'Roolit' : 'Järjestelmät'}</span>
+            <ul className="candidates__list">
+              {group.map((c) => {
+                const on = c.likely ? !off.has(key(c)) : off.has(key(c))
+                return (
+                  <li key={key(c)}>
+                    <label
+                      className={`chip-check ${on ? 'is-on' : ''}`}
+                      title={`${c.count} mainintaa`}
+                    >
+                      <input type="checkbox" checked={on} onChange={() => toggle(c)} />
+                      {c.name} <span className="muted">{c.count}×</span>
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )
+      })}
+      <button
+        type="button"
+        disabled={chosen.length === 0}
+        onClick={addChosen}
+        data-testid="candidates-add"
+      >
+        Lisää valitut ({chosen.length})
+      </button>
+    </div>
+  )
 }
