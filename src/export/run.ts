@@ -177,7 +177,7 @@ export async function svgToPng(svg: string, scale = 2): Promise<Blob> {
 /** Dokumentti: jokaiselle alipuun prosessille oma kaavio (ei avattuja alaprosesseja, ne ovat omina osioinaan). */
 export async function buildDocument(
   req: ExportRequest,
-  opts: { interactive: boolean; includeQuestions: boolean },
+  opts: { interactive: boolean; includeQuestions: boolean; review?: boolean },
 ): Promise<string> {
   const svgs: Record<string, string> = {}
   for (const id of descendantProcessIds(req.project, req.processId)) {
@@ -193,6 +193,7 @@ export async function buildDocument(
     theme: req.theme,
     svgs,
     interactive: opts.interactive,
+    review: opts.review,
     includeQuestions: opts.includeQuestions,
     questions: analysis.open,
     comparison: req.comparison,
@@ -203,7 +204,12 @@ export async function buildDocument(
 export async function runExport(
   format: ExportFormat,
   req: ExportRequest,
-  extra: { includeQuestions?: boolean; deck?: DeckOptions; tiles?: TileOptions } = {},
+  extra: {
+    includeQuestions?: boolean
+    review?: boolean
+    deck?: DeckOptions
+    tiles?: TileOptions
+  } = {},
 ): Promise<void> {
   const base = safeFilename(req.project.processes[req.processId]?.name ?? 'prosessi')
   switch (format) {
@@ -251,8 +257,12 @@ export async function runExport(
     }
     case 'html':
       return downloadText(
-        await buildDocument(req, { interactive: true, includeQuestions: false }),
-        `${base}.html`,
+        await buildDocument(req, {
+          interactive: true,
+          includeQuestions: false,
+          review: !!extra.review,
+        }),
+        `${base}${extra.review ? '.palaute' : ''}.html`,
         'text/html;charset=utf-8',
       )
     case 'document': {

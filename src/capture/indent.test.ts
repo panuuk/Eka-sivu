@@ -31,9 +31,12 @@ describe('diffSummary', () => {
       changedNodes: [],
       newEdges: [],
       removedEdges: [],
+      removedNodes: [],
       newEntities: [],
       newProcesses: [],
       newSources: [],
+      cardChanges: 0,
+      entityNotes: 0,
     }
     expect(diffSummary(base)).toBe('')
     expect(

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Source } from '../model/types'
 import { findMentions } from '../capture/mentions'
 import { FileImportError, importFile, SUPPORTED_EXTENSIONS } from '../capture/importers'
+import { looksLikeMarkdown } from '../capture/markdown'
 import { refsOfSource } from '../capture/refs'
 import type { Mark } from '../capture/segments'
 import { discoverEntities, type Candidate } from '../capture/discover'
@@ -364,15 +365,27 @@ function SourceWorkspace({ source, sources }: { source: Source; sources: Source[
             </button>
           </>
         ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setDraft(source.text)
-              setEditing(true)
-            }}
-          >
-            <Icon name="edit" size={16} /> Muokkaa tekstiä
-          </button>
+          <>
+            {looksLikeMarkdown(source.text) && (
+              <button
+                type="button"
+                data-testid="source-to-quick"
+                title="Avaa teksti pikasyötteessä, jossa Markdown muunnetaan vaiheiksi, rooleiksi ja prosessikortiksi"
+                onClick={() => useUi.getState().openQuick('add', source.text)}
+              >
+                <Icon name="edit" size={16} /> Muunna pikasyötteeksi
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(source.text)
+                setEditing(true)
+              }}
+            >
+              <Icon name="edit" size={16} /> Muokkaa tekstiä
+            </button>
+          </>
         )}
         <Menu
           label="Lähteen toiminnot"

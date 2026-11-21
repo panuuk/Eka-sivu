@@ -122,6 +122,10 @@ interface UiState extends Persisted {
   setHelpOpen: (open: boolean) => void
   versionsOpen: boolean
   setVersionsOpen: (open: boolean) => void
+  syncOpen: boolean
+  setSyncOpen: (open: boolean) => void
+  cardOpen: boolean
+  setCardOpen: (open: boolean) => void
   /** Vertailun lähtötila (version tunniste) ja kohde (version tunniste tai 'current'). */
   compareBaseId: string | null
   compareTargetId: string
@@ -196,6 +200,8 @@ interface UiState extends Persisted {
   setLayoutMode: (m: LayoutMode) => void
   setHeatmap: (h: Heatmap) => void
   toggleLeft: () => void
+  /** Sulkee molemmat sivupaneelit (puhelimella taustan napautus). */
+  closePanels: () => void
   toggleRight: () => void
   setRightOpen: (open: boolean) => void
   setEntityManagerOpen: (open: boolean) => void
@@ -244,6 +250,10 @@ export const useUi = create<UiState>((set, get) => {
     setHelpOpen: (helpOpen) => set({ helpOpen }),
     versionsOpen: false,
     setVersionsOpen: (versionsOpen) => set({ versionsOpen }),
+    syncOpen: false,
+    setSyncOpen: (syncOpen) => set({ syncOpen }),
+    cardOpen: false,
+    setCardOpen: (cardOpen) => set({ cardOpen }),
     compareBaseId: null,
     compareTargetId: 'current',
     setCompare: (compareBaseId, compareTargetId = 'current') =>
@@ -341,6 +351,10 @@ export const useUi = create<UiState>((set, get) => {
     },
     toggleLeft: () => {
       set((s) => ({ leftOpen: !s.leftOpen }))
+      save()
+    },
+    closePanels: () => {
+      set({ leftOpen: false, rightOpen: false })
       save()
     },
     toggleRight: () => {

@@ -27,6 +27,12 @@ Tämä dokumentti kertoo, mitä on tehty, miksi ja mitä on jätetty tekemättä
 | 14  | Esittämisen syventäminen    | Valmis      | `src/export/deck.ts`, `pptx.ts`, `tiles.ts`, `views.ts`, `src/panels/SavedViewsDialog.tsx`          |
 | 12  | Tuonnit                     | Valmis      | `src/capture/table.ts`, `diagram.ts`, `bpmnImport.ts`, `mermaidImport.ts`, `office.ts`, `ocr.ts`    |
 | 13  | Paikallinen kielimalli      | Valmis osin | `src/capture/llm.ts`, `src/capture/eval/`, `src/panels/LlmPanel.tsx`, `src/store/llm.ts`            |
+| 15  | Puhelin                     | Valmis      | `src/ui/useMedia.ts`, `TopBar.tsx`, `src/canvas/Canvas.tsx`, `src/App.tsx`                          |
+| 16  | Tekoälytyönkulut            | Valmis      | `src/capture/aiPrompt.ts`, `aiResponse.ts`, `plan.ts`, `src/panels/AiAssist.tsx`                    |
+| 17  | Dokumentin rakenne malliin  | Valmis      | `src/capture/markdown.ts`, `syntax.ts`, `src/panels/ProcessCardDialog.tsx`                          |
+| 18  | Siirto laitteiden välillä   | Valmis      | `src/model/sync.ts`, `src/panels/SyncDialog.tsx`                                                    |
+| 19  | Katselmointi                | Valmis      | `src/export/document.ts`, `src/model/feedback.ts`, `src/panels/SyncDialog.tsx`                      |
+| 20  | Ylläpito                    | Valmis      | `.github/workflows/`, `docs/`                                                                       |
 
 ## Poikkeamat alkuperäisestä suunnitelmasta
 
@@ -66,7 +72,7 @@ Toteutusjärjestys: **8 → 9 → 10 → 11 → 14 → 12 → 13**. Lähtöoletu
 - **Toinen välilehti.** Jos sovellus on auki useassa välilehdessä, siitä varoitetaan, koska ne ylikirjoittaisivat toistensa muutoksia.
 - **CI** ajaa nyt myös selaintestit.
 
-Rajoitus: GitHub Pages pitää kytkeä päälle repon asetuksista (Settings → Pages → Source: GitHub Actions) ennen kuin julkaisu onnistuu.
+Julkaisu: GitHub Pages -työnkulku poistettiin vaiheessa 20, koska julkaisu tehdään Vercelin kautta. Sovellus on staattinen ja polut ovat suhteellisia.
 
 ### Vaihe 9: Koekäyttö ja kitkan poisto (valmis)
 
@@ -139,3 +145,48 @@ Tämä vaihe oli suunnitelmassa valinnainen ja ehdollinen mittaukselle. Toteutet
 - **Testaus**: adapteri on testattu simuloidulla palvelimella (jäsennys, sijainnin etsintä, pilkkominen, virheet, kevennys) ja koko selainpolku Playwrightin simuloimalla OpenAI-rajapinnalla. Oikealla mallilla sitä ei ole ajettu.
 
 Ei toteutettu: selaimessa toimiva malli (WebLLM). Se vaatisi WebGPU:n ja 2–5 Gt latauksen, eikä sitä voi varmistaa täällä, joten se jätettiin pois. Samaan rajapintaan voi ajaa myös muut paikalliset palvelimet. Huomaa myös, että selain voi pyytää lupaa paikalliseen verkkoon yhdistämiseen, kun sovellus avataan verkkosivulta (Chromen “paikallisen verkon käyttö”), ja Ollama pitää sallia selaimen pyynnöille (`OLLAMA_ORIGINS`).
+
+## Vaiheet 15–20
+
+Toteutusjärjestys: **15 → 16 → 17 → 18 → 19 → 20**. Lähtöoletukset (vahvistettu): puhelimella katselu, muistiinpanot, pikasyöte ja listamuokkaus; tekoäly ulkopuolisena kopioi–liitä-mallilla (käyttäjä käyttää Geminiä ja Claudea, joten ohjeet ovat yleisiä); siirto laitteiden välillä tiedostona; katselmointi HTML-tiedostolla; julkaisu Vercelillä.
+
+### Vaihe 15: Puhelin (valmis)
+
+- Yläpalkki yhdelle riville: harvinaisemmat toiminnot (Esitä, Vie, roolit, ominaisuudet, suunta, tallennus) ovat Lisää-valikossa kapealla näytöllä (`useNarrow`, alle 700 px).
+- Kaavion haku, väritys ja asettelutapa ovat Näkymä-paneelissa, joka avautuu napista eikä peitä työkalupalkkia. Tyhjän prosessin aloituskortti täyttää kaavion ja vierittyy.
+- Kosketusyhdistäminen: valitse vaihe, paina Yhdistä ja napauta kohdetta. Kahvat ovat isompia kosketuslaitteilla. Vanhaan Pikasyöte-reittiin ei koskettu.
+- Sivupaneelit avautuvat sisällön päälle ja sulkeutuvat taustaa napauttamalla. Vaihetta lisätessä paneeli ei enää avaudu puhelimella (se peittäisi kaavion).
+- Analyysi, vertailu, lähteet ja kaikki ikkunat ladataan vasta tarvittaessa: pääpaketti 979 → 772 kt. Yleisimmät osat ladataan valmiiksi muutaman sekunnin kuluttua, ja ne ovat offline-välimuistissa.
+- Rajoitus: kaavion raahausmuokkaus ja suuret mallit ovat edelleen tietokoneelle. Puhelinkäyttöä on testattu emuloidulla 390 × 844 -näytöllä, ei oikealla laitteella.
+
+### Vaihe 16: Tekoälytyönkulut (valmis)
+
+- **Ohjepohjat** (`aiPrompt.ts`): muotoile muistiinpanot, arvioi nykyinen prosessi (prosessi ja avoimet kysymykset mukana), haastattelukysymykset ja esittelyteksti. Syntaksitaulukko tulee syntaksiohjeesta, ja esimerkki on testattu jäsentyväksi. Teksti näytetään ennen kopiointia.
+- **Vastauksen siivous** (`aiResponse.ts`): johdanto, koodilohko, loppuselitys, lihavoinnit ja tähtiluettelot pois, palautettavissa. Markdown-dokumentti ei sekoitu tekoälyvastaukseen.
+- **Nimenmuutos** `Uusi nimi (aiemmin: Vanha nimi)`: vaihe säilyy yhteyksineen, ja vanhaan nimeen viittaavat hypyt löytävät sen.
+- **Poistot**: valinta _Poista vaiheet, joita tekstissä ei ole_ ehdottaa poistettavaksi vaiheet, joita koko prosessin kuvaavassa tekstissä ei ole. Jokaisen voi säilyttää erikseen, ja aukon yli siltaudutaan.
+- Rajoitus: ohjeita ei ole kokeiltu oikealla tekoälyllä, vain testattu, että niiden esimerkki toimii sovelluksessa.
+
+### Vaihe 17: Dokumentin rakenne malliin (valmis)
+
+- **Malli** (skeemaversio 5): prosessikortti (tarkoitus, omistaja, käynnistäjä, asiakas, tuotokset, mittarit, riskit, tarkistuslista), roolin kuvaus ja vaiheen tarkistuslista.
+- **Direktiivit** pikasyötteessä: `:tarkoitus`, `:omistaja`, `:asiakas`, `:käynnistäjä`, `:tuotos`, `:mittari`, `:riski`, `:tarkistus`, `:rooli Nimi: kuvaus`. Ne kulkevat mukana tekstiviennissä ja tuonnissa.
+- **Markdown-muunnos** lukee roolitaulukon, RACI-taulukon (R/A/C/I-sarakkeet), vaiheiden Tavoite/Syöte/Tuotos/Toimenpiteet/Työaika/Odotus/Tarkistuslista-kentät sekä tarkistuslista-, mittari- ja riskiosiot. Mermaid-kaavion vaihe, josta lähtee useita haaroja, tulee päätökseksi.
+- **Näkyvyys**: prosessikortti-ikkuna, roolin kuvaus roolinhallinnassa, vaiheen tarkistuslista ominaisuuksissa, kortti dokumenttiviennissä ja PowerPoint-esityksen alussa.
+- Rajoitus: päätöksen kuvaus ei säily pikasyötteessä. Otsikottomissa dokumenteissa (esim. liitetty teksti, josta otsikot ovat hävinneet) osioita ei voi tunnistaa. Vaihetaulukot (Vaihe | Rooli | Järjestelmä) tuodaan Excelinä tai CSV:nä.
+
+### Vaihe 18: Siirto laitteiden välillä (valmis)
+
+- Jokaisella tietueella on muokkausaika ja poistetuilla poistomerkintä (`stamps`, `tombstones`). Ne päivitetään tallennuksen yhteydessä viitteitä vertaamalla, joten operaatiot pysyvät puhtaina. Kumoaminen ja uudelleentekeminen leimataan myös.
+- **Jaa**: jakovalikko puhelimella, muuten tiedoston lataus. **Yhdistä** (`sync.ts`): kummankin laitteen lisäykset säilyvät, eroavissa tietueissa uudempi voittaa (valinnan voi vaihtaa), poistettu ja sen jälkeen muokattu säilyy, samannimiset roolit ja järjestelmät yhdistyvät, ja eheys tarkistetaan. Yhdistäminen on yksi kumottava askel.
+- Rajoitus: yhdistäminen perustuu muokkausaikoihin eikä yhteiseen lähtötilaan, joten jos sama asia on muuttunut molemmilla, valinta tehdään käsin. Laitteiden kellojen erot voivat vaikuttaa oletusvalintaan. Rinnakkaiset muutokset samaan kohtaan (esim. kaksi uutta vaihetta saman vaiheen jälkeen) tuottavat rinnakkaiset haarat, jotka käyttäjä siistii.
+
+### Vaihe 19: Katselmointi (valmis)
+
+- **HTML-vienti palautetilassa**: lukija kommentoi vaiheita ja vastaa avoimiin kysymyksiin ja tallentaa palautteen tiedostoksi. Suoritettava skripti on kiinteä eikä sisällä käyttäjän tietoja.
+- **Palautteen tuonti** (Jaa ja yhdistä): rivit valitaan, ja niistä tulee avoimia kysymyksiä oikeisiin vaiheisiin. Tuonti on idempotentti, ja toisen projektin palaute hylätään.
+
+### Vaihe 20: Ylläpito (valmis)
+
+- GitHub Pages -työnkulku poistettu (julkaisu Vercelillä).
+- `npm audit`: ei haavoittuvuuksia. Offline-testi kattaa nyt myös vasta tarvittaessa ladattavat näkymät.

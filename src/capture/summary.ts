@@ -10,6 +10,8 @@ export function diffSummary(d: ProjectDiff): string {
   if (steps) parts.push(plural(steps, 'uusi vaihe', 'uutta vaihetta'))
   if (decisions) parts.push(plural(decisions, 'uusi päätös', 'uutta päätöstä'))
   if (d.changedNodes.length) parts.push(plural(d.changedNodes.length, 'päivitys', 'päivitystä'))
+  if (d.removedNodes.length)
+    parts.push(plural(d.removedNodes.length, 'vaihe poistuu', 'vaihetta poistuu'))
   if (d.newEdges.length) parts.push(plural(d.newEdges.length, 'yhteys', 'yhteyttä'))
   if (d.removedEdges.length)
     parts.push(plural(d.removedEdges.length, 'yhteys poistuu', 'yhteyttä poistuu'))
@@ -19,6 +21,13 @@ export function diffSummary(d: ProjectDiff): string {
   if (kinds.system) parts.push(plural(kinds.system, 'uusi järjestelmä', 'uutta järjestelmää'))
   if (kinds.artifact)
     parts.push(plural(kinds.artifact, 'uusi syöte/tuotos', 'uutta syötettä/tuotosta'))
+  if (d.cardChanges)
+    parts.push(
+      d.cardChanges === 1
+        ? 'prosessikortti päivittyy'
+        : `${d.cardChanges} prosessikorttia päivittyy`,
+    )
+  if (d.entityNotes) parts.push(plural(d.entityNotes, 'roolin kuvaus', 'roolin kuvausta'))
   if (d.newProcesses.length)
     parts.push(plural(d.newProcesses.length, 'uusi prosessi', 'uutta prosessia'))
   return parts.join(' · ')

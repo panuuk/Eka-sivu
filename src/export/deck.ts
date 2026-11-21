@@ -134,6 +134,27 @@ export async function planDeck(
     notes: root?.description ?? '',
   })
 
+  // Prosessikortti heti avauksen jälkeen: tarkoitus, omistaja, käynnistäjä, asiakas ja tuotokset
+  const card = root?.card
+  if (card) {
+    const bullets = [
+      card.purpose && `Tarkoitus: ${card.purpose}`,
+      card.owner && `Omistaja: ${card.owner}`,
+      card.trigger && `Käynnistäjä: ${card.trigger}`,
+      card.customer && `Asiakas: ${card.customer}`,
+      card.outputs?.length && `Tuotokset: ${card.outputs.join(', ')}`,
+      card.metrics?.length && `Mittarit: ${card.metrics.join('; ')}`,
+      card.risks?.length && `Riskit: ${card.risks.join('; ')}`,
+    ].filter((x): x is string => !!x)
+    if (bullets.length)
+      slides.push({
+        kind: 'text',
+        title: 'Prosessikortti',
+        bullets,
+        notes: card.checklist?.length ? `Tarkistuslista: ${card.checklist.join('; ')}` : '',
+      })
+  }
+
   const baseView = (processId: string, patch: Partial<SavedView> = {}): SavedView =>
     createView({
       name: project.processes[processId]?.name ?? 'Prosessi',

@@ -1,4 +1,11 @@
-import { SCHEMA_VERSION, type Project, type SavedView, type Scenario, type Version } from './types'
+import {
+  SCHEMA_VERSION,
+  type Project,
+  type ProcessCard,
+  type SavedView,
+  type Scenario,
+  type Version,
+} from './types'
 import { validateProject } from './validate'
 
 export const FILE_APP_ID = 'prosessikartta'
@@ -21,6 +28,8 @@ const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string
   2: (raw) => raw,
   // v3 -> v4: skenaariot ja tallennetut näkymät (valinnaisia kenttiä).
   3: (raw) => raw,
+  // v4 -> v5: prosessikortti, roolien kuvaus ja vaiheen tarkistuslista (valinnaisia kenttiä).
+  4: (raw) => raw,
 }
 
 export class ImportError extends Error {
@@ -47,6 +56,30 @@ export function migrateProject(raw: unknown): Project {
     cur.schemaVersion = version
   }
   return normalizeProject(cur)
+}
+
+const CARD_TEXT = ['purpose', 'owner', 'trigger', 'customer'] as const
+const CARD_LISTS = ['outputs', 'metrics', 'risks', 'checklist'] as const
+
+/** Poistaa prosessikortista virheelliset kentät. Palauttaa undefined, jos kortti jää tyhjäksi. */
+export function sanitizeCard(raw: unknown): ProcessCard | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const src = raw as Record<string, unknown>
+  const card: ProcessCard = {}
+  for (const k of CARD_TEXT) {
+    const v = src[k]
+    if (typeof v === 'string' && v.trim()) card[k] = v.trim()
+  }
+  for (const k of CARD_LISTS) {
+    const v = src[k]
+    if (Array.isArray(v)) {
+      const list = v
+        .filter((x): x is string => typeof x === 'string' && !!x.trim())
+        .map((x) => x.trim())
+      if (list.length) card[k] = list
+    }
+  }
+  return Object.keys(card).length ? card : undefined
 }
 
 const RECORDS = ['processes', 'nodes', 'edges', 'entities', 'sources', 'questions'] as const
@@ -76,7 +109,25 @@ function normalizeProject(raw: Record<string, unknown>): Project {
     n.kind ??= 'step'
     n.label ??= ''
   }
-  for (const e of Object.values(p.entities)) e.aliases ??= []
+  for (const e of Object.values(p.entities)) {
+    e.aliases ??= []
+    if (typeof e.description !== 'string') delete e.description
+  }
+  for (const n of Object.values(p.nodes)) {
+    if (n.checklist !== undefined) {
+      n.checklist = Array.isArray(n.checklist)
+        ? n.checklist.filter((x) => typeof x === 'string' && x.trim())
+        : undefined
+      if (!n.checklist?.length) delete n.checklist
+    }
+  }
+  for (const proc of Object.values(p.processes)) {
+    if (proc.card !== undefined) {
+      const card = sanitizeCard(proc.card)
+      if (card) proc.card = card
+      else delete proc.card
+    }
+  }
   // Skenaariot ja näkymät: viallinen tietue pudotetaan, jottei se estä projektin avaamista.
   if (p.scenarios !== undefined) {
     const ok: NonNullable<Project['scenarios']> = {}
@@ -130,6 +181,16 @@ function normalizeProject(raw: Record<string, unknown>): Project {
       }
     }
     p.versions = Object.keys(ok).length ? ok : undefined
+  }
+  for (const key of ['stamps', 'tombstones'] as const) {
+    const raw = p[key] as unknown
+    if (raw === undefined) continue
+    const ok: Record<string, number> = {}
+    if (raw && typeof raw === 'object' && !Array.isArray(raw))
+      for (const [id, t] of Object.entries(raw as Record<string, unknown>))
+        if (typeof t === 'number' && Number.isFinite(t)) ok[id] = t
+    if (Object.keys(ok).length) p[key] = ok
+    else delete p[key]
   }
   const issues = validateProject(p)
   if (issues.length) {

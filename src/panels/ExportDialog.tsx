@@ -27,6 +27,7 @@ export function ExportDialog() {
 
   const [format, setFormat] = useState<ExportFormat>('svg')
   const [includeQuestions, setIncludeQuestions] = useState(false)
+  const [review, setReview] = useState(false)
   const [busy, setBusy] = useState(false)
   const [deck, setDeck] = useState<DeckOptions>(DEFAULT_DECK)
   const [tiles, setTiles] = useState<TileOptions>(DEFAULT_TILE_OPTIONS)
@@ -83,7 +84,12 @@ export function ExportDialog() {
     setBusy(true)
     setError(null)
     try {
-      await runExport(format, currentRequest(project, processId), { includeQuestions, deck, tiles })
+      await runExport(format, currentRequest(project, processId), {
+        includeQuestions,
+        review,
+        deck,
+        tiles,
+      })
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -218,6 +224,17 @@ export function ExportDialog() {
                     </label>
                   ))}
                 </fieldset>
+              )}
+              {format === 'html' && (
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    data-testid="export-review"
+                    checked={review}
+                    onChange={(e) => setReview(e.target.checked)}
+                  />
+                  Palautetila: lukija voi kommentoida vaiheita ja vastata avoimiin kysymyksiin
+                </label>
               )}
               {format === 'document' && (
                 <label className="check">

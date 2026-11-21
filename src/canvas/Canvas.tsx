@@ -32,6 +32,7 @@ import {
 import { useStore } from '../store/store'
 import { useUi, type Heatmap, type LayoutMode } from '../store/ui'
 import { Icon } from '../ui/Icon'
+import { useNarrow } from '../ui/useMedia'
 import { LaneView } from './LaneView'
 import { ProcessGroupView } from './ProcessGroupView'
 import { ProcessNodeView } from './ProcessNodeView'
@@ -72,6 +73,10 @@ function CanvasInner() {
   const project = useStore((s) => s.project)!
   const { fitView, getInternalNode, getViewport, setViewport } = useReactFlow()
   const wrapRef = useRef<HTMLDivElement>(null)
+  const narrow = useNarrow()
+  /** Puhelimella ja kosketuksella: vaihe, josta yhteys lähtee, kun kohde valitaan napauttamalla. */
+  const [linkFrom, setLinkFrom] = useState<string | null>(null)
+  const [toolsOpen, setToolsOpen] = useState(false)
   const model = useCanvasModel()
   const { mode } = model
   const editable = mode === 'free'
@@ -211,6 +216,35 @@ function CanvasInner() {
     })
   }, [])
 
+  const onNodeClick = useCallback(
+    (_: unknown, node: Node) => {
+      if (!linkFrom) return
+      if (node.id !== linkFrom) {
+        const { project } = useStore.getState()
+        const a = project?.nodes[linkFrom]
+        const b = project?.nodes[node.id]
+        const exists = Object.values(project?.edges ?? {}).some(
+          (e) => e.from === linkFrom && e.to === node.id,
+        )
+        if (a && b && a.processId === b.processId && !exists)
+          onConnect({ source: linkFrom, target: node.id, sourceHandle: null, targetHandle: null })
+        else useStore.getState().setError('Yhteyttä ei voi luoda näiden vaiheiden välille.')
+      }
+      setLinkFrom(null)
+    },
+    [linkFrom, onConnect],
+  )
+
+  // Esc perui yhdistämisen
+  useEffect(() => {
+    if (!linkFrom) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLinkFrom(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [linkFrom])
+
   const isValidConnection = useCallback(
     (c: Connection | Edge) => {
       if (!c.source || !c.target || c.source === c.target) return false
@@ -256,7 +290,11 @@ function CanvasInner() {
         onConnect={onConnect}
         isValidConnection={isValidConnection}
         onNodeDragStop={onNodeDragStop}
-        onPaneClick={() => useUi.getState().setEditNode(null)}
+        onNodeClick={onNodeClick}
+        onPaneClick={() => {
+          useUi.getState().setEditNode(null)
+          setLinkFrom(null)
+        }}
         nodesDraggable={editable}
         deleteKeyCode={null}
         selectionKeyCode="Shift"
@@ -273,7 +311,6 @@ function CanvasInner() {
         {model.scopeCount > 12 && <MiniMap pannable zoomable ariaLabel="Pienoiskartta" />}
       </ReactFlow>
 
-      <FilterBar className="canvas__filter" />
       <div className="canvas__toolbar" role="toolbar" aria-label="Kaavion työkalut">
         <button type="button" onClick={() => addNode('step')} title="Lisää vaihe (Enter)">
           <Icon name="plus" size={16} /> Vaihe
@@ -283,6 +320,25 @@ function CanvasInner() {
         </button>
         <button type="button" onClick={() => addNode('subprocess')} title="Lisää alaprosessi">
           <Icon name="plus" size={16} /> Alaprosessi
+        </button>
+        {narrow && (
+          <button
+            type="button"
+            onClick={() => useUi.getState().toggleRight()}
+            title="Näytä tai piilota ominaisuudet"
+          >
+            <Icon name="panelRight" size={16} /> Ominaisuudet
+          </button>
+        )}
+        <button
+          type="button"
+          className={linkFrom ? 'is-on' : ''}
+          aria-pressed={!!linkFrom}
+          onClick={() => setLinkFrom(linkFrom ? null : (selection.nodeIds[0] ?? null))}
+          disabled={!linkFrom && (selection.nodeIds.length !== 1 || !editable)}
+          title="Yhdistä valittu vaihe toiseen: valitse ensin vaihe, paina tätä ja napauta kohdetta"
+        >
+          <Icon name="link" size={16} /> Yhdistä
         </button>
         <span className="toolbar__sep" />
         <button
@@ -328,34 +384,60 @@ function CanvasInner() {
         </button>
       </div>
 
-      <div className="canvas__mode" role="radiogroup" aria-label="Asettelu">
-        {(Object.keys(MODE_LABEL) as LayoutMode[]).map((m) => (
-          <button
-            key={m}
-            type="button"
-            role="radio"
-            aria-checked={mode === m}
-            className={mode === m ? 'is-on' : ''}
-            onClick={() => useUi.getState().setLayoutMode(m)}
-          >
-            {MODE_LABEL[m]}
+      {linkFrom && (
+        <p className="canvas__linkhint" role="status" data-testid="link-hint">
+          Napauta vaihetta, johon yhdistät “{project.nodes[linkFrom]?.label}”.
+          <button type="button" onClick={() => setLinkFrom(null)}>
+            Peruuta
           </button>
-        ))}
-      </div>
-      <label className="canvas__heat">
-        Väritys
-        <select
-          value={heatmap}
-          onChange={(e) => useUi.getState().setHeatmap(e.target.value as Heatmap)}
-          aria-label="Väritys"
+        </p>
+      )}
+      {narrow && (
+        <button
+          type="button"
+          className="canvas__toolsbtn"
+          aria-expanded={toolsOpen}
+          aria-controls="canvas-tools"
+          onClick={() => setToolsOpen(!toolsOpen)}
         >
-          <option value="off">Ei väritystä</option>
-          <option value="time">Aika (työ ja odotus)</option>
-          <option value="pain">Kipupisteet</option>
-          <option value="handoff">Luovutukset</option>
-        </select>
-      </label>
-      {MODE_HINT[mode] && <p className="canvas__hint">{MODE_HINT[mode]}</p>}
+          <Icon name="sliders" size={16} /> Näkymä
+        </button>
+      )}
+      <div
+        id="canvas-tools"
+        className={`canvas__tools${toolsOpen ? ' is-open' : ''}`}
+        data-testid="canvas-tools"
+      >
+        <FilterBar className="canvas__filter" />
+        <div className="canvas__mode" role="radiogroup" aria-label="Asettelu">
+          {(Object.keys(MODE_LABEL) as LayoutMode[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mode === m}
+              className={mode === m ? 'is-on' : ''}
+              onClick={() => useUi.getState().setLayoutMode(m)}
+            >
+              {MODE_LABEL[m]}
+            </button>
+          ))}
+        </div>
+        <label className="canvas__heat">
+          Väritys
+          <select
+            value={heatmap}
+            onChange={(e) => useUi.getState().setHeatmap(e.target.value as Heatmap)}
+            aria-label="Väritys"
+          >
+            <option value="off">Ei väritystä</option>
+            <option value="time">Aika (työ ja odotus)</option>
+            <option value="pain">Kipupisteet</option>
+            <option value="handoff">Luovutukset</option>
+          </select>
+        </label>
+        {MODE_HINT[mode] && <p className="canvas__hint">{MODE_HINT[mode]}</p>}
+      </div>
 
       {empty && (
         <div className="canvas__empty">

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { analyze } from '../analysis/analyze'
 import { createProject } from '../model/factory'
-import { AI_EXAMPLE, buildAiPrompt } from './aiPrompt'
+import { buildSampleProject } from '../model/sample'
+import { AI_EXAMPLE, buildAiPrompt, buildTemplates } from './aiPrompt'
 import { SYNTAX_HELP } from './example'
 import { planText } from './plan'
 import { parseSyntax } from './syntax'
@@ -56,5 +58,40 @@ describe('tekoälyohje', () => {
     const r = parseSyntax('- Tarkista lasku\n// Avoin: kuka hyväksyy?\n- Maksa lasku')
     expect(r.issues.filter((i) => i.severity === 'error')).toEqual([])
     expect(r.items.map((i) => i.label)).toEqual(['Tarkista lasku', 'Maksa lasku'])
+  })
+})
+
+describe('ohjepohjat', () => {
+  const p = buildSampleProject()
+  const open = analyze(p).open
+  const templates = buildTemplates(p, p.rootProcessId, open)
+
+  it('on neljä pohjaa, joista kaksi tuottaa takaisin liitettävää tekstiä', () => {
+    expect(templates.map((t) => t.id)).toEqual(['format', 'review', 'interview', 'present'])
+    for (const t of templates) {
+      expect(t.text.length).toBeGreaterThan(200)
+      expect(t.usage).not.toBe('')
+    }
+  })
+
+  it('arviointiohje sisältää nykyisen prosessin, syntaksin ja avoimet kysymykset', () => {
+    const t = templates.find((x) => x.id === 'review')!.text
+    expect(t).toContain('SYNTAKSI')
+    expect(t).toContain('(aiemmin: Vanha nimi)')
+    expect(t).toContain('# Ostolaskun käsittely')
+    expect(t).toContain('AVOIMET KYSYMYKSET')
+  })
+
+  it('ohjeeseen upotettu prosessiteksti on idempotentti: sen lisääminen takaisin ei muuta mitään', () => {
+    const t = templates.find((x) => x.id === 'review')!.text
+    const block = /NYKYINEN PROSESSI\n```\n([\s\S]*?)\n```/.exec(t)![1]
+    const plan = planText(p, block, { processId: p.rootProcessId, mode: 'append' })
+    expect(plan.hasErrors).toBe(false)
+    expect(plan.ops).toEqual([])
+  })
+
+  it('haastatteluohje ja esittelyohje sisältävät prosessin nimen tai kuvauksen', () => {
+    expect(templates.find((x) => x.id === 'interview')!.text).toContain('Ostolaskun käsittely')
+    expect(templates.find((x) => x.id === 'present')!.text).toContain('Hyväksyntäkierto')
   })
 })

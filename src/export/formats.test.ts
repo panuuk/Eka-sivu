@@ -186,6 +186,24 @@ describe('buildDocumentHtml', () => {
     expect(executable[0].textContent).not.toContain('Ostolasku')
   })
 
+  it('palautetila lisää kommentointikentät ja kysymysdatan mutta ei käyttäjän tietoja suoritettavaan skriptiin', async () => {
+    const { dom, html } = await doc({ interactive: true, review: true, questions: analyze(p).open })
+    expect(dom.getElementById('pk-comment')).not.toBeNull()
+    expect(dom.getElementById('pk-reviewer')).not.toBeNull()
+    expect(dom.getElementById('pk-fb-save')).not.toBeNull()
+    const executable = [...dom.querySelectorAll('script')].filter((s) => !s.getAttribute('type'))
+    expect(executable).toHaveLength(2)
+    for (const s of executable) expect(s.textContent).not.toContain('Ostolasku')
+    const meta = JSON.parse(dom.getElementById('pk-review-data')!.textContent!)
+    expect(meta.projectId).toBe(p.id)
+    expect(Array.isArray(meta.questions)).toBe(true)
+    expect(html).not.toContain('</script><script>alert')
+    // Ilman palautetilaa kenttiä ei ole
+    const plain = await doc({ interactive: true })
+    expect(plain.dom.getElementById('pk-comment')).toBeNull()
+    expect(plain.dom.getElementById('pk-review-data')).toBeNull()
+  })
+
   it('escapettaa käyttäjän tekstit ja liittää avoimet kysymykset pyydettäessä', async () => {
     let q = buildSampleProject()
     q = applyOperations(q, [

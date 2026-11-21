@@ -70,7 +70,8 @@ export function insertNode(opts: InsertOptions): string | undefined {
   if (!st().dispatch(ops)) return undefined
   if (!opts.quiet) {
     st().select({ nodeIds: [nodeId], edgeIds: [] })
-    useUi.getState().setRightOpen(true)
+    // Puhelimella paneeli peittäisi kaavion, joten se avataan vain pyydettäessä
+    if (!window.matchMedia?.('(max-width: 700px)').matches) useUi.getState().setRightOpen(true)
   }
   if (opts.edit) useUi.getState().setEditNode(nodeId)
   return nodeId

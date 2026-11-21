@@ -27,7 +27,7 @@ export type Operation =
   | {
       type: 'updateProcess'
       id: string
-      patch: Partial<Pick<Process, 'name' | 'description' | 'parentNodeId'>>
+      patch: Partial<Pick<Process, 'name' | 'description' | 'parentNodeId' | 'card'>>
     }
   | { type: 'deleteProcess'; id: string }
   | { type: 'addNode'; node: ProcessNode }

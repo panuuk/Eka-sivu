@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createProject } from '../model/factory'
 import { applyOperations, OperationError, type Operation } from '../model/operations'
 import { parseProjectJson } from '../model/serialize'
+import { stampChanges } from '../model/sync'
 import type { Project } from '../model/types'
 import { newId } from '../model/ids'
 import { runProjectActivated, runProjectSaved } from './hooks'
@@ -56,6 +57,8 @@ export interface AppState {
   openProject: (id: string) => Promise<void>
   deleteProject: (id: string) => Promise<void>
   importProjectJson: (text: string) => Promise<void>
+  /** Korvaa projektin yhdistetyllä versiolla yhtenä kumottavana askeleena. */
+  applyMerged: (next: Project) => void
   /** Ottaa valmiin projektin käyttöön uutena projektina (esim. esimerkki). */
   adoptProject: (project: Project) => Promise<void>
   flushSave: () => Promise<void>
@@ -152,8 +155,8 @@ export const useStore = create<AppState>((set, get) => {
         }
         throw e
       }
-      next = { ...next, updatedAt: Date.now() }
       const now = Date.now()
+      next = stampChanges(project, { ...next, updatedAt: now }, now)
       const coalesce =
         opts.coalesceKey !== undefined &&
         opts.coalesceKey === lastCoalesceKey &&
@@ -184,7 +187,7 @@ export const useStore = create<AppState>((set, get) => {
       const prev = past[past.length - 1]
       lastCoalesceKey = undefined
       set({
-        project: { ...prev, updatedAt: Date.now() },
+        project: stampChanges(project, { ...prev, updatedAt: Date.now() }, Date.now()),
         past: past.slice(0, -1),
         future: [project, ...future].slice(0, HISTORY_LIMIT),
         selection: sanitizeSelection(prev, get().selection),
@@ -201,7 +204,7 @@ export const useStore = create<AppState>((set, get) => {
       const nxt = future[0]
       lastCoalesceKey = undefined
       set({
-        project: { ...nxt, updatedAt: Date.now() },
+        project: stampChanges(project, { ...nxt, updatedAt: Date.now() }, Date.now()),
         past: [...past, project].slice(-HISTORY_LIMIT),
         future: future.slice(1),
         selection: sanitizeSelection(nxt, get().selection),
@@ -275,6 +278,23 @@ export const useStore = create<AppState>((set, get) => {
       } catch (e) {
         set({ error: (e as Error).message })
       }
+    },
+
+    applyMerged(next) {
+      const { project, past } = get()
+      if (!project) return
+      set({
+        project: next,
+        past: [...past, project].slice(-HISTORY_LIMIT),
+        future: [],
+        selection: sanitizeSelection(next, get().selection),
+        currentProcessId: next.processes[get().currentProcessId]
+          ? get().currentProcessId
+          : next.rootProcessId,
+        error: null,
+      })
+      lastCoalesceKey = undefined
+      scheduleSave()
     },
 
     async adoptProject(project) {

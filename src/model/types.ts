@@ -69,6 +69,8 @@ export interface ProcessNode {
   frequency?: string
   painPoints?: PainPoint[]
   tags?: string[]
+  /** Tarkistuslista: asiat, jotka on varmistettava vaiheen yhteydessä. */
+  checklist?: string[]
 }
 
 export interface ProcessEdge {
@@ -85,12 +87,28 @@ export interface Entity {
   name: string
   /** Vaihtoehtoiset nimet ja taivutusmuodot, jotka auttavat tunnistamaan entiteetin teksteistä. */
   aliases: string[]
+  /** Vapaa kuvaus, esim. roolin keskeinen vastuu. */
+  description?: string
+}
+
+/** Prosessikortti: prosessin tarkoitus, omistaja ja rajat yhdellä silmäyksellä. */
+export interface ProcessCard {
+  purpose?: string
+  owner?: string
+  trigger?: string
+  customer?: string
+  outputs?: string[]
+  metrics?: string[]
+  risks?: string[]
+  /** Koko prosessin tarkistuslista (laatukriteerit). */
+  checklist?: string[]
 }
 
 export interface Process {
   id: string
   name: string
   description?: string
+  card?: ProcessCard
   /** Vaihe, josta tämä prosessi on avattu alaprosessiksi. Puuttuu päätason prosesseilta. */
   parentNodeId?: string
 }
@@ -191,9 +209,13 @@ export interface Project {
   scenarios?: Record<string, Scenario>
   /** Tallennetut näkymät esityksen järjestyksessä. */
   views?: SavedView[]
+  /** Viimeisin muokkausaika tietueen tunnisteen mukaan (laitteiden välistä yhdistämistä varten). */
+  stamps?: Record<string, number>
+  /** Poistettujen tietueiden poistoaika tunnisteen mukaan. */
+  tombstones?: Record<string, number>
 }
 
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 5
 
 export const CONFIDENCE_LABELS: Record<Confidence, string> = {
   guess: 'Arvaus',

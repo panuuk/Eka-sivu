@@ -34,6 +34,22 @@ function EntityRow({ entity }: { entity: Entity }) {
             )
           }
         />
+        {entity.kind === 'role' && (
+          <input
+            aria-label={`Kuvaus: ${entity.name}`}
+            placeholder="Roolin kuvaus tai keskeinen vastuu"
+            defaultValue={entity.description ?? ''}
+            onBlur={(e) => {
+              const v = e.target.value.trim()
+              if (v !== (entity.description ?? ''))
+                dispatch({
+                  type: 'updateEntity',
+                  id: entity.id,
+                  patch: { description: v || undefined },
+                })
+            }}
+          />
+        )}
         <input
           aria-label={`Vaihtoehtoiset nimet: ${entity.name}`}
           placeholder="Vaihtoehtoiset nimet pilkulla erotettuna"

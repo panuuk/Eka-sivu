@@ -20,6 +20,11 @@ Kaikki data pysyy omassa selaimessa. Mitään ei lähetetä palvelimelle, eikä 
 | **Kielimalli** (valinnainen) | Ehdotukset voi ajaa omalla koneella toimivalla kielimallilla (Ollama, LM Studio tai muu OpenAI-yhteensopiva palvelin). Teksti lähetetään vain valittuun osoitteeseen, ja ei-paikallinen osoite vaatii vahvistuksen. Ehdotukset kulkevat samassa hyväksynnässä, ja jokaisen on löydyttävä lähdetekstistä. _Mittaa aineistolla_ vertaa mallia sääntöihin 12 testitekstillä, jotta käyttöönotto perustuu mittaukseen.                                                                                                                     |
 | **Tuonnit**                  | _Tuo taulukko tai kaavio_ (projektivalikko): Excel (.xlsx), CSV ja leikepöydältä liitetty taulukko sarakkeiden yhdistämisellä, BPMN 2.0 (uimaradat rooleiksi, alaprosessit, päätökset) ja Mermaid-vuokaaviot. Oma BPMN- ja Mermaid-vienti palautuu tuonnissa samaksi rakenteeksi.                                                                                                                                                                                                                                                      |
 | **Esittäminen**              | _Esitystila_ (siisti koko ruudun näkymä, läpikäynti vaihe vaiheelta) sekä viennit: SVG, PNG, PDF (myös usealle A4- tai A3-sivulle), PowerPoint, prosessidokumentti, interaktiivinen HTML (haku, tietopaneeli, alaprosessiin porautuminen), Mermaid ja BPMN 2.0. _Tallennetut näkymät_ ja _skenaariopolut_ (esim. “luottoraja ylittyy”) koostavat esityksen ja PowerPoint-diat.                                                                                                                                                         |
+| **Puhelin**                  | Yläpalkki mahtuu yhdelle riville ja harvinaisemmat toiminnot ovat Lisää-valikossa. Kaavion haku, väritys ja asettelutapa ovat Näkymä-paneelissa. Vaiheet yhdistetään napauttamalla (valitse vaihe, Yhdistä, napauta kohdetta). Sivupaneelit sulkeutuvat taustaa napauttamalla. Raskaat näkymät ladataan vasta tarvittaessa.                                                                                                                                                                                                            |
+| **Tekoälyn apu**             | Pikasyötteen _Tekoälyn apu_ antaa kopioitavat ohjeet (muotoile muistiinpanot, arvioi prosessi, haastattelukysymykset, esittelyteksti) mille tahansa tekoälylle. Sovellus ei ota yhteyttä mihinkään palveluun. Vastauksen siivous poistaa johdannon, koodilohkon ja selitykset, ja muutokset näytetään eroina ennen lisäämistä. Nimenmuutokset (`(aiemmin: …)`) ja poistot (valinta _Poista vaiheet, joita tekstissä ei ole_) hyväksytään rivi kerrallaan.                                                                              |
+| **Prosessikortti**           | Tarkoitus, omistaja, käynnistäjä, asiakas, tuotokset, mittarit, riskit ja tarkistuslista (projektivalikko → Prosessikortti). Roolilla on kuvaus ja vaiheella oma tarkistuslista. Markdown-dokumentin roolitaulukko, RACI-taulukko, Tavoite/Syöte/Tuotos-kentät ja tarkistuslista-, mittari- ja riskiosiot luetaan malliin muunnoksessa. Kortti näkyy dokumenttiviennissä ja esityksen alussa.                                                                                                                                          |
+| **Jaa ja yhdistä**           | Projekti jaetaan tiedostona (puhelimella jakovalikko). Toisella laitteella muokattu versio yhdistetään tähän: kummankin lisäykset säilyvät, ristiriidoissa uudempi voittaa ja valinnan voi vaihtaa. Yhdistäminen on kumottavissa.                                                                                                                                                                                                                                                                                                      |
+| **Katselmointi**             | HTML-vienti _palautetilassa_: lukija kommentoi vaiheita ja vastaa avoimiin kysymyksiin ja tallentaa palautteen tiedostoksi. Tuo palaute Jaa ja yhdistä -ikkunassa: valituista riveistä tulee avoimia kysymyksiä oikeisiin vaiheisiin.                                                                                                                                                                                                                                                                                                  |
 
 ## Aloitus
 
@@ -47,23 +52,27 @@ Vaatimukset: Node.js 20.19+ tai 22.12+.
   - Lähetä paketti
 ```
 
-| Merkintä                          | Merkitys                                                      |
-| --------------------------------- | ------------------------------------------------------------- |
-| `- Vaihe`                         | Vaihe (myös `*`, `1.`, `1)`)                                  |
-| `@Rooli`, `@(Monisanainen rooli)` | Vastuurooli                                                   |
-| `[CRM, ERP]`                      | Järjestelmät                                                  |
-| `< Syöte`, `> Tuotos`             | Syötteet ja tuotokset                                         |
-| `~arvaus`, `~vahvistettu`         | Varmuus (oletus: todennäköinen)                               |
-| `? Kysymys`                       | Päätös, haarat sisennettynä `kyllä: …`                        |
-| `jatka`, `loppu`, `-> Vaihe`      | Haara jatkaa, päättyy tai palaa vaiheeseen                    |
-| `+ Alaprosessi`                   | Alaprosessi, sisältö sisennettynä                             |
-| `alku`, `loppu`, `alku: Nimi`     | Alku- ja loppupiste (luodaan itse, jos puuttuvat)             |
-| `=2 pv`, `^1-3 pv`                | Työaika ja odotusaika (min, h, pv, vk; väli tai min-tyyp-max) |
-| `%viikoittain`, `#tunniste`       | Toistuvuus ja tunniste                                        |
-| `!3 Ongelma => Idea`              | Kipupiste (vakavuus 1–3) ja parannusidea                      |
-| `A@Rooli`, `C@Rooli`, `I@Rooli`   | RACI (`@Rooli` on suorittaja eli R)                           |
-| `---`                             | Erotin: seuraava ketju ei jatka edellistä                     |
-| `// kommentti`                    | Rivi ohitetaan                                                |
+| Merkintä                                              | Merkitys                                                                                                      |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `- Vaihe`                                             | Vaihe (myös `*`, `1.`, `1)`)                                                                                  |
+| `@Rooli`, `@(Monisanainen rooli)`                     | Vastuurooli                                                                                                   |
+| `[CRM, ERP]`                                          | Järjestelmät                                                                                                  |
+| `< Syöte`, `> Tuotos`                                 | Syötteet ja tuotokset                                                                                         |
+| `~arvaus`, `~vahvistettu`                             | Varmuus (oletus: todennäköinen)                                                                               |
+| `? Kysymys`                                           | Päätös, haarat sisennettynä `kyllä: …`                                                                        |
+| `jatka`, `loppu`, `-> Vaihe`                          | Haara jatkaa, päättyy tai palaa vaiheeseen                                                                    |
+| `+ Alaprosessi`                                       | Alaprosessi, sisältö sisennettynä                                                                             |
+| `alku`, `loppu`, `alku: Nimi`                         | Alku- ja loppupiste (luodaan itse, jos puuttuvat)                                                             |
+| `=2 pv`, `^1-3 pv`                                    | Työaika ja odotusaika (min, h, pv, vk; väli tai min-tyyp-max)                                                 |
+| `%viikoittain`, `#tunniste`                           | Toistuvuus ja tunniste                                                                                        |
+| `!3 Ongelma => Idea`                                  | Kipupiste (vakavuus 1–3) ja parannusidea                                                                      |
+| `A@Rooli`, `C@Rooli`, `I@Rooli`                       | RACI (`@Rooli` on suorittaja eli R)                                                                           |
+| `Uusi nimi (aiemmin: Vanha)`                          | Nimenmuutos: päivittää olemassa olevan vaiheen                                                                |
+| `:tarkoitus`, `:omistaja`, `:asiakas`, `:käynnistäjä` | Prosessikortin tiedot omilla riveillään                                                                       |
+| `:tuotos`, `:mittari`, `:riski`, `:tarkistus`         | Prosessikortin listat, yksi kohta per rivi (`:tarkistus` vaiheen alla sisennettynä on vaiheen tarkistuslista) |
+| `:rooli Nimi: kuvaus`                                 | Roolin kuvaus                                                                                                 |
+| `---`                                                 | Erotin: seuraava ketju ei jatka edellistä                                                                     |
+| `// kommentti`                                        | Rivi ohitetaan                                                                                                |
 
 Samannimiset vaiheet tunnistetaan, joten tekstiä voi lisätä uudelleen tai täydentää vaiheiden tietoja ilman että syntyy kaksoiskappaleita.
 
@@ -87,7 +96,8 @@ Samannimiset vaiheet tunnistetaan, joten tekstiä voi lisätä uudelleen tai tä
 
 - Projektit tallentuvat selaimen IndexedDB:hen. Työkalu ottaa automaattisia varmuuskopioita (valikko “Tallennus ja varmuuskopiot”). **Yhdistä projekti tiedostoon** (Chrome, Edge) tai **vie se JSON-tiedostoon säännöllisesti**, koska selaimen tietojen tyhjennys poistaa selaimen sisäiset kopiot.
 - Sovelluksen voi asentaa (projektivalikko → Asenna sovellus), ja se toimii ilman verkkoa. Uusi versio ilmoitetaan, eikä se tule käyttöön ennen kuin painat “Päivitä nyt”.
-- Älä pidä samaa projektia auki usean välilehden kautta.
+- Älä pidä samaa projektia auki usean välilehden kautta. Laitteiden välillä projekti siirretään tiedostona (Jaa ja yhdistä), eikä mikään kulje palvelimen kautta.
+- Tekoälyohjeet kopioidaan leikepöydälle, ja teksti näytetään ennen kopiointia, koska se sisältää projektin nimiä ja kuvauksia. Sovellus ei lähetä niitä itse.
 - Tuodut dokumentit käsitellään kokonaan selaimessa.
 - Vientitiedostot syntyvät selaimessa; mitään ei lähetetä minnekään.
 
@@ -103,7 +113,7 @@ npm run e2e          # selaintestit (Playwright, rakentaa ja käynnistää sovel
 npm run format       # Prettier
 ```
 
-Jokaisen muutoksen tarkistaa CI (`.github/workflows/ci.yml`). Julkaisu GitHub Pagesiin tapahtuu `main`-haaran päivityksestä (`.github/workflows/pages.yml`).
+Jokaisen muutoksen tarkistaa CI (`.github/workflows/ci.yml`). Sovellus on staattinen (`dist/`), ja sen voi julkaista mille tahansa staattiselle palvelulle (esim. Vercel: Build Command `npm run build`, Output Directory `dist`). Polut ovat suhteellisia, joten se toimii myös alihakemistossa.
 
 ### Rakenne
 
