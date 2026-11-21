@@ -73,8 +73,34 @@ export function processToText(
   const lines: string[] = []
   const proc = p.processes[processId]
   if (options.title && proc) lines.push(`# ${safe(proc.name)}`)
+  lines.push(...metaLines(p, processId))
   lines.push(...serializeProcess(p, processId, 0))
   return lines.join('\n')
+}
+
+/** Prosessikortti ja roolien kuvaukset direktiiveinä (`:tarkoitus ...`, `:rooli Nimi: kuvaus`). */
+function metaLines(p: Project, processId: string): string[] {
+  const out: string[] = []
+  const card = p.processes[processId]?.card
+  if (card) {
+    if (card.purpose) out.push(`:tarkoitus ${safe(card.purpose)}`)
+    if (card.owner) out.push(`:omistaja ${safe(card.owner)}`)
+    if (card.trigger) out.push(`:käynnistäjä ${safe(card.trigger)}`)
+    if (card.customer) out.push(`:asiakas ${safe(card.customer)}`)
+    for (const x of card.outputs ?? []) out.push(`:tuotos ${safe(x)}`)
+    for (const x of card.metrics ?? []) out.push(`:mittari ${safe(x)}`)
+    for (const x of card.risks ?? []) out.push(`:riski ${safe(x)}`)
+    for (const x of card.checklist ?? []) out.push(`:tarkistus ${safe(x)}`)
+  }
+  // Roolien kuvaukset kuuluvat koko projektiin: tulostetaan vain päätason prosessin yhteydessä
+  if (p.rootProcessId === processId) {
+    for (const e of Object.values(p.entities)) {
+      if (e.kind === 'role' && e.description?.trim()) {
+        out.push(`:rooli ${safe(e.name).replace(/:/g, ' ')}: ${safe(e.description)}`)
+      }
+    }
+  }
+  return out
 }
 
 function serializeProcess(p: Project, processId: string, baseIndent: number): string[] {
@@ -146,9 +172,10 @@ function serializeProcess(p: Project, processId: string, baseIndent: number): st
       if (n.childProcessId && p.processes[n.childProcessId]) {
         lines.push(...serializeProcess(p, n.childProcessId, baseIndent + depth + 1))
       }
-    } else if (n.description) {
-      for (const d of n.description.split('\n'))
+    } else {
+      for (const d of (n.description ?? '').split('\n'))
         if (d.trim()) lines.push(`${pad(depth + 1)}${safe(d)}`)
+      for (const c of n.checklist ?? []) lines.push(`${pad(depth + 1)}:tarkistus ${safe(c)}`)
     }
   }
 

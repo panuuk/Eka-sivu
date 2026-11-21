@@ -1,5 +1,5 @@
 import { parseDuration } from '../model/duration'
-import type { Confidence, DurationRange, PainSeverity } from '../model/types'
+import type { Confidence, DurationRange, PainSeverity, ProcessCard } from '../model/types'
 
 /**
  * Pikasyötteen tekstisyntaksi.
@@ -66,6 +66,8 @@ export interface ParsedItem {
   notes: string[]
   /** Nimenmuutos: vaiheen aiempi nimi merkinnästä `(aiemmin: Vanha nimi)`. */
   renamedFrom?: string
+  /** Vaiheen tarkistuslista (`:tarkistus ...` vaiheen alla). */
+  checklist?: string[]
 }
 
 export interface Issue {
@@ -74,8 +76,17 @@ export interface Issue {
   message: string
 }
 
+/** Prosessitason direktiivit (`:tarkoitus ...`): prosessikortti ja roolien kuvaukset. */
+export interface DocMeta {
+  card: ProcessCard
+  roles: { name: string; description: string; line: number }[]
+  /** Direktiivirivit rivinumeroineen esikatselua varten. */
+  lines: { line: number; text: string }[]
+}
+
 export interface ParseResult {
   title?: string
+  meta?: DocMeta
   items: ParsedItem[]
   issues: Issue[]
 }
@@ -109,6 +120,30 @@ const BRANCH = /^([^:@[\]<>~?+]{1,40}?):\s*(.*)$/
 const KEYWORD_CONTINUE = /^(?:jatka|jatkuu|jatketaan)[.!]?$/i
 const KEYWORD_END = /^(?:loppu|lopeta|päättyy|paattyy)[.!]?$/i
 const KEYWORD_START = /^(?:alku|aloita)[.!]?$/i
+
+/** Direktiivit: `:nimi arvo`. Kentän nimi -> prosessikortin kenttä. */
+const DIRECTIVES: Record<string, string> = {
+  tarkoitus: 'purpose',
+  omistaja: 'owner',
+  käynnistäjä: 'trigger',
+  käynnistys: 'trigger',
+  laukaisija: 'trigger',
+  asiakas: 'customer',
+  tuotos: 'outputs',
+  mittari: 'metrics',
+  riski: 'risks',
+  tarkistus: 'checklist',
+  rooli: 'role',
+}
+const DIRECTIVE = /^:([\p{L}]+)\s*(.*)$/u
+
+/** Tunnettu direktiivirivi: palauttaa kentän ja arvon. */
+export function parseDirective(text: string): { key: string; value: string } | undefined {
+  const m = DIRECTIVE.exec(text)
+  if (!m) return undefined
+  const key = DIRECTIVES[m[1].toLowerCase()]
+  return key ? { key, value: m[2].trim() } : undefined
+}
 
 /** `(aiemmin: Vanha nimi)`, `(ent. Vanha nimi)` */
 const RENAMED = /\s*\((?:aiemmin|ent\.|aik\.)\s*:?\s*([^)]+)\)/iu
@@ -274,6 +309,33 @@ export function parseSyntax(text: string, options: ParseOptions = {}): ParseResu
       continue
     }
     while (stack.length && stack[stack.length - 1].indent >= r.indent) stack.pop()
+    const dir = parseDirective(r.text)
+    if (dir && !stack.length) {
+      // Prosessitason direktiivi: ei kuulu kulkuun
+      if (!skip.has(r.line)) {
+        const meta = (result.meta ??= { card: {}, roles: [], lines: [] })
+        meta.lines.push({ line: r.line, text: r.text })
+        if (!dir.value) {
+          issues.push({ line: r.line, severity: 'warning', message: 'Direktiivin arvo puuttuu' })
+        } else if (dir.key === 'role') {
+          const rm = /^(.+?)\s*:\s*(.+)$/.exec(dir.value)
+          if (rm) meta.roles.push({ name: clean(rm[1]), description: clean(rm[2]), line: r.line })
+          else
+            issues.push({
+              line: r.line,
+              severity: 'warning',
+              message: 'Rooli kirjoitetaan muodossa ":rooli Nimi: kuvaus"',
+            })
+        } else if (['outputs', 'metrics', 'risks', 'checklist'].includes(dir.key)) {
+          const k = dir.key as 'outputs' | 'metrics' | 'risks' | 'checklist'
+          const list = (meta.card[k] ??= [])
+          if (!list.includes(dir.value)) list.push(dir.value)
+        } else {
+          meta.card[dir.key as 'purpose' | 'owner' | 'trigger' | 'customer'] = dir.value
+        }
+      }
+      continue
+    }
     if (stack.length) stack[stack.length - 1].children.push(r)
     else roots.push(r)
     stack.push(r)
@@ -287,7 +349,16 @@ export function parseSyntax(text: string, options: ParseOptions = {}): ParseResu
     issues.push({ line, severity: 'warning', message })
   const err = (line: number, message: string) => issues.push({ line, severity: 'error', message })
 
-  const parseItem = (text: string, raw: RawLine, children: RawLine[]): ParsedItem => {
+  const parseItem = (text: string, raw: RawLine, allChildren: RawLine[]): ParsedItem => {
+    // Vaiheen alla olevat :tarkistus-rivit ovat vaiheen tarkistuslistaa, muut direktiivit ohitetaan
+    const checklist: string[] = []
+    const children = allChildren.filter((c) => {
+      const d = parseDirective(c.text)
+      if (!d) return true
+      if (d.key === 'checklist' && d.value) checklist.push(d.value)
+      else warn(c.line, 'Direktiivi sallitaan vain prosessin tasolla (tai :tarkistus vaiheen alla)')
+      return false
+    })
     const base = {
       line: raw.line,
       start: raw.start,
@@ -351,7 +422,14 @@ export function parseSyntax(text: string, options: ParseOptions = {}): ParseResu
       err(raw.line, 'Nimi puuttuu')
     }
 
-    const item: ParsedItem = { ...base, kind, label, ann, ...(renamedFrom ? { renamedFrom } : {}) }
+    const item: ParsedItem = {
+      ...base,
+      kind,
+      label,
+      ann,
+      ...(renamedFrom ? { renamedFrom } : {}),
+      ...(checklist.length ? { checklist } : {}),
+    }
     if (kind === 'decision') {
       item.branches = children.map((c) => parseBranch(c))
       if (children.length === 0) warn(raw.line, 'Päätöksellä ei ole haaroja')

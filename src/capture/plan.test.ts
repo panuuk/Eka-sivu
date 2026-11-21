@@ -439,3 +439,71 @@ describe('nimenmuutos ja poistot (tekoälyn muokkaama teksti)', () => {
     expect(r.hasErrors).toBe(false)
   })
 })
+
+describe('prosessikortti, roolien kuvaukset ja tarkistuslistat (direktiivit)', () => {
+  const TEXT = `# Matkalasku
+:tarkoitus Korvata työmatkan kulut nopeasti
+:omistaja Talousjohtaja
+:asiakas Työntekijä
+:tuotos Maksettu matkalasku
+:mittari Läpimenoaika alle 5 pv
+:riski Kuitit puuttuvat
+:tarkistus Kuitit liitetty
+:rooli Esimies: Hyväksyy matkat ja tarkistaa kuitit
+- Täytä matkalasku @Työntekijä
+  :tarkistus Päivämäärät oikein
+  :tarkistus Kuitit mukana
+- Hyväksy @Esimies`
+
+  it('direktiivit päivittävät prosessikortin, roolin kuvauksen ja vaiheen tarkistuslistan', () => {
+    const { plan, project } = apply(createProject(), TEXT)
+    expect(plan.hasErrors).toBe(false)
+    expect(plan.issues).toEqual([])
+    const card = project.processes[project.rootProcessId].card!
+    expect(card.purpose).toBe('Korvata työmatkan kulut nopeasti')
+    expect(card.owner).toBe('Talousjohtaja')
+    expect(card.outputs).toEqual(['Maksettu matkalasku'])
+    expect(card.checklist).toEqual(['Kuitit liitetty'])
+    expect(findEntity(project, 'role', 'Esimies')!.description).toBe(
+      'Hyväksyy matkat ja tarkistaa kuitit',
+    )
+    const step = nodesOf(project, project.rootProcessId).find(
+      (n) => n.label === 'Täytä matkalasku',
+    )!
+    expect(step.checklist).toEqual(['Päivämäärät oikein', 'Kuitit mukana'])
+    // Direktiivit eivät tule vaiheiksi
+    expect(nodesOf(project, project.rootProcessId).filter((n) => n.kind === 'step')).toHaveLength(2)
+  })
+
+  it('on idempotentti ja palautuu tekstinä samaksi (viennin ja tuonnin kierros)', async () => {
+    const { project } = apply(createProject(), TEXT)
+    const again = planText(project, TEXT, { processId: project.rootProcessId })
+    expect(again.ops).toEqual([])
+    const { processToText } = await import('./serialize')
+    const out = processToText(project, project.rootProcessId, { title: true })
+    for (const line of [
+      ':tarkoitus Korvata',
+      ':tarkistus Kuitit liitetty',
+      ':rooli Esimies: Hyväksyy',
+      '  :tarkistus Kuitit mukana',
+    ])
+      expect(out).toContain(line)
+    const re = planText(project, out, { processId: project.rootProcessId })
+    expect(re.ops).toEqual([])
+  })
+
+  it('vain direktiiveistä koostuva teksti on kelvollinen, ja tuntematon direktiivi on tavallinen rivi', () => {
+    const { plan, project } = apply(createProject(), ':tarkoitus Vain kortti')
+    expect(plan.hasErrors).toBe(false)
+    expect(project.processes[project.rootProcessId].card?.purpose).toBe('Vain kortti')
+    const p = createProject()
+    const unknown = planText(p, ':tuntematon x', { processId: p.rootProcessId })
+    expect(unknown.parse.meta).toBeUndefined()
+  })
+
+  it('direktiivi vaiheen alla muualla kuin :tarkistus antaa varoituksen', () => {
+    const p = createProject()
+    const r = planText(p, '- A\n  :omistaja Joku', { processId: p.rootProcessId })
+    expect(r.issues.some((i) => /sallitaan vain prosessin tasolla/.test(i.message))).toBe(true)
+  })
+})

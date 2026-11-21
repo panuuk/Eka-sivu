@@ -5,7 +5,7 @@
 
 /** Pikasyötteen rivi: luettelomerkki, päätös, alaprosessi, hyppy, otsikko, kommentti, erotin, alku/loppu tai haara. */
 const DSL_LINE =
-  /^\s*(?:[-*+•–]\s|\d{1,3}[.)]\s|\?\s|\+\s|->|→|#\s|\/\/|-{3,}\s*$|alku\b|loppu\b|(?:kyllä|ei|[^\s:]{1,24}):\s)/iu
+  /^\s*(?:[-*+•–]\s|\d{1,3}[.)]\s|\?\s|\+\s|->|→|#{1,6}\s|:\p{L}+\s|\/\/|-{3,}\s*$|alku\b|loppu\b|(?:kyllä|ei|[^\s:]{1,24}):\s)/iu
 
 const FENCE_LANGS = new Set(['', 'text', 'txt', 'plaintext', 'markdown', 'md', 'dsl', 'pikasyote'])
 
@@ -20,6 +20,8 @@ function dedent(lines: string[]): string[] {
 export interface CleanedResponse {
   text: string
   changed: boolean
+  /** Siivous poisti johdannon, loppuselityksen tai koodilohkon (ei vain lihavointeja). */
+  structural: boolean
   /** Mitä siivottiin, käyttäjälle kerrottavaksi. */
   notes: string[]
 }
@@ -68,7 +70,13 @@ export function cleanAiResponse(raw: string): CleanedResponse {
     let start = end
     while (start > 0 && lines[start - 1].trim()) start--
     const para = lines.slice(start, end)
-    if (start > 0 && para.length && !isDslLine(para[0]) && !/^\s/.test(para[0])) {
+    if (
+      start > 0 &&
+      para.length &&
+      !isDslLine(para[0]) &&
+      !/^\s/.test(para[0]) &&
+      !/^\|/.test(para[0])
+    ) {
       lines = lines.slice(0, start)
       notes.push('Loppuselitys poistettiin.')
     }
@@ -80,17 +88,18 @@ export function cleanAiResponse(raw: string): CleanedResponse {
     .replace(/(\*\*|__)(.+?)\1/g, '$2')
     .replace(/^(\s*)\*\s/gm, '$1- ')
     .trim()
+  const structural = notes.length > 0
   const stripped = text !== lines.join('\n').trim()
   if (stripped) notes.push('Lihavoinnit ja tähtiluettelomerkit muutettiin tavalliseksi tekstiksi.')
   text = text.replace(/\n{3,}/g, '\n\n')
-  return { text, changed: notes.length > 0, notes }
+  return { text, changed: notes.length > 0, structural, notes }
 }
 
 /** Näyttääkö teksti tekoälyn vastaukselta, jonka siivoamisesta olisi hyötyä? */
 export function looksLikeAiResponse(raw: string): boolean {
   if (raw.trim().length < 20) return false
   const r = cleanAiResponse(raw)
-  if (!r.changed) return false
+  if (!r.structural) return false
   // Siivottu tulos on pikasyötettä: vähintään kaksi tunnistettavaa riviä
   return r.text.split('\n').filter(isDslLine).length >= 2
 }

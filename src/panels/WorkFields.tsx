@@ -159,6 +159,7 @@ export function WorkSection({ node, patch }: WorkProps) {
     !!node.frequency ||
     !!node.painPoints?.length ||
     !!node.tags?.length ||
+    !!node.checklist?.length ||
     !!(
       node.raci?.accountableIds?.length ||
       node.raci?.consultedIds?.length ||
@@ -236,6 +237,27 @@ export function WorkSection({ node, patch }: WorkProps) {
           points={node.painPoints ?? []}
           onChange={(pts) => patch({ painPoints: pts.length ? pts : undefined })}
         />
+        <div className="field">
+          <label className="field__label" htmlFor={`${listId}-check`}>
+            Tarkistuslista
+          </label>
+          <textarea
+            id={`${listId}-check`}
+            rows={3}
+            data-testid="node-checklist"
+            key={(node.checklist ?? []).join('\n')}
+            defaultValue={(node.checklist ?? []).join('\n')}
+            placeholder="Yksi kohta per rivi"
+            onBlur={(e) => {
+              const list = e.target.value
+                .split('\n')
+                .map((l) => l.trim())
+                .filter(Boolean)
+              if (JSON.stringify(list) !== JSON.stringify(node.checklist ?? []))
+                patch({ checklist: list.length ? list : undefined })
+            }}
+          />
+        </div>
         <div className="field">
           <label className="field__label" htmlFor={`${listId}-tags`}>
             Tunnisteet

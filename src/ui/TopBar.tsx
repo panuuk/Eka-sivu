@@ -134,6 +134,10 @@ export function TopBar() {
       onSelect: () => useUi.getState().setImportOpen(true),
     },
     {
+      label: 'Prosessikortti…',
+      onSelect: () => useUi.getState().setCardOpen(true),
+    },
+    {
       label: 'Näkymät ja skenaariot…',
       onSelect: () => useUi.getState().setSavedViewsOpen(true),
     },

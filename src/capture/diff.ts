@@ -16,6 +16,9 @@ export interface ProjectDiff {
   newEntities: { id: string; name: string; kind: string }[]
   newProcesses: { id: string; name: string }[]
   newSources: { id: string; title: string }[]
+  /** Prosessikorttien ja roolien kuvausten muutokset (lukumäärä). */
+  cardChanges: number
+  entityNotes: number
 }
 
 const sameList = (a: string[], b: string[]) =>
@@ -32,6 +35,8 @@ export function diffProjects(before: Project, after: Project): ProjectDiff {
     newEntities: [],
     newProcesses: [],
     newSources: [],
+    cardChanges: 0,
+    entityNotes: 0,
   }
   for (const n of Object.values(after.nodes)) {
     const old = before.nodes[n.id]
@@ -59,6 +64,8 @@ export function diffProjects(before: Project, after: Project): ProjectDiff {
     }
     if (old.confidence !== n.confidence) fields.push(`varmuus: ${old.confidence} → ${n.confidence}`)
     if (old.description !== n.description) fields.push('kuvaus')
+    if (JSON.stringify(old.checklist ?? []) !== JSON.stringify(n.checklist ?? []))
+      fields.push('tarkistuslista')
     if (fields.length) d.changedNodes.push({ id: n.id, label: n.label, fields })
   }
   for (const e of Object.values(after.edges)) {
@@ -76,6 +83,16 @@ export function diffProjects(before: Project, after: Project): ProjectDiff {
   for (const p of Object.values(after.processes)) {
     if (!before.processes[p.id]) d.newProcesses.push({ id: p.id, name: p.name })
   }
+  for (const pr of Object.values(after.processes)) {
+    const old = before.processes[pr.id]
+    if (old && JSON.stringify(old.card ?? null) !== JSON.stringify(pr.card ?? null)) d.cardChanges++
+    if (!old && pr.card) d.cardChanges++
+  }
+  for (const e of Object.values(after.entities)) {
+    const old = before.entities[e.id]
+    if (old && old.description !== e.description) d.entityNotes++
+    if (!old && e.description) d.entityNotes++
+  }
   for (const s of Object.values(after.sources)) {
     if (!before.sources[s.id]) d.newSources.push({ id: s.id, title: s.title })
   }
@@ -90,6 +107,8 @@ export function isEmptyDiff(d: ProjectDiff): boolean {
     d.removedEdges.length === 0 &&
     d.removedNodes.length === 0 &&
     d.newEntities.length === 0 &&
-    d.newProcesses.length === 0
+    d.newProcesses.length === 0 &&
+    d.cardChanges === 0 &&
+    d.entityNotes === 0
   )
 }

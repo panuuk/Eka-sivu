@@ -5,7 +5,7 @@ import { raciStateOf } from '../model/commands'
 import { formatRange, formatTotal } from '../model/duration'
 import { flowOrder } from '../model/flow'
 import { processTree } from '../model/selectors'
-import type { Project } from '../model/types'
+import type { ProcessCard, Project } from '../model/types'
 import { esc } from './svg'
 import { fontStack, sanitizeTheme, themeColors, type Theme } from './theme'
 
@@ -59,6 +59,36 @@ const names = (p: Project, ids: string[]) =>
     .map((i) => p.entities[i]?.name)
     .filter(Boolean)
     .join(', ')
+
+/** Prosessikortti HTML:nä: tiedot määrittelylistana ja listat omina otsikkoinaan. */
+function cardHtml(card: ProcessCard | undefined): string {
+  if (!card) return ''
+  const rows: [string, string | undefined][] = [
+    ['Tarkoitus', card.purpose],
+    ['Omistaja', card.owner],
+    ['Käynnistäjä', card.trigger],
+    ['Asiakas', card.customer],
+  ]
+  const dl = rows
+    .filter(([, v]) => v)
+    .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v!)}</dd>`)
+    .join('')
+  const lists: [string, string[] | undefined][] = [
+    ['Tuotokset', card.outputs],
+    ['Mittarit', card.metrics],
+    ['Riskit', card.risks],
+    ['Tarkistuslista', card.checklist],
+  ]
+  const ul = lists
+    .filter(([, v]) => v?.length)
+    .map(
+      ([k, v]) =>
+        `<div class="card__list"><h4>${esc(k)}</h4><ul${k === 'Tarkistuslista' ? ' class="checklist"' : ''}>${v!.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`,
+    )
+    .join('')
+  if (!dl && !ul) return ''
+  return `<div class="processcard">${dl ? `<dl>${dl}</dl>` : ''}${ul}</div>`
+}
 
 export function buildDocumentHtml(p: Project, opts: DocumentOptions): string {
   const theme = sanitizeTheme(opts.theme)
@@ -124,7 +154,7 @@ export function buildDocumentHtml(p: Project, opts: DocumentOptions): string {
   <td>${esc(names(p, node.outputIds))}</td>
   ${anyTiming ? `<td>${esc(formatRange(node.duration))}</td><td>${esc(formatRange(node.waiting))}</td>` : ''}
   <td>${nextText}</td>
-  <td>${esc(node.description ?? '')}${node.confidence !== 'confirmed' ? ` <span class="conf conf--${node.confidence}">${CONF[node.confidence]}</span>` : ''}</td>
+  <td>${esc(node.description ?? '')}${node.checklist?.length ? `<ul class="checklist">${node.checklist.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}${node.confidence !== 'confirmed' ? ` <span class="conf conf--${node.confidence}">${CONF[node.confidence]}</span>` : ''}</td>
 </tr>`
       })
       .join('\n')
@@ -158,6 +188,7 @@ export function buildDocumentHtml(p: Project, opts: DocumentOptions): string {
     sections.push(`<section class="process" id="process-${esc(id)}">
 <h${Math.min(2 + depth, 4)}>${index + 1}. ${esc(proc.name)}</h${Math.min(2 + depth, 4)}>
 ${proc.description ? `<p class="lead">${esc(proc.description)}</p>` : ''}
+${cardHtml(proc.card)}
 ${opts.svgs[id] ? `<figure class="diagram">${opts.svgs[id]}</figure>` : ''}
 ${
   rows.length
@@ -194,7 +225,7 @@ ${matrixRows}
       .filter((e) => e.kind === kind && used.has(e.id))
       .sort((a, b) => a.name.localeCompare(b.name, 'fi'))
     if (!list.length) return ''
-    return `<h4>${title}</h4><ul class="entities">${list.map((e) => `<li>${esc(e.name)}${e.aliases.length ? ` <span class="muted">(${esc(e.aliases.join(', '))})</span>` : ''}</li>`).join('')}</ul>`
+    return `<h4>${title}</h4><ul class="entities">${list.map((e) => `<li>${esc(e.name)}${e.description ? ` – ${esc(e.description)}` : ''}${e.aliases.length ? ` <span class="muted">(${esc(e.aliases.join(', '))})</span>` : ''}</li>`).join('')}</ul>`
   }
   const appendix = `<section class="appendix"><h2>Liite: roolit, järjestelmät ja tuotokset</h2>${entityList('role', 'Roolit')}${entityList('system', 'Järjestelmät')}${entityList('artifact', 'Syötteet ja tuotokset')}</section>`
 
@@ -269,6 +300,7 @@ ${edgeRows ? `<h4>Yhteydet</h4><ul>${edgeRows}</ul>` : ''}
         frequency: n.frequency,
         confidence: CONF[n.confidence],
         description: n.description,
+        checklist: n.checklist,
         pains: (n.painPoints ?? []).map((x) => ({ text: x.text, idea: x.idea })),
       }
     }
@@ -400,6 +432,14 @@ h2 { margin-top: 2.5rem; border-bottom: 2px solid var(--accent); padding-bottom:
 h3, h4 { margin-top: 1.5rem; }
 .meta, .muted { color: var(--muted); }
 .lead { font-size: 1.05rem; }
+.processcard { display: grid; gap: .5rem 1.5rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin: .5rem 0 1rem; padding: .75rem 1rem; background: var(--surface2); border-radius: 8px; }
+.processcard dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: .15rem .75rem; }
+.processcard dt { font-weight: 600; }
+.processcard dd { margin: 0; }
+.processcard h4 { margin: 0 0 .2rem; }
+.processcard ul { margin: 0; padding-left: 1.1rem; }
+ul.checklist { list-style: none; padding-left: 0; }
+ul.checklist li::before { content: '☐ '; }
 .diagram { margin: 1rem 0; padding: .5rem; border: 1px solid var(--border); border-radius: 10px; overflow: auto; }
 .diagram svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
 table { width: 100%; border-collapse: collapse; margin: .5rem 0 1rem; font-size: .9rem; }

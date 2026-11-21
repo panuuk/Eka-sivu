@@ -21,6 +21,13 @@ export function diffSummary(d: ProjectDiff): string {
   if (kinds.system) parts.push(plural(kinds.system, 'uusi järjestelmä', 'uutta järjestelmää'))
   if (kinds.artifact)
     parts.push(plural(kinds.artifact, 'uusi syöte/tuotos', 'uutta syötettä/tuotosta'))
+  if (d.cardChanges)
+    parts.push(
+      d.cardChanges === 1
+        ? 'prosessikortti päivittyy'
+        : `${d.cardChanges} prosessikorttia päivittyy`,
+    )
+  if (d.entityNotes) parts.push(plural(d.entityNotes, 'roolin kuvaus', 'roolin kuvausta'))
   if (d.newProcesses.length)
     parts.push(plural(d.newProcesses.length, 'uusi prosessi', 'uutta prosessia'))
   return parts.join(' · ')

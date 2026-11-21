@@ -147,7 +147,7 @@ function AddTab() {
       .map(([line, statuses]) => ({ line, statuses }))
   }, [rowsPlan.effects])
   const summary = diffSummary(plan.diff)
-  const hasContent = plan.parse.items.length > 0
+  const hasContent = plan.parse.items.length > 0 || !!plan.parse.meta
   const blocked = !hasContent || plan.hasErrors
 
   const apply = () => {

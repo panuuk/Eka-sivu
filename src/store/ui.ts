@@ -122,6 +122,8 @@ interface UiState extends Persisted {
   setHelpOpen: (open: boolean) => void
   versionsOpen: boolean
   setVersionsOpen: (open: boolean) => void
+  cardOpen: boolean
+  setCardOpen: (open: boolean) => void
   /** Vertailun lähtötila (version tunniste) ja kohde (version tunniste tai 'current'). */
   compareBaseId: string | null
   compareTargetId: string
@@ -246,6 +248,8 @@ export const useUi = create<UiState>((set, get) => {
     setHelpOpen: (helpOpen) => set({ helpOpen }),
     versionsOpen: false,
     setVersionsOpen: (versionsOpen) => set({ versionsOpen }),
+    cardOpen: false,
+    setCardOpen: (cardOpen) => set({ cardOpen }),
     compareBaseId: null,
     compareTargetId: 'current',
     setCompare: (compareBaseId, compareTargetId = 'current') =>

@@ -8,10 +8,15 @@ import { processToText } from './serialize'
  * (testattu), koska tekoäly jäljittelee sitä.
  */
 export const AI_EXAMPLE = `# Matkalaskun käsittely
+:tarkoitus Korvata työmatkan kulut työntekijälle nopeasti ja tarkasti
+:omistaja Talousjohtaja
+:mittari Läpimenoaika alle 5 työpäivää
+:rooli Esimies: Hyväksyy matkat ja tarkistaa kuitit
 alku: Matkalasku jätetään
 - Täytä matkalasku @Työntekijä [Matkahallinta] < Kuitit > Matkalasku =30 min
 - Tarkista ja hyväksy @Esimies [Matkahallinta] =10 min ^2 pv
   Esimies tarkistaa kuitit ja matkan tarkoituksen.
+  :tarkistus Kuitit liitetty
   !3 Kuitit puuttuvat usein => Pakollinen kuittiliite lomakkeella
 ? Ylittääkö summa 1000 euroa
   kyllä: Hyväksy erikseen @Talousjohtaja ^1 pv
@@ -47,6 +52,7 @@ SÄÄNNÖT
 - Älä keksi tietoa, jota muistiinpanoissa ei ole. Jos tieto on epävarma tai oma tulkintasi, lisää vaiheen loppuun ~arvaus.
 - Jos jokin jää epäselväksi, älä arvaa hiljaa. Kirjoita kysymys kommenttiriville ("// Avoin: kuka hyväksyy yli 1000 euron laskut?") sen vaiheen kohdalle, jota se koskee.
 - Tavallinen sisennetty teksti vaiheen alla tallentuu vaiheen kuvaukseksi. Käytä sitä perusteluille ja lisätiedoille.
+- Prosessin tarkoituksen, omistajan, mittarit, riskit, roolien kuvaukset ja tarkistuslistat voi kirjata direktiiveinä (:tarkoitus, :omistaja, :mittari, :riski, :rooli, :tarkistus) vain, jos muistiinpanoissa sanotaan ne selvästi.
 - Aloita halutessasi rivillä "# Prosessin nimi". Käytä "alku" ja "loppu" -rivejä, jos prosessin alku- ja päätepiste ovat tiedossa.
 
 ESIMERKKI (näin tuloksen pitää näyttää)

@@ -84,17 +84,16 @@ test('kaavion työkalut ovat Näkymä-paneelissa eivätkä peitä toisiaan', asy
 
 test('vaiheet yhdistetään napauttamalla: valitse, Yhdistä, napauta kohdetta', async ({ page }) => {
   await page.getByRole('button', { name: 'Luo alku, vaihe ja loppu' }).click()
-  await page.getByRole('button', { name: 'Vaihe', exact: true }).click()
   const nodes = page.locator('.react-flow__node')
-  await expect(nodes).toHaveCount(4)
-  const before = await page.locator('.react-flow__edge').count()
-  // Valitse alku ja yhdistä se viimeiseen vaiheeseen (uusi vaihe on irrallinen)
+  await expect(nodes).toHaveCount(3)
+  await expect(page.locator('.react-flow__edge')).toHaveCount(2)
+  // Alusta ei vielä ole suoraa yhteyttä loppuun (alku -> vaihe -> loppu)
   await nodes.filter({ hasText: 'Alku' }).first().tap()
   await page.getByRole('button', { name: 'Yhdistä' }).tap()
   await expect(page.getByTestId('link-hint')).toBeVisible()
-  await nodes.last().tap()
+  await nodes.filter({ hasText: 'Loppu' }).first().tap()
   await expect(page.getByTestId('link-hint')).toBeHidden()
-  await expect.poll(() => page.locator('.react-flow__edge').count()).toBe(before + 1)
+  await expect(page.locator('.react-flow__edge')).toHaveCount(3)
 })
 
 test('sivupaneeli sulkeutuu taustaa napauttamalla', async ({ page }) => {

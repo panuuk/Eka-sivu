@@ -44,5 +44,19 @@ export const SYNTAX_HELP: { syntax: string; meaning: string }[] = [
     meaning: 'Alku- ja loppupiste (lisätään itse, jos puuttuvat)',
   },
   { syntax: '---', meaning: 'Erotin: seuraava ketju ei jatka edellistä' },
+  {
+    syntax: ':tarkoitus  :omistaja  :asiakas  :käynnistäjä',
+    meaning: 'Prosessikortin tiedot omilla riveillään (ennen vaiheita)',
+  },
+  {
+    syntax: ':tuotos  :mittari  :riski  :tarkistus',
+    meaning:
+      'Prosessikortin listat: yksi kohta per rivi (tarkistus = koko prosessin tarkistuslista)',
+  },
+  { syntax: ':rooli Nimi: kuvaus', meaning: 'Roolin kuvaus tai keskeinen vastuu' },
+  {
+    syntax: ':tarkistus teksti (vaiheen alla sisennettynä)',
+    meaning: 'Vaiheen oma tarkistuslista',
+  },
   { syntax: '// kommentti', meaning: 'Rivi ohitetaan' },
 ]

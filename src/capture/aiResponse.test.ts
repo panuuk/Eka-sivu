@@ -56,4 +56,9 @@ describe('looksLikeAiResponse', () => {
       false,
     )
   })
+
+  it('Markdown-dokumentti lihavointeineen ei ole tekoälyn vastaus', () => {
+    const md = '# Prosessi\n- **Tavoite:** tee asia\n- Toinen vaihe\n\n| a | b |\n| - | - |'
+    expect(looksLikeAiResponse(md)).toBe(false)
+  })
 })

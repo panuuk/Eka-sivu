@@ -31,6 +31,9 @@ const CompareView = lazy(() =>
 const SavedViewsDialog = lazy(() =>
   import('./panels/SavedViewsDialog').then((m) => ({ default: m.SavedViewsDialog })),
 )
+const ProcessCardDialog = lazy(() =>
+  import('./panels/ProcessCardDialog').then((m) => ({ default: m.ProcessCardDialog })),
+)
 const VersionsDialog = lazy(() =>
   import('./panels/VersionsDialog').then((m) => ({ default: m.VersionsDialog })),
 )
@@ -76,6 +79,7 @@ function App() {
   const helpOpen = useUi((s) => s.helpOpen)
   const replaceOpen = useUi((s) => s.replaceOpen)
   const versionsOpen = useUi((s) => s.versionsOpen)
+  const cardOpen = useUi((s) => s.cardOpen)
   const storageOpen = useUi((s) => s.storageOpen)
   const entityManagerOpen = useUi((s) => s.entityManagerOpen)
   const narrow = useNarrow()
@@ -176,6 +180,9 @@ function App() {
       </OnFirstOpen>
       <OnFirstOpen open={helpOpen}>
         <HelpDialog />
+      </OnFirstOpen>
+      <OnFirstOpen open={cardOpen}>
+        <ProcessCardDialog />
       </OnFirstOpen>
       <OnFirstOpen open={versionsOpen}>
         <VersionsDialog />
