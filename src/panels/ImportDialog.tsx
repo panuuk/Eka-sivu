@@ -46,7 +46,7 @@ export function ImportDialog() {
 }
 
 function Body() {
-  const [tab, setTab] = useState<Tab>('table')
+  const [tab, setTab] = useState<Tab>(() => useUi.getState().importFile?.tab ?? 'table')
   const close = () => useUi.getState().setImportOpen(false)
   return (
     <>
@@ -152,6 +152,16 @@ function TableTab({ close }: { close: () => void }) {
     (FIELDS.find((f) => mapping[f] === col) as Field | undefined) ?? ''
 
   const result = useMemo(() => tableToDsl(data, mapping), [data, mapping])
+
+  // Lähteet-näkymästä ohjattu tiedosto luetaan heti
+  useEffect(() => {
+    const pending = useUi.getState().importFile
+    if (pending?.tab !== 'table') return
+    useUi.getState().clearImportFile()
+    void Promise.resolve().then(() => onFile(pending.file))
+    // Vain avautuessa: ohjattu tiedosto luetaan kerran
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="import__body" data-testid="import-table">
@@ -324,6 +334,17 @@ function DiagramTab({ close }: { close: () => void }) {
   }
 
   const summary = graph ? summarize(graph) : null
+
+  useEffect(() => {
+    const pending = useUi.getState().importFile
+    if (pending?.tab !== 'diagram') return
+    useUi.getState().clearImportFile()
+    const f = pending.file
+    void (async () => {
+      if (f.size > MAX_FILE_BYTES) return setError('Tiedosto on liian suuri')
+      parse(await f.text(), f.name)
+    })()
+  }, [])
 
   const apply = async () => {
     if (!graph) return

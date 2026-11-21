@@ -1,11 +1,14 @@
+// @vitest-environment jsdom
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import {
   bytesToBinaryString,
   decodeMimeWords,
   emlToText,
+  htmlToStructuredText,
   paragraphsOfSlideXml,
   pptxToText,
+  slideToText,
 } from './office'
 
 const enc = (s: string) => bytesToBinaryString(new TextEncoder().encode(s))
@@ -123,5 +126,59 @@ describe('emlToText', () => {
     expect(m.text).toContain('Kirjaa lasku ERPiin')
     expect(m.text).toContain('Valmis & lähetetty')
     expect(m.text).not.toContain('<p>')
+  })
+})
+
+describe('slideToText', () => {
+  const sp = (ph: string, paras: string[]) =>
+    `<p:sp><p:nvSpPr><p:nvPr>${ph}</p:nvPr></p:nvSpPr><p:txBody>${paras
+      .map((t) => `<a:p><a:r><a:t>${t}</a:t></a:r></a:p>`)
+      .join('')}</p:txBody></p:sp>`
+  const cell = (t: string) =>
+    `<a:tc><a:txBody><a:p><a:r><a:t>${t}</a:t></a:r></a:p></a:txBody></a:tc>`
+
+  it('otsikko otsikoksi, sisältökentän kappaleet luetteloksi ja taulukko riveiksi', () => {
+    const xml =
+      sp('<p:ph type="title"/>', ['Hyväksyntä']) +
+      sp('<p:ph idx="1"/>', ['Esimies tarkistaa laskun.', 'Talous maksaa.']) +
+      sp('', ['Vapaa tekstilaatikko']) +
+      `<p:graphicFrame><a:tbl><a:tr>${cell('Vaihe')}${cell('Rooli')}</a:tr><a:tr>${cell('Maksu')}${cell('Talous')}</a:tr></a:tbl></p:graphicFrame>`
+    expect(slideToText(xml, 2)).toEqual([
+      '## Hyväksyntä',
+      '- Esimies tarkistaa laskun.',
+      '- Talous maksaa.',
+      'Vapaa tekstilaatikko',
+      '| Vaihe | Rooli |',
+      '| Maksu | Talous |',
+    ])
+  })
+
+  it('ilman otsikkoa dian numero on otsikkona', () => {
+    expect(slideToText(sp('', ['Teksti']), 3)).toEqual(['## Dia 3', 'Teksti'])
+  })
+})
+
+describe('htmlToStructuredText', () => {
+  const parse = (h: string) => new DOMParser().parseFromString(h, 'text/html')
+  it('otsikot, luettelot, numeroidut luettelot ja taulukot säilyvät', () => {
+    const html =
+      '<h1>Prosessi</h1><p>Johdanto.</p><h2>Vaiheet</h2><ol><li>Kirjaa <strong>lasku</strong></li><li>Hyväksy<ul><li>esimies</li></ul></li></ol>' +
+      '<table><tr><th>Vaihe</th><th>Rooli</th></tr><tr><td>Maksu</td><td>Talous</td></tr></table>'
+    expect(htmlToStructuredText(html, parse)).toBe(
+      [
+        '# Prosessi',
+        '',
+        'Johdanto.',
+        '',
+        '## Vaiheet',
+        '',
+        '1. Kirjaa lasku',
+        '2. Hyväksy',
+        '  - esimies',
+        '',
+        '| Vaihe | Rooli |',
+        '| Maksu | Talous |',
+      ].join('\n'),
+    )
   })
 })

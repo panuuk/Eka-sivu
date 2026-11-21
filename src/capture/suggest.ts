@@ -1,5 +1,6 @@
 import { parseDuration } from '../model/duration'
 import type { DurationRange, PainSeverity, Project } from '../model/types'
+import { maskMarkdown } from './markdown'
 import { findMentions } from './mentions'
 import { capitalize, collapse, splitSentences, truncate, type Span } from './text'
 
@@ -405,14 +406,25 @@ function splitClauses(sentence: string): { start: number; end: number }[] {
   return parts.filter((p) => collapse(sentence.slice(p.start, p.end)).split(' ').length >= 2)
 }
 
+/** Dokumentin omaa sisältöä esittelevä lause ("Tämä kuvaus kertoo ...") ei ole prosessin vaihe. */
+const META_SENTENCE =
+  /^\s*(?:tämä|tässä|seuraavassa|alla|ohessa)\s+(?:\S+\s+){0,3}?(?:dokumentti|dokumentissa|kuvaus|kuvauksessa|ohje|ohjeessa|asiakirja|asiakirjassa|esitys|esityksessä|sivu|sivulla)\b/iu
+
 export const ruleExtractor: Extractor = {
-  suggest(project, sourceId, text) {
+  suggest(project, sourceId, rawText) {
+    // Markdown-merkinnät (koodilohkot, taulukot, lihavointi) peitetään pituutta muuttamatta
+    const text = maskMarkdown(rawText)
     const drafts: Draft[] = []
     const sentences = splitSentences(text)
     let lastWasDecision = false
 
     for (const span of sentences) {
       const sentence = span.text
+      if (META_SENTENCE.test(sentence)) {
+        // "Tämä dokumentti kuvaa ..." kertoo dokumentista, ei prosessista
+        lastWasDecision = false
+        continue
+      }
       const cond = CONDITION_RE.exec(sentence)
       const other = ELSE_RE.exec(sentence)
 
@@ -598,7 +610,7 @@ export const ruleExtractor: Extractor = {
         kind: d.kind,
         start: d.start,
         end: d.end,
-        quote: d.text,
+        quote: rawText.slice(d.start, d.end),
         label,
         roleId: role?.entityId,
         systemIds: systems,

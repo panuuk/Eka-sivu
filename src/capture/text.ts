@@ -19,6 +19,11 @@ export function normalizeText(raw: string): string {
       .replace(/\u00a0/g, ' ')
       // eslint-disable-next-line no-control-regex
       .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
+      // Wordin ja PDF:n luettelomerkkien erikoismerkit (Symbol-fontin ) tavalliseksi luetteloviivaksi
+      .replace(
+        /^([ \t]*)[\uF0B7\uF0A7\uF0D8\uF076\uF02D\u25AA\u25CF\u25E6\u25A0\u2023\u2043][ \t]*/gm,
+        '$1- ',
+      )
       .replace(/[ \t]+\n/g, '\n')
       .replace(/\n{3,}/g, '\n\n')
       .trim()
@@ -53,13 +58,27 @@ export function splitSentences(text: string): Span[] {
   }
 
   let offset = 0
+  let prev = ''
   for (const line of text.split('\n')) {
     const lineStart = offset
     offset += line.length + 1
     if (!line.trim()) {
       flushParagraph()
+      prev = ''
       continue
     }
+    // Lyhyt, ilman päätemerkkiä oleva rivi isoon alkukirjaimeen alkavan rivin edellä on otsikko
+    // (esim. "Vaiheet" ennen lausetta), joten se ei yhdisty seuraavaan riviin.
+    if (
+      para.length === 1 &&
+      prev &&
+      isHeadingLike(prev) &&
+      /^\s*[A-ZÅÄÖ\d"“(]/.test(prev) &&
+      /^\s*[A-ZÅÄÖ\d"“(]/.test(line) &&
+      !LIST_PREFIX.test(prev)
+    )
+      flushParagraph()
+    prev = line
     const m = LIST_PREFIX.exec(line)
     if (m) {
       flushParagraph()
@@ -70,6 +89,14 @@ export function splitSentences(text: string): Span[] {
   }
   flushParagraph()
   return spans
+}
+
+/** Otsikon näköinen rivi: enintään seitsemän sanaa eikä lauseen tai luettelon päätemerkkiä. */
+export function isHeadingLike(line: string): boolean {
+  const t = line.trim()
+  if (!t || t.length > 70) return false
+  if (/[.!?…:;,-]$/.test(t)) return false
+  return t.split(/\s+/).length <= 7
 }
 
 function pushSpan(spans: Span[], text: string, start: number, end: number, listItem: boolean) {
