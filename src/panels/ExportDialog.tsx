@@ -10,6 +10,8 @@ import {
 import { useStore } from '../store/store'
 import { useUi } from '../store/ui'
 import { Icon } from '../ui/Icon'
+import { DEFAULT_DECK, deckSummary, planDeck, type DeckOptions } from '../export/deck'
+import { DEFAULT_TILE_OPTIONS, planTiles, type TileOptions } from '../export/tiles'
 import { PresentSettings } from './PresentSettings'
 
 const IMAGE_FORMATS: ExportFormat[] = ['svg', 'png', 'pdf']
@@ -26,6 +28,8 @@ export function ExportDialog() {
   const [format, setFormat] = useState<ExportFormat>('svg')
   const [includeQuestions, setIncludeQuestions] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [deck, setDeck] = useState<DeckOptions>(DEFAULT_DECK)
+  const [tiles, setTiles] = useState<TileOptions>(DEFAULT_TILE_OPTIONS)
   const [preview, setPreview] = useState<{ kind: 'svg' | 'text' | 'none'; content: string }>({
     kind: 'none',
     content: '',
@@ -46,7 +50,14 @@ export function ExportDialog() {
     const req = currentRequest(project, processId)
     ;(async () => {
       try {
-        if (IMAGE_FORMATS.includes(format) || format === 'html' || format === 'document') {
+        if (format === 'pptx') {
+          const slides = await planDeck(project, req, deck)
+          if (!cancelled)
+            setPreview({
+              kind: 'text',
+              content: `${slides.length} diaa\n\n${deckSummary(slides).join('\n')}`,
+            })
+        } else if (IMAGE_FORMATS.includes(format) || format === 'html' || format === 'document') {
           const svg = await buildSvg(req)
           if (!cancelled) setPreview({ kind: 'svg', content: svg })
         } else {
@@ -61,7 +72,7 @@ export function ExportDialog() {
     return () => {
       cancelled = true
     }
-  }, [open, project, processId, format, theme, options, direction])
+  }, [open, project, processId, format, theme, options, direction, deck])
 
   if (!project) return null
   const procName = project.processes[processId]?.name ?? ''
@@ -72,7 +83,7 @@ export function ExportDialog() {
     setBusy(true)
     setError(null)
     try {
-      await runExport(format, currentRequest(project, processId), { includeQuestions })
+      await runExport(format, currentRequest(project, processId), { includeQuestions, deck, tiles })
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -128,6 +139,86 @@ export function ExportDialog() {
                     : 'Mermaid-vienti käyttää “Avaa alaprosessit” -asetusta ja suuntaa.'}
                 </p>
               )}
+              {format === 'pdf' && (
+                <fieldset className="deck-options" data-testid="print-options">
+                  <legend className="field__label">Sivut</legend>
+                  <label className="gap-select">
+                    <span className="field__label">Sivukoko</span>
+                    <select
+                      value={tiles.paper}
+                      aria-label="Sivukoko"
+                      onChange={(e) =>
+                        setTiles({ ...tiles, paper: e.target.value as TileOptions['paper'] })
+                      }
+                    >
+                      <option value="fit">Sovita yhdelle sivulle</option>
+                      <option value="A4">A4, jaa usealle sivulle</option>
+                      <option value="A3">A3, jaa usealle sivulle</option>
+                    </select>
+                  </label>
+                  {tiles.paper !== 'fit' && (
+                    <>
+                      <label className="gap-select">
+                        <span className="field__label">Suunta</span>
+                        <select
+                          value={tiles.orientation}
+                          aria-label="Suunta"
+                          onChange={(e) =>
+                            setTiles({
+                              ...tiles,
+                              orientation: e.target.value as TileOptions['orientation'],
+                            })
+                          }
+                        >
+                          <option value="landscape">Vaaka</option>
+                          <option value="portrait">Pysty</option>
+                        </select>
+                      </label>
+                      <label className="gap-select">
+                        <span className="field__label">Mittakaava</span>
+                        <select
+                          value={tiles.scale}
+                          aria-label="Mittakaava"
+                          onChange={(e) =>
+                            setTiles({ ...tiles, scale: e.target.value as TileOptions['scale'] })
+                          }
+                        >
+                          <option value="width">Sovita leveys yhdelle sivulle</option>
+                          <option value="actual">100 %</option>
+                        </select>
+                      </label>
+                      <p className="field__hint" data-testid="tile-estimate">
+                        {tileEstimate(preview.kind === 'svg' ? preview.content : '', tiles)}
+                      </p>
+                    </>
+                  )}
+                </fieldset>
+              )}
+              {format === 'pptx' && (
+                <fieldset className="deck-options" data-testid="deck-options">
+                  <legend className="field__label">Diat</legend>
+                  {(
+                    [
+                      ['overview', 'Prosessin yleiskuva'],
+                      ['subprocesses', 'Alaprosessit omina diaoinaan'],
+                      ['views', 'Tallennetut näkymät'],
+                      ['scenarios', 'Skenaariopolut'],
+                      ['metrics', 'Mittarit ja kipupisteet'],
+                      ['changes', 'Muutokset lähtötilaan verrattuna'],
+                      ['walkthrough', 'Vaihe vaiheelta -läpikäynti'],
+                    ] as [keyof DeckOptions, string][]
+                  ).map(([key, label]) => (
+                    <label key={key} className="check">
+                      <input
+                        type="checkbox"
+                        checked={deck[key]}
+                        onChange={(e) => setDeck({ ...deck, [key]: e.target.checked })}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </fieldset>
+              )}
               {format === 'document' && (
                 <label className="check">
                   <input
@@ -176,4 +267,16 @@ export function ExportDialog() {
       )}
     </dialog>
   )
+}
+
+/** Arvio sivumäärästä esikatselukuvan koon perusteella. */
+function tileEstimate(svg: string, tiles: TileOptions): string {
+  const m = /width="(\d+)" height="(\d+)"/.exec(svg)
+  if (!m) return ''
+  const plan = planTiles(Number(m[1]), Number(m[2]), tiles)
+  if (!plan) return ''
+  const total = plan.cols * plan.rows
+  return total === 1
+    ? 'Kuva mahtuu yhdelle sivulle.'
+    : `${total} sivua (${plan.cols} × ${plan.rows}). Sivut voi liittää yhteen isoksi kaavioksi.`
 }

@@ -176,9 +176,14 @@ describe('buildDocumentHtml', () => {
     const stat = await doc()
     expect(stat.dom.querySelectorAll('script')).toHaveLength(0)
     const inter = await doc({ interactive: true })
-    expect(inter.dom.querySelectorAll('script')).toHaveLength(1)
-    // skriptissä ei ole käyttäjän dataa
-    expect(inter.dom.querySelector('script')!.textContent).not.toContain('Ostolasku')
+    // yksi suoritettava skripti ja yksi data-lohko (application/json, ei suoritettava)
+    const executable = [...inter.dom.querySelectorAll('script')].filter(
+      (s) => !s.getAttribute('type'),
+    )
+    expect(executable).toHaveLength(1)
+    expect(inter.dom.querySelectorAll('script[type="application/json"]')).toHaveLength(1)
+    // suoritettavassa skriptissä ei ole käyttäjän dataa
+    expect(executable[0].textContent).not.toContain('Ostolasku')
   })
 
   it('escapettaa käyttäjän tekstit ja liittää avoimet kysymykset pyydettäessä', async () => {

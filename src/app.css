@@ -2943,3 +2943,49 @@ button.cell:hover {
   display: block;
   margin: 0 auto;
 }
+
+.scenario-editor {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  background: var(--surface-2);
+}
+.scenario-editor h4 {
+  margin: 0 0 0.5rem;
+}
+.scenario-choices {
+  list-style: none;
+  margin: 0.6rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.scenario-choices li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.scenario-choices__q {
+  font-weight: 600;
+}
+.deck-options {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+}
+
+.present__select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--p-muted);
+}
+.present__select select {
+  max-width: 11rem;
+}

@@ -107,3 +107,13 @@ Rajoitus: arviot ovat vain niin hyviä kuin annetut kestot. Päätösten haaroje
 - **Esitys ja viennit.** “Korosta muutokset lähtötilaan verrattuna” värjää vaiheet esityksessä ja kuvaviennissä, ja prosessidokumenttiin tulee muutosluettelo mittareineen.
 
 Rajoitus: versio sisältää vain prosessin rakenteen, ei lähteitä tai kysymyksiä. Vertailu tunnistaa vaiheet tunnisteen tai nimen perusteella, joten täysin uudelleen kirjoitettu ja uudelleen nimetty vaihe näkyy poistettuna ja lisättynä.
+
+### Vaihe 14: Esittämisen syventäminen (valmis)
+
+- **PowerPoint-vienti** (`deck.ts` suunnittelee, `pptx.ts` kirjoittaa pptxgenjs:llä, joka ladataan vasta tarvittaessa). 16:9-diat: otsikkodia, kaaviot kuvina (vaaka- tai pystyasettelu valitaan sen mukaan, kumpi mahtuu diaan isompana), mittarit ja kipupisteet taulukkoina, muutosluettelo ja vaihe vaiheelta -läpikäyntidiat korostettuine vaiheineen sekä puhujan muistiinpanot (vaiheiden tiedot, skenaarion polku). Dioja voi valita vientiikkunassa. Tuloksen oikeellisuus testataan python-pptx:llä ja piirtyminen LibreOfficella. `pptxgenjs`:n riippuvuus `image-size` ohitetaan selainpaketissa, ja sen haavoittuvuus on korjattu `overrides`-asetuksella.
+- **Tallennetut näkymät** (`Project.views`, skeema 4): prosessi, asettelu (alaprosessit auki, vain vahvistetut), kestot ja lämpökartta, muutosten korostus, valinnainen rajaus valittuihin vaiheisiin ja skenaario sekä puhujan muistiinpano. Näkymiä voi järjestää, ja esitys ja PowerPoint koostetaan niistä. Esityksessä näkymä valitaan yläpalkista.
+- **Skenaariopolut** (`Project.scenarios`, `scenario.ts`): valinnat päätöksissä, esim. “luottoraja ylittyy”. Polku korostetaan ja numeroidaan kaaviossa, ja läpikäynti kulkee vain polun vaiheissa. Poistuneiden prosessien näkymät ja skenaariot siivotaan, ja vioittuneet tietueet pudotetaan tuonnissa.
+- **Interaktiivinen HTML.** Haku himmentää ei-osuvat vaiheet ja suodattaa rivit, vaiheen napsautus avaa tietopaneelin (rooli, järjestelmät, kestot, kipupisteet ja niin edelleen), alaprosessiin pääsee tietopaneelin painikkeesta tai kaksoisnapsautuksella ja takaisin “Takaisin”-painikkeella. Vaiheiden tiedot ovat turvallisesti koodattuna JSON-lohkona (`<`, `>`, `&` koodattu, tekstit lisätään `textContent`-kentällä).
+- **Suurten kaavioiden tulostus** (`tiles.ts`): PDF-vienti voi jakaa kuvan A4- tai A3-sivuille (vaaka tai pysty, mittakaava “sovita leveys” tai 100 %). Jokaisella sivulla on sivu- ja rivi/sarake-merkintä, ja arvio sivumäärästä näkyy valinnoissa. Sivut voi liittää yhteen isoksi seinäkaavioksi.
+
+Rajoitus: PowerPoint-diat ovat kuvia eivätkä muokattavia muotoja. Hyvin suuri prosessi (satoja vaiheita) mahtuu yhteen diaan vain pienenä, joten ne kannattaa jakaa alaprosesseihin tai tallennettuihin rajattuihin näkymiin.

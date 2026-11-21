@@ -15,6 +15,14 @@ export interface SvgOptions {
   heat?: 'off' | 'time' | 'pain' | 'handoff'
   /** Vertailun merkinnät: lisätty (vihreä), poistettu (punainen katkoviiva), muuttunut (keltainen). */
   marks?: ReadonlyMap<string, 'added' | 'removed' | 'changed'>
+  /** Skenaariopolku: polun vaiheet ja yhteydet korostetaan, muut himmennetään ja vaiheet numeroidaan. */
+  path?: {
+    nodes: ReadonlySet<string>
+    edges: ReadonlySet<string>
+    order: ReadonlyMap<string, number>
+  }
+  /** Rajaa kuvan tähän alueeseen (graafin koordinaatit, marginaali lisätään). */
+  crop?: { x: number; y: number; width: number; height: number }
   title?: string
   margin?: number
   /** Läpikäynti: korostettu vaihe ja jo käydyt; muut himmennetään. */
@@ -73,19 +81,24 @@ export function renderSvg(graph: RenderGraph, opts: SvgOptions): string {
   const c = themeColors(opts.theme)
   const print = opts.theme.palette === 'print'
   const margin = opts.margin ?? 32
-  const width = Math.ceil(graph.width + margin * 2)
-  const height = Math.ceil(graph.height + margin * 2)
+  const area = opts.crop ?? { x: 0, y: 0, width: graph.width, height: graph.height }
+  const width = Math.ceil(area.width + margin * 2)
+  const height = Math.ceil(area.height + margin * 2)
+  const vx = Math.floor(area.x - margin)
+  const vy = Math.floor(area.y - margin)
   const hl = opts.highlight
+  const pathSet = opts.path
   const dimmed = (id: string) =>
-    !!hl && hl.current !== undefined && id !== hl.current && !hl.visited?.has(id)
+    (!!hl && hl.current !== undefined && id !== hl.current && !hl.visited?.has(id)) ||
+    (!!pathSet && !pathSet.nodes.has(id))
 
   const parts: string[] = []
   const title = opts.title ?? 'Prosessikaavio'
   parts.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-margin} ${-margin} ${width} ${height}" width="${width}" height="${height}" font-family="${esc(fontStack(opts.theme))}" role="img" aria-label="${esc(title)}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${width} ${height}" width="${width}" height="${height}" font-family="${esc(fontStack(opts.theme))}" role="img" aria-label="${esc(title)}">`,
     `<title>${esc(title)}</title>`,
     `<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${c.borderStrong}"/></marker></defs>`,
-    `<rect x="${-margin}" y="${-margin}" width="${width}" height="${height}" fill="${c.bg}"/>`,
+    `<rect x="${vx}" y="${vy}" width="${width}" height="${height}" fill="${c.bg}"/>`,
   )
 
   // Ryhmät (avatut alaprosessit) ensin: syvyysjärjestyksessä, jotta sisäkkäiset ryhmät piirtyvät päälle.
@@ -107,9 +120,12 @@ export function renderSvg(graph: RenderGraph, opts: SvgOptions): string {
       hl &&
       hl.current !== undefined &&
       !(hl.visited?.has(e.from) && (hl.visited?.has(e.to) || hl.current === e.to))
+    const onPath = !pathSet || pathSet.edges.has(e.id)
     parts.push(
-      `<g data-edge="${esc(e.id)}" opacity="${faded ? 0.25 : 1}">`,
-      `<path d="${path}" fill="none" stroke="${c.borderStrong}" stroke-width="1.6" marker-end="url(#arrow)"/>`,
+      `<g data-edge="${esc(e.id)}" opacity="${faded || !onPath ? 0.25 : 1}">`,
+      pathSet && onPath
+        ? `<path d="${path}" fill="none" stroke="${c.accent}" stroke-width="3" marker-end="url(#arrow)"/>`
+        : `<path d="${path}" fill="none" stroke="${c.borderStrong}" stroke-width="1.6" marker-end="url(#arrow)"/>`,
     )
     if (e.label) {
       const lp = labelPoint(e.points)
@@ -126,6 +142,13 @@ export function renderSvg(graph: RenderGraph, opts: SvgOptions): string {
   for (const n of graph.nodes) {
     if (n.group) continue
     parts.push(renderNode(n, opts, c, print, dimmed(n.id), hl?.current === n.id))
+    const order = pathSet?.order.get(n.id)
+    if (order !== undefined) {
+      parts.push(
+        `<g data-order="${order}"><circle cx="${n.x + n.w - 4}" cy="${n.y + 4}" r="11" fill="${c.accent}"/>` +
+          `<text x="${n.x + n.w - 4}" y="${n.y + 8.5}" font-size="12" font-weight="800" text-anchor="middle" fill="#fff">${order}</text></g>`,
+      )
+    }
   }
   parts.push('</svg>')
   return parts.join('\n')

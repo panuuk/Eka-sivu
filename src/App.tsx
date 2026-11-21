@@ -4,6 +4,7 @@ import { EntityManager } from './panels/EntityManager'
 import { ExportDialog } from './panels/ExportDialog'
 import { PresentView } from './panels/PresentView'
 import { CompareView } from './panels/CompareView'
+import { SavedViewsDialog } from './panels/SavedViewsDialog'
 import { VersionsDialog } from './panels/VersionsDialog'
 import { AnalysisView } from './panels/AnalysisView'
 import { HelpDialog } from './panels/HelpDialog'
@@ -45,6 +46,9 @@ function App() {
       <div className="app app--present">
         <PresentView />
         <ExportDialog />
+        <SavedViewsDialog />
+        <ConfirmHost />
+        <PromptHost />
       </div>
     )
   }
@@ -91,6 +95,7 @@ function App() {
       <ReplaceDialog />
       <HelpDialog />
       <VersionsDialog />
+      <SavedViewsDialog />
       <ExportDialog />
       <QuickInput />
       <ConfirmHost />

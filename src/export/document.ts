@@ -25,6 +25,20 @@ export interface DocumentOptions {
   comparison?: { comparison: Comparison; baseName: string }
 }
 
+const INTERACTIVE_CSS = `
+.pk-toolbar { position: sticky; top: 0; z-index: 5; display: flex; gap: .75rem; align-items: center; padding: .5rem .75rem; margin: -1rem 0 1rem; background: var(--bg); border-bottom: 1px solid var(--border); }
+.pk-toolbar input { padding: .3rem .5rem; border: 1px solid var(--border); border-radius: 6px; min-width: 14rem; font: inherit; }
+.pk-toolbar button, .pk-panel button { font: inherit; padding: .25rem .6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface2); color: var(--text); cursor: pointer; }
+.pk-panel { position: fixed; right: 1rem; bottom: 1rem; width: min(24rem, calc(100vw - 2rem)); max-height: 70vh; overflow: auto; padding: 1rem; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 30px rgb(0 0 0 / 20%); z-index: 10; }
+.pk-panel h3 { margin: 0 2rem .5rem 0; }
+.pk-panel dl { margin: 0 0 .5rem; display: grid; grid-template-columns: auto 1fr; gap: .2rem .75rem; font-size: .9rem; }
+.pk-panel dt { color: var(--muted); }
+.pk-panel dd { margin: 0; }
+#pk-close { position: absolute; top: .5rem; right: .5rem; }
+svg g[data-id] { cursor: pointer; }
+@media print { .pk-toolbar, .pk-panel { display: none !important; } }
+`
+
 const CONF = { guess: 'arvaus', likely: 'todennäköinen', confirmed: 'vahvistettu' } as const
 
 function descendantsInOrder(p: Project, rootId: string): { id: string; depth: number }[] {
@@ -233,15 +247,137 @@ ${edgeRows ? `<h4>Yhteydet</h4><ul>${edgeRows}</ul>` : ''}
           .join('')}</ul></section>`
       : ''
 
+  /** Vaiheiden tiedot interaktiiviseen tiedostoon. JSON upotetaan skriptilohkoon, joten merkit < > & ja rivinvaihtomerkit koodataan. */
+  const nodeData: Record<string, unknown> = {}
+  if (opts.interactive) {
+    const ids = new Set(processes.map((x) => x.id))
+    for (const n of Object.values(p.nodes)) {
+      if (!ids.has(n.processId) || n.kind === 'start' || n.kind === 'end') continue
+      const list = (xs: string[]) => xs.map((i) => p.entities[i]?.name).filter(Boolean)
+      nodeData[n.id] = {
+        label: n.label,
+        kind: n.kind,
+        process: p.processes[n.processId]?.name ?? '',
+        child:
+          n.childProcessId && ids.has(n.childProcessId) ? `process-${n.childProcessId}` : undefined,
+        role: n.roleId ? p.entities[n.roleId]?.name : undefined,
+        systems: list(n.systemIds),
+        inputs: list(n.inputIds),
+        outputs: list(n.outputIds),
+        duration: n.duration ? formatRange(n.duration) : undefined,
+        waiting: n.waiting ? formatRange(n.waiting) : undefined,
+        frequency: n.frequency,
+        confidence: CONF[n.confidence],
+        description: n.description,
+        pains: (n.painPoints ?? []).map((x) => ({ text: x.text, idea: x.idea })),
+      }
+    }
+  }
+  const dataJson = JSON.stringify(nodeData)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
+
+  const toolbar = opts.interactive
+    ? `<div class="pk-toolbar" role="search"><label>Hae vaiheita <input id="pk-search" type="search" placeholder="Nimi, rooli, järjestelmä…" autocomplete="off"></label><span id="pk-count" class="muted" role="status"></span><button type="button" id="pk-back" hidden>← Takaisin</button></div>`
+    : ''
+  const panel = opts.interactive
+    ? `<aside id="pk-panel" class="pk-panel" hidden aria-live="polite"><button type="button" id="pk-close" aria-label="Sulje tiedot">×</button><h3 id="pk-title"></h3><dl id="pk-details"></dl><button type="button" id="pk-open" hidden>Avaa alaprosessi</button></aside>`
+    : ''
+
   const script = opts.interactive
-    ? `<script>
+    ? `<script type="application/json" id="pk-data">${dataJson}</script>
+<script>
 (function () {
+  var data = JSON.parse(document.getElementById('pk-data').textContent)
+  var panel = document.getElementById('pk-panel')
+  var title = document.getElementById('pk-title')
+  var details = document.getElementById('pk-details')
+  var openBtn = document.getElementById('pk-open')
+  var back = document.getElementById('pk-back')
+  var search = document.getElementById('pk-search')
+  var count = document.getElementById('pk-count')
+  var history = []
+  var currentChild = null
+
+  function clearHl() { document.querySelectorAll('tr.hl').forEach(function (r) { r.classList.remove('hl') }) }
+  function addRow(label, value) {
+    if (!value || (Array.isArray(value) && !value.length)) return
+    var dt = document.createElement('dt'); dt.textContent = label
+    var dd = document.createElement('dd'); dd.textContent = Array.isArray(value) ? value.join(', ') : value
+    details.appendChild(dt); details.appendChild(dd)
+  }
+  function show(id) {
+    var d = data[id]
+    if (!d) { panel.hidden = true; return }
+    title.textContent = d.label
+    details.textContent = ''
+    addRow('Prosessi', d.process)
+    addRow('Rooli', d.role)
+    addRow('Järjestelmät', d.systems)
+    addRow('Syötteet', d.inputs)
+    addRow('Tuotokset', d.outputs)
+    addRow('Työaika', d.duration)
+    addRow('Odotus', d.waiting)
+    addRow('Toistuvuus', d.frequency)
+    addRow('Varmuus', d.confidence)
+    addRow('Kuvaus', d.description)
+    ;(d.pains || []).forEach(function (p) { addRow('Kipupiste', p.text + (p.idea ? ' → ' + p.idea : '')) })
+    currentChild = d.child || null
+    openBtn.hidden = !currentChild
+    panel.hidden = false
+  }
+  function goTo(sectionId) {
+    var el = document.getElementById(sectionId)
+    if (!el) return
+    history.push(window.scrollY)
+    back.hidden = false
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   document.addEventListener('click', function (e) {
     var g = e.target.closest ? e.target.closest('svg [data-id]') : null
-    document.querySelectorAll('tr.hl').forEach(function (r) { r.classList.remove('hl') })
+    clearHl()
     if (!g) return
-    var row = document.getElementById('row-' + g.getAttribute('data-id'))
+    var id = g.getAttribute('data-id')
+    var row = document.getElementById('row-' + id)
     if (row) { row.classList.add('hl'); row.scrollIntoView({ block: 'center', behavior: 'smooth' }) }
+    show(id)
+    // Alaprosessiin porautuminen: kaksoisnapsautus avaa sen osion
+  })
+  document.addEventListener('dblclick', function (e) {
+    var g = e.target.closest ? e.target.closest('svg [data-id]') : null
+    var d = g && data[g.getAttribute('data-id')]
+    if (d && d.child) goTo(d.child)
+  })
+  openBtn.addEventListener('click', function () { if (currentChild) goTo(currentChild) })
+  back.addEventListener('click', function () {
+    var y = history.pop()
+    if (y !== undefined) window.scrollTo({ top: y, behavior: 'smooth' })
+    if (!history.length) back.hidden = true
+  })
+  document.getElementById('pk-close').addEventListener('click', function () { panel.hidden = true; clearHl() })
+
+  function norm(s) { return String(s || '').toLocaleLowerCase('fi') }
+  search.addEventListener('input', function () {
+    var q = norm(search.value).trim()
+    var hits = 0
+    document.querySelectorAll('svg g[data-id]').forEach(function (g) {
+      var d = data[g.getAttribute('data-id')]
+      var text = d ? norm([d.label, d.role, (d.systems || []).join(' '), (d.inputs || []).join(' '), (d.outputs || []).join(' '), d.description].join(' ')) : ''
+      var match = !q || (d && text.indexOf(q) >= 0)
+      if (q && match) hits++
+      g.style.opacity = match ? '' : '0.18'
+    })
+    document.querySelectorAll('table.steps tbody tr').forEach(function (r) {
+      var id = (r.getAttribute('data-node') || '')
+      var d = data[id]
+      var text = d ? norm([d.label, d.role, (d.systems || []).join(' '), (d.description || '')].join(' ')) : norm(r.textContent)
+      r.style.display = !q || text.indexOf(q) >= 0 ? '' : 'none'
+    })
+    count.textContent = q ? hits + ' osumaa' : ''
   })
 })()
 </script>`
@@ -273,6 +409,7 @@ thead th { background: var(--surface2); }
 .tag, .conf { font-size: .72rem; padding: 0 .45em; border-radius: 999px; background: var(--surface2); color: var(--muted); }
 .conf--guess { color: var(--warn); }
 tr.hl { outline: 3px solid var(--accent); background: var(--surface2); }
+${opts.interactive ? INTERACTIVE_CSS : ''}
 svg [data-id] { cursor: ${opts.interactive ? 'pointer' : 'default'}; }
 .entities { columns: 2; }
 @media print {
@@ -287,6 +424,7 @@ svg [data-id] { cursor: ${opts.interactive ? 'pointer' : 'default'}; }
 </head>
 <body>
 <main>
+${toolbar}
 <header>
 <h1>${esc(root?.name ?? 'Prosessi')}</h1>
 <p class="meta">${esc(p.name)} · ${esc(when)}</p>
@@ -298,6 +436,7 @@ ${painSection}
 ${changeSection}
 ${questions}
 </main>
+${panel}
 ${script}
 </body>
 </html>

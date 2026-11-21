@@ -6,17 +6,20 @@ import { useUi, type PresentOptions } from '../store/ui'
 import { compareProjects, type Comparison } from '../analysis/compare'
 import { pickBaseline, projectFromSnapshot } from '../model/commands'
 import { toBpmn } from './bpmn'
+import { buildPptx } from './pptx'
+import { DEFAULT_DECK, planDeck, type DeckOptions } from './deck'
 import { buildDocumentHtml } from './document'
 import { downloadBlob, downloadText, safeFilename } from './download'
 import { buildRenderGraph, type RenderGraph, type RenderOptions } from './graph'
 import { toMermaid } from './mermaid'
 import { printHtml } from './print'
+import { buildTiledHtml, DEFAULT_TILE_OPTIONS, type TileOptions } from './tiles'
 import { renderSvg, type SvgOptions } from './svg'
 import type { Theme } from './theme'
 
 /** Vientien käyttöliittymäpuolen ajurit: laskevat asettelun työssä ja käynnistävät lataukset tai tulostuksen. */
 
-export type ExportFormat = 'svg' | 'png' | 'pdf' | 'mermaid' | 'bpmn' | 'html' | 'document'
+export type ExportFormat = 'svg' | 'png' | 'pdf' | 'pptx' | 'mermaid' | 'bpmn' | 'html' | 'document'
 
 export const FORMATS: { id: ExportFormat; label: string; hint: string; ext: string }[] = [
   {
@@ -36,6 +39,12 @@ export const FORMATS: { id: ExportFormat; label: string; hint: string; ext: stri
     label: 'PDF (kaavio)',
     hint: 'Avaa tulostusikkunan: valitse “Tallenna PDF:ksi”.',
     ext: 'pdf',
+  },
+  {
+    id: 'pptx',
+    label: 'PowerPoint (.pptx)',
+    hint: 'Esitys 16:9-dioina: kaaviot kuvina, mittarit ja kipupisteet taulukkoina ja vaiheiden tiedot puhujan muistiinpanoina.',
+    ext: 'pptx',
   },
   {
     id: 'document',
@@ -194,7 +203,7 @@ export async function buildDocument(
 export async function runExport(
   format: ExportFormat,
   req: ExportRequest,
-  extra: { includeQuestions?: boolean } = {},
+  extra: { includeQuestions?: boolean; deck?: DeckOptions; tiles?: TileOptions } = {},
 ): Promise<void> {
   const base = safeFilename(req.project.processes[req.processId]?.name ?? 'prosessi')
   switch (format) {
@@ -202,9 +211,23 @@ export async function runExport(
       return downloadText(await buildSvg(req), `${base}.svg`, 'image/svg+xml;charset=utf-8')
     case 'png':
       return downloadBlob(await svgToPng(await buildSvg(req)), `${base}.png`)
+    case 'pptx': {
+      const slides = await planDeck(req.project, req, extra.deck ?? DEFAULT_DECK)
+      const blob = await buildPptx(slides, {
+        title: req.project.processes[req.processId]?.name ?? req.project.name,
+        theme: req.theme,
+        rasterize: (svg) => svgToPng(svg),
+      })
+      return downloadBlob(blob, `${base}.pptx`)
+    }
     case 'pdf': {
       const svg = await buildSvg(req)
       const name = req.project.processes[req.processId]?.name ?? 'Prosessi'
+      const tiled = buildTiledHtml(svg, name, extra.tiles ?? DEFAULT_TILE_OPTIONS)
+      if (tiled) {
+        printHtml(tiled)
+        return
+      }
       printHtml(
         `<!doctype html><html lang="fi"><head><meta charset="utf-8"><title>${name.replace(/[<&]/g, '')}</title><style>@page{size:auto;margin:12mm}body{margin:0;background:#fff}svg{max-width:100%;height:auto;display:block}</style></head><body>${svg}</body></html>`,
       )

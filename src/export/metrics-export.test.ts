@@ -109,4 +109,43 @@ describe('tietotyön tiedot vienneissä', () => {
     expect(svg).toContain('stroke-width="3"')
     expect(renderSvg(g, svgOpts)).not.toContain('stroke-width="3"')
   })
+
+  it('interaktiivinen HTML sisältää haun, tietopaneelin ja turvallisesti koodatun datan', () => {
+    const evil = buildSampleProject()
+    const n = Object.values(evil.nodes).find((x) => x.label === 'Tarkista laskun tiedot')!
+    evil.nodes[n.id] = {
+      ...n,
+      label: 'X</script><img src=x onerror=alert(1)>&amp;',
+      description: '<b>kuvaus</b>',
+    }
+    const html = buildDocumentHtml(evil, {
+      processId: evil.rootProcessId,
+      theme: DEFAULT_THEME,
+      svgs: {},
+      includeQuestions: false,
+      interactive: true,
+    })
+    expect(html).toContain('id="pk-search"')
+    expect(html).toContain('id="pk-panel"')
+    const m = /<script type="application\/json" id="pk-data">([\s\S]*?)<\/script>/.exec(html)!
+    expect(m[1]).not.toContain('</script')
+    expect(m[1]).not.toContain('<img')
+    const data = JSON.parse(m[1]) as Record<string, { label: string; description?: string }>
+    expect(data[n.id].label).toBe('X</script><img src=x onerror=alert(1)>&amp;')
+    expect(data[n.id].description).toBe('<b>kuvaus</b>')
+    // Alaprosessiin johtava vaihe tietää osionsa
+    expect(
+      Object.values(data).some((d) => (d as { child?: string }).child?.startsWith('process-')),
+    ).toBe(true)
+    // Ei-interaktiivinen ei sisällä skriptiä
+    const plain = buildDocumentHtml(evil, {
+      processId: evil.rootProcessId,
+      theme: DEFAULT_THEME,
+      svgs: {},
+      includeQuestions: false,
+      interactive: false,
+    })
+    expect(plain).not.toContain('<script')
+    expect(plain).not.toContain('pk-toolbar"')
+  })
 })

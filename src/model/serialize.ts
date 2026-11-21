@@ -1,4 +1,4 @@
-import { SCHEMA_VERSION, type Project, type Version } from './types'
+import { SCHEMA_VERSION, type Project, type SavedView, type Scenario, type Version } from './types'
 import { validateProject } from './validate'
 
 export const FILE_APP_ID = 'prosessikartta'
@@ -19,6 +19,8 @@ const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string
   1: (raw) => raw,
   // v2 -> v3: versiot (valinnainen kenttä).
   2: (raw) => raw,
+  // v3 -> v4: skenaariot ja tallennetut näkymät (valinnaisia kenttiä).
+  3: (raw) => raw,
 }
 
 export class ImportError extends Error {
@@ -75,6 +77,36 @@ function normalizeProject(raw: Record<string, unknown>): Project {
     n.label ??= ''
   }
   for (const e of Object.values(p.entities)) e.aliases ??= []
+  // Skenaariot ja näkymät: viallinen tietue pudotetaan, jottei se estä projektin avaamista.
+  if (p.scenarios !== undefined) {
+    const ok: NonNullable<Project['scenarios']> = {}
+    const raw = p.scenarios as unknown
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      for (const [id, sc] of Object.entries(raw as Record<string, Scenario>)) {
+        if (
+          sc &&
+          typeof sc.name === 'string' &&
+          typeof sc.processId === 'string' &&
+          sc.choices &&
+          typeof sc.choices === 'object'
+        )
+          ok[id] = sc
+      }
+    }
+    p.scenarios = Object.keys(ok).length ? ok : undefined
+  }
+  if (p.views !== undefined) {
+    p.views = Array.isArray(p.views)
+      ? (p.views as SavedView[]).filter(
+          (v) =>
+            v &&
+            typeof v.id === 'string' &&
+            typeof v.name === 'string' &&
+            typeof v.processId === 'string',
+        )
+      : undefined
+    if (p.views && p.views.length === 0) p.views = undefined
+  }
   // Vioittunut versio ei saa estää projektin avaamista: se pudotetaan.
   if (p.versions !== undefined) {
     const ok: NonNullable<Project['versions']> = {}

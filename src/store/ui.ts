@@ -126,6 +126,14 @@ interface UiState extends Persisted {
   compareBaseId: string | null
   compareTargetId: string
   setCompare: (base: string | null, target?: string) => void
+  /** Tallennetut näkymät ja skenaariot -ikkuna. */
+  savedViewsOpen: boolean
+  setSavedViewsOpen: (open: boolean) => void
+  /** Esityksessä valittu tallennettu näkymä ja korostettu skenaario. */
+  presentViewId: string | null
+  presentScenarioId: string | null
+  setPresentView: (id: string | null) => void
+  setPresentScenario: (id: string | null) => void
   entityManagerOpen: boolean
   /** Tallennus ja varmuuskopiot -ikkuna. */
   storageOpen: boolean
@@ -234,6 +242,12 @@ export const useUi = create<UiState>((set, get) => {
     compareTargetId: 'current',
     setCompare: (compareBaseId, compareTargetId = 'current') =>
       set({ compareBaseId, compareTargetId }),
+    savedViewsOpen: false,
+    setSavedViewsOpen: (savedViewsOpen) => set({ savedViewsOpen }),
+    presentViewId: null,
+    presentScenarioId: null,
+    setPresentView: (presentViewId) => set({ presentViewId }),
+    setPresentScenario: (presentScenarioId) => set({ presentScenarioId }),
     entityManagerOpen: false,
     storageOpen: false,
     setStorageOpen: (storageOpen) => set({ storageOpen }),

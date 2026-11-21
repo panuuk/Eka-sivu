@@ -127,8 +127,12 @@ export function TopBar() {
         ]
       : []),
     {
-      label: 'Versiot ja tavoitetila…',
+      label: 'Näkymät ja skenaariot…',
       separatorBefore: true,
+      onSelect: () => useUi.getState().setSavedViewsOpen(true),
+    },
+    {
+      label: 'Versiot ja tavoitetila…',
       onSelect: () => useUi.getState().setVersionsOpen(true),
     },
     {

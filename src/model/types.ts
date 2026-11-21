@@ -121,6 +121,39 @@ export interface Question {
   key: string
 }
 
+export type HeatKind = 'off' | 'time' | 'pain' | 'handoff'
+
+/**
+ * Skenaariopolku: valinnat päätöksissä ("luottoraja ylittyy"). Polku kulkee alusta loppuun
+ * valittuja haaroja pitkin; valitsemattomissa päätöksissä seurataan ensimmäistä haaraa.
+ */
+export interface Scenario {
+  id: string
+  name: string
+  description?: string
+  processId: string
+  /** Päätössolmun tunniste -> valittu lähtevä yhteys. */
+  choices: Record<string, string>
+}
+
+/** Tallennettu näkymä: rajaus, asettelu ja korostukset, joista esitys ja PowerPoint koostetaan. */
+export interface SavedView {
+  id: string
+  name: string
+  /** Puhujan muistiinpano ja dian kuvaus. */
+  note?: string
+  processId: string
+  expand: boolean
+  onlyConfirmed: boolean
+  showMetrics: boolean
+  heat: HeatKind
+  changes: boolean
+  /** Korostettava skenaariopolku. */
+  scenarioId?: string
+  /** Rajaa kuvan näihin vaiheisiin (ja niiden ympäristöön). */
+  focusNodeIds?: string[]
+}
+
 /** Prosessin rakenne ilman lähteitä, kysymyksiä ja versioita: sitä verrataan ja se voidaan palauttaa. */
 export interface ProjectSnapshot {
   rootProcessId: string
@@ -155,9 +188,12 @@ export interface Project {
   questions: Record<string, Question>
   /** Nimetyt versiot (valinnainen). Ne kulkevat projektin mukana vienneissä ja varmuuskopioissa. */
   versions?: Record<string, Version>
+  scenarios?: Record<string, Scenario>
+  /** Tallennetut näkymät esityksen järjestyksessä. */
+  views?: SavedView[]
 }
 
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
 export const CONFIDENCE_LABELS: Record<Confidence, string> = {
   guess: 'Arvaus',

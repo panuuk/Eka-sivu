@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { buildGraph, currentRequest, svgOptions } from '../export/run'
+import { cropFor, pathOption } from '../export/views'
+import { scenarioPath } from '../model/scenario'
 import type { RenderGraph } from '../export/graph'
 import { renderSvg } from '../export/svg'
 import { themeColors } from '../export/theme'
@@ -23,6 +25,8 @@ export function PresentView() {
   const theme = useUi((s) => s.theme)
   const options = useUi((s) => s.present)
   const direction = useUi((s) => s.direction)
+  const presentViewId = useUi((s) => s.presentViewId)
+  const presentScenarioId = useUi((s) => s.presentScenarioId)
   const colors = themeColors(theme)
 
   const [graph, setGraph] = useState<RenderGraph | null>(null)
@@ -34,13 +38,31 @@ export function PresentView() {
   const stageRef = useRef<HTMLDivElement>(null)
   const pan = useRef<{ x: number; y: number; left: number; top: number } | null>(null)
 
-  const fitFor = useCallback((g: RenderGraph) => {
+  const fitFor = useCallback((g: RenderGraph, crop?: { width: number; height: number }) => {
     const el = stageRef.current
     if (!el || g.width === 0) return 1
-    const w = g.width + MARGIN * 2
-    const h = g.height + MARGIN * 2
+    const w = (crop?.width ?? g.width) + MARGIN * 2
+    const h = (crop?.height ?? g.height) + MARGIN * 2
     return Math.max(0.1, Math.min((el.clientWidth - 24) / w, (el.clientHeight - 24) / h, 1.5))
   }, [])
+
+  const view = useMemo(
+    () => project.views?.find((v) => v.id === presentViewId && v.processId === processId),
+    [project.views, presentViewId, processId],
+  )
+  const scenario = presentScenarioId ? project.scenarios?.[presentScenarioId] : undefined
+  const scenarioHere = scenario && scenario.processId === processId ? scenario : undefined
+  const pathInfo = useMemo(
+    () =>
+      scenarioHere
+        ? scenarioPath(project, scenarioHere.processId, scenarioHere.choices)
+        : undefined,
+    [project, scenarioHere],
+  )
+  const crop = useMemo(
+    () => (graph && view ? cropFor(graph, view.focusNodeIds) : undefined),
+    [graph, view],
+  )
 
   // Asettelu lasketaan uudelleen, kun prosessi tai sisältöasetukset muuttuvat
   useEffect(() => {
@@ -49,22 +71,41 @@ export function PresentView() {
       .then((g) => {
         if (cancelled) return
         setGraph(g)
-        setZoom(fitFor(g))
+        setZoom(fitFor(g, view ? cropFor(g, view.focusNodeIds) : undefined))
         setError(null)
       })
       .catch((e: Error) => !cancelled && setError(e.message))
     return () => {
       cancelled = true
     }
+    // view vaikuttaa vain rajaukseen, joka lasketaan graafista
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project, processId, options.expand, options.onlyConfirmed, options.heat, direction, fitFor])
 
-  const steps = useMemo(
-    () =>
-      graph
-        ? walkSteps(project, processId, new Set(graph.nodes.map((n) => n.id)), options.expand)
-        : [],
-    [graph, project, processId, options.expand],
-  )
+  const steps = useMemo(() => {
+    if (!graph) return []
+    const visible = new Set(graph.nodes.map((n) => n.id))
+    if (pathInfo) {
+      // Skenaarion läpikäynti: vain polun vaiheet kulkujärjestyksessä
+      const ids = pathInfo.nodeIds.filter((id) => visible.has(id))
+      return ids
+        .map((id, i) => ({
+          node: project.nodes[id],
+          next: ids[i + 1]
+            ? [
+                {
+                  id: ids[i + 1],
+                  label: Object.values(project.edges).find(
+                    (e) => e.from === id && e.to === ids[i + 1],
+                  )?.label,
+                },
+              ]
+            : [],
+        }))
+        .filter((st) => st.node)
+    }
+    return walkSteps(project, processId, visible, options.expand)
+  }, [graph, project, processId, options.expand, pathInfo])
   const idx = Math.min(stepIdx, Math.max(steps.length - 1, 0))
   const currentId = walking ? steps[idx]?.node.id : (focusId ?? undefined)
   const visited = useMemo(
@@ -92,6 +133,8 @@ export function PresentView() {
         name,
       ),
       highlight: currentId ? { current: currentId, visited } : undefined,
+      path: walking ? undefined : pathOption(pathInfo),
+      crop,
     })
   }, [
     graph,
@@ -103,6 +146,9 @@ export function PresentView() {
     reqTheme,
     reqComparison,
     direction,
+    pathInfo,
+    crop,
+    walking,
   ])
 
   // Keskitä kuva korostettuun vaiheeseen
@@ -111,14 +157,14 @@ export function PresentView() {
     if (!el || !graph || !currentId) return
     const n = graph.nodes.find((x) => x.id === currentId)
     if (!n) return
-    const cx = (n.x + n.w / 2 + MARGIN) * zoom
-    const cy = (n.y + n.h / 2 + MARGIN) * zoom
+    const cx = (n.x + n.w / 2 + MARGIN - (crop?.x ?? 0)) * zoom
+    const cy = (n.y + n.h / 2 + MARGIN - (crop?.y ?? 0)) * zoom
     el.scrollTo({
       left: cx - el.clientWidth / 2 + (walking ? -150 : 0),
       top: cy - el.clientHeight / 2,
       behavior: 'smooth',
     })
-  }, [currentId, graph, zoom, walking])
+  }, [currentId, graph, zoom, walking, crop])
 
   const go = useCallback(
     (delta: number) => {
@@ -156,11 +202,33 @@ export function PresentView() {
       else if (e.key === 'End' && walking) setStepIdx(steps.length - 1)
       else if (e.key === '+' || e.key === '=') setZoom((z) => Math.min(3, z * 1.2))
       else if (e.key === '-') setZoom((z) => Math.max(0.1, z / 1.2))
-      else if (e.key === '0' && graph) setZoom(fitFor(graph))
+      else if (e.key === '0' && graph) setZoom(fitFor(graph, crop))
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [walking, focusId, go, close, steps.length, graph, fitFor])
+  }, [walking, focusId, go, close, steps.length, graph, fitFor, crop])
+
+  /** Ottaa tallennetun näkymän käyttöön: prosessi, asetukset, skenaario ja rajaus. */
+  const selectView = (id: string) => {
+    const v = project.views?.find((x) => x.id === id)
+    setWalking(false)
+    setFocusId(null)
+    const ui = useUi.getState()
+    if (!v) {
+      ui.setPresentView(null)
+      return
+    }
+    ui.setPresentView(v.id)
+    ui.setPresentScenario(v.scenarioId ?? null)
+    ui.setPresentOptions({
+      expand: v.expand,
+      onlyConfirmed: v.onlyConfirmed,
+      showMetrics: v.showMetrics,
+      heat: v.heat,
+      changes: v.changes,
+    })
+    if (project.processes[v.processId]) useStore.getState().setCurrentProcess(v.processId)
+  }
 
   const path = processPath(project, processId)
   const focusNode = currentId ? project.nodes[currentId] : undefined
@@ -180,8 +248,8 @@ export function PresentView() {
     else setFocusId(id)
   }
 
-  const svgW = graph ? graph.width + MARGIN * 2 : 0
-  const svgH = graph ? graph.height + MARGIN * 2 : 0
+  const svgW = graph ? (crop?.width ?? graph.width) + MARGIN * 2 : 0
+  const svgH = graph ? (crop?.height ?? graph.height) + MARGIN * 2 : 0
 
   return (
     <div
@@ -225,6 +293,46 @@ export function PresentView() {
           ))}
         </nav>
         <span className="present__spacer" />
+        {(project.views?.length ?? 0) > 0 && (
+          <label className="present__select">
+            Näkymä
+            <select
+              aria-label="Näkymä"
+              value={view?.id ?? ''}
+              onChange={(e) => selectView(e.target.value)}
+            >
+              <option value="">Ei valittu</option>
+              {project.views!.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {Object.keys(project.scenarios ?? {}).length > 0 && (
+          <label className="present__select">
+            Skenaario
+            <select
+              aria-label="Skenaario"
+              value={scenarioHere?.id ?? ''}
+              onChange={(e) => {
+                setWalking(false)
+                setFocusId(null)
+                useUi.getState().setPresentScenario(e.target.value || null)
+              }}
+            >
+              <option value="">Ei</option>
+              {Object.values(project.scenarios ?? {})
+                .filter((sc) => sc.processId === processId)
+                .map((sc) => (
+                  <option key={sc.id} value={sc.id}>
+                    {sc.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+        )}
         <button
           type="button"
           className={`present__btn ${walking ? 'is-on' : ''}`}
@@ -252,7 +360,7 @@ export function PresentView() {
           <button
             type="button"
             className="present__btn"
-            onClick={() => graph && setZoom(fitFor(graph))}
+            onClick={() => graph && setZoom(fitFor(graph, crop))}
           >
             Sovita
           </button>
@@ -271,6 +379,13 @@ export function PresentView() {
           onClick={() => useUi.getState().setExportOpen(true)}
         >
           <Icon name="download" size={16} /> Vie
+        </button>
+        <button
+          type="button"
+          className="present__btn"
+          onClick={() => useUi.getState().setSavedViewsOpen(true)}
+        >
+          Näkymät…
         </button>
       </header>
 
