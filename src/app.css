@@ -3279,3 +3279,56 @@ button.cell:hover {
     width: min(360px, 92vw);
   }
 }
+
+/* Tekoälyn apu ja poistoehdotukset pikasyötteessä */
+.quick__ai {
+  margin: 0.5rem 0;
+}
+.quick__ai summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.quick__ai-list {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin: 0.4rem 0;
+}
+.quick__ai-list button {
+  display: grid;
+  gap: 0.15rem;
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  font-weight: 400;
+}
+.quick__ai-list button span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.quick__ai-list button.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.quick__ai-preview {
+  display: grid;
+  gap: 0.4rem;
+}
+.quick__ai-preview textarea {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+}
+.quick__ai-preview .btn-primary {
+  justify-self: start;
+}
+.quick__removals-title {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.9rem;
+}
+.badge--removed {
+  background: color-mix(in srgb, var(--danger, #dc2626) 15%, var(--surface));
+  color: var(--danger, #b91c1c);
+}
+.badge--renamed {
+  background: var(--accent-soft);
+  color: var(--accent);
+}

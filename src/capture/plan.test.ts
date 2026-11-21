@@ -356,3 +356,86 @@ describe('planText: asetukset', () => {
     expect(plan.issues.filter((i) => /ei saa yhteyttä/.test(i.message))).toEqual([])
   })
 })
+
+describe('nimenmuutos ja poistot (tekoälyn muokkaama teksti)', () => {
+  const base = () =>
+    apply(createProject(), '- Vastaanota lasku @Talous\n- Tarkista lasku\n- Maksa lasku').project
+
+  it('(aiemmin: ...) nimeää vaiheen uudelleen ja säilyttää roolin ja yhteydet', () => {
+    const p = base()
+    const id = nodesOf(p, p.rootProcessId).find((n) => n.label === 'Vastaanota lasku')!.id
+    const r = planText(
+      p,
+      '- Kirjaa lasku (aiemmin: Vastaanota lasku) @Talous\n- Tarkista lasku\n- Maksa lasku',
+      {
+        processId: p.rootProcessId,
+      },
+    )
+    expect(r.after.nodes[id].label).toBe('Kirjaa lasku')
+    expect(r.after.nodes[id].roleId).toBe(p.nodes[id].roleId)
+    expect(Object.keys(r.after.nodes)).toHaveLength(Object.keys(p.nodes).length)
+    expect(r.effects.map((e) => e.status)).toContain('renamed')
+    // Uudelleen lisäys ei muuta mitään (idempotentti)
+    const again = planText(
+      r.after,
+      '- Kirjaa lasku (aiemmin: Vastaanota lasku) @Talous\n- Tarkista lasku\n- Maksa lasku',
+      {
+        processId: p.rootProcessId,
+      },
+    )
+    expect(again.ops).toEqual([])
+  })
+
+  it('removeMissing ehdottaa poistettavaksi vaiheet, joita tekstissä ei ole, ja siltaa aukon', () => {
+    const p = base()
+    const text = '- Vastaanota lasku\n- Maksa lasku'
+    const dry = planText(p, text, { processId: p.rootProcessId })
+    expect(dry.removals).toEqual([])
+    const r = planText(p, text, { processId: p.rootProcessId, removeMissing: true })
+    expect(r.removals.map((x) => x.label)).toEqual(['Tarkista lasku'])
+    const labels = nodesOf(r.after, p.rootProcessId).map((n) => n.label)
+    expect(labels).not.toContain('Tarkista lasku')
+    expect(edgeList(r.after, p.rootProcessId)).toContain('Vastaanota lasku -> Maksa lasku')
+  })
+
+  it('käyttäjä voi säilyttää yksittäisen poistoehdotuksen', () => {
+    const p = base()
+    const id = nodesOf(p, p.rootProcessId).find((n) => n.label === 'Tarkista lasku')!.id
+    const r = planText(p, '- Vastaanota lasku\n- Maksa lasku', {
+      processId: p.rootProcessId,
+      removeMissing: true,
+      keepIds: new Set([id]),
+    })
+    expect(r.removals).toHaveLength(1)
+    expect(nodesOf(r.after, p.rootProcessId).map((n) => n.label)).toContain('Tarkista lasku')
+  })
+
+  it('poistoja ei ehdoteta virheellisestä tekstistä eikä liitoskohdan kanssa', () => {
+    const p = base()
+    const anchor = nodesOf(p, p.rootProcessId)[0].id
+    expect(
+      planText(p, '- Maksa lasku', {
+        processId: p.rootProcessId,
+        removeMissing: true,
+        anchorNodeId: anchor,
+      }).removals,
+    ).toEqual([])
+    expect(
+      planText(p, '? \n- Maksa lasku', { processId: p.rootProcessId, removeMissing: true })
+        .removals,
+    ).toEqual([])
+  })
+
+  it('vanhaan nimeen viittaava hyppy löytää uudelleennimetyn vaiheen', () => {
+    const p = apply(
+      createProject(),
+      '- Tarkista lasku\n? Ok\n  kyllä: jatka\n  ei: -> Tarkista lasku',
+    ).project
+    const r = planText(
+      p,
+      '- Tarkasta lasku (aiemmin: Tarkista lasku)\n? Ok\n  kyllä: jatka\n  ei: -> Tarkista lasku',
+      { processId: p.rootProcessId },
+    )
+    expect(r.hasErrors).toBe(false)
+  })
+})

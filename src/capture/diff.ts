@@ -12,6 +12,7 @@ export interface ProjectDiff {
   changedNodes: NodeChange[]
   newEdges: { id: string; from: string; to: string; label?: string }[]
   removedEdges: { id: string; from: string; to: string }[]
+  removedNodes: { id: string; label: string; kind: string }[]
   newEntities: { id: string; name: string; kind: string }[]
   newProcesses: { id: string; name: string }[]
   newSources: { id: string; title: string }[]
@@ -27,6 +28,7 @@ export function diffProjects(before: Project, after: Project): ProjectDiff {
     changedNodes: [],
     newEdges: [],
     removedEdges: [],
+    removedNodes: [],
     newEntities: [],
     newProcesses: [],
     newSources: [],
@@ -65,6 +67,9 @@ export function diffProjects(before: Project, after: Project): ProjectDiff {
   for (const e of Object.values(before.edges)) {
     if (!after.edges[e.id]) d.removedEdges.push({ id: e.id, from: e.from, to: e.to })
   }
+  for (const n of Object.values(before.nodes)) {
+    if (!after.nodes[n.id]) d.removedNodes.push({ id: n.id, label: n.label, kind: n.kind })
+  }
   for (const e of Object.values(after.entities)) {
     if (!before.entities[e.id]) d.newEntities.push({ id: e.id, name: e.name, kind: e.kind })
   }
@@ -83,6 +88,7 @@ export function isEmptyDiff(d: ProjectDiff): boolean {
     d.changedNodes.length === 0 &&
     d.newEdges.length === 0 &&
     d.removedEdges.length === 0 &&
+    d.removedNodes.length === 0 &&
     d.newEntities.length === 0 &&
     d.newProcesses.length === 0
   )

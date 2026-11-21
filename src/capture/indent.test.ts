@@ -31,6 +31,7 @@ describe('diffSummary', () => {
       changedNodes: [],
       newEdges: [],
       removedEdges: [],
+      removedNodes: [],
       newEntities: [],
       newProcesses: [],
       newSources: [],

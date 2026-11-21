@@ -1,4 +1,4 @@
-import { ensureEntity } from '../model/commands'
+import { ensureEntity, opsDeleteNodeBridging } from '../model/commands'
 import { createEdge, createNode, createProcess } from '../model/factory'
 import { newId } from '../model/ids'
 import { applyOperation, type Operation } from '../model/operations'
@@ -21,9 +21,22 @@ export interface PlanOptions {
   skipLines?: ReadonlySet<number>
   /** Viitteet olemassa oleviin lähteisiin rivinumeron mukaan (ohittaa `saveSource`-viitteet). */
   lineRefs?: ReadonlyMap<number, SourceRef>
+  /**
+   * Ehdota poistettavaksi kohdeprosessin vaiheet, joita teksti ei mainitse (tekstin on kuvattava koko prosessi).
+   * Vain `append`-tilassa ilman liitoskohtaa ja vain, jos teksti jäsentyy ilman virheitä.
+   */
+  removeMissing?: boolean
+  /** Poistoehdotukset, jotka käyttäjä haluaa säilyttää. */
+  keepIds?: ReadonlySet<string>
 }
 
-export type EffectStatus = 'new' | 'matched' | 'updated' | 'branch' | 'link' | 'note'
+export interface Removal {
+  id: string
+  label: string
+  kind: NodeKind
+}
+
+export type EffectStatus = 'new' | 'matched' | 'updated' | 'branch' | 'link' | 'note' | 'renamed'
 
 export interface LineEffect {
   line: number
@@ -37,6 +50,8 @@ export interface PlanResult {
   parse: ParseResult
   issues: Issue[]
   effects: LineEffect[]
+  /** Poistoehdotukset (kaikki ehdokkaat, myös säilytettäviksi valitut). */
+  removals: Removal[]
   diff: ProjectDiff
   targetProcessId: string
   hasErrors: boolean
@@ -57,6 +72,8 @@ class Planner {
   touched = new Set<string>()
   created = new Set<string>()
   private consumed = new Set<string>()
+  /** Nimenmuutokset: vanha nimi (normalisoitu) -> vaihe, jotta vanhaan nimeen viittaavat hypyt löytävät kohteensa. */
+  private renames = new Map<string, string>()
   private gotos: {
     from: string
     label?: string
@@ -167,7 +184,18 @@ class Planner {
     }
     const kind: NodeKind =
       item.kind === 'decision' ? 'decision' : item.kind === 'subprocess' ? 'subprocess' : 'step'
-    const existing = this.findExisting(processId, item.label, kind)
+    let existing = this.findExisting(processId, item.label, kind)
+    let renamed = false
+    if (!existing && item.renamedFrom) {
+      // Nimenmuutos: vanha vaihe säilyy (yhteydet, roolit, lähteet) ja saa uuden nimen
+      const old = this.findExisting(processId, item.renamedFrom, kind)
+      if (old) {
+        this.emit({ type: 'updateNode', id: old, patch: { label: item.label } })
+        existing = old
+        renamed = true
+        this.renames.set(normalizeName(item.renamedFrom), old)
+      }
+    }
     const ref = this.sourceRef(item)
     if (existing) {
       this.consumed.add(existing)
@@ -188,11 +216,13 @@ class Planner {
       const changed =
         this.p !== before &&
         JSON.stringify(before.nodes[existing]) !== JSON.stringify(this.p.nodes[existing])
-      this.effect(
-        item.line,
-        changed ? 'updated' : 'matched',
-        changed ? 'Päivittää olemassa olevaa vaihetta' : 'Olemassa oleva vaihe',
-      )
+      if (renamed) this.effect(item.line, 'renamed', `Uusi nimi vaiheelle “${item.renamedFrom}”`)
+      else
+        this.effect(
+          item.line,
+          changed ? 'updated' : 'matched',
+          changed ? 'Päivittää olemassa olevaa vaihetta' : 'Olemassa oleva vaihe',
+        )
       return existing
     }
     const node = createNode(processId, {
@@ -491,7 +521,11 @@ class Planner {
       const candidates = nodesOf(this.p, g.processId).filter(
         (n) => normalizeName(n.label) === target,
       )
-      const best = candidates.find((n) => this.touched.has(n.id)) ?? candidates[0]
+      const renamedTo = this.renames.get(target)
+      const best =
+        candidates.find((n) => this.touched.has(n.id)) ??
+        candidates[0] ??
+        (renamedTo ? this.p.nodes[renamedTo] : undefined)
       if (!best) {
         this.err(g.line, `Hyppykohdetta “${g.target}” ei löytynyt`)
         continue
@@ -535,6 +569,28 @@ export function planText(project: Project, text: string, options: PlanOptions): 
     planner.resolveGotos()
   }
 
+  // Poistoehdotukset: vaiheet, joita koko prosessin kuvaavassa tekstissä ei ole
+  const removals: Removal[] = []
+  if (
+    options.removeMissing &&
+    options.newProcessName === undefined &&
+    options.mode !== 'standalone' &&
+    !options.anchorNodeId &&
+    parse.items.length > 0 &&
+    !hasErrors &&
+    !planner.issues.some((i) => i.severity === 'error')
+  ) {
+    for (const n of nodesOf(planner.p, processId)) {
+      if (n.kind === 'start' || n.kind === 'end') continue
+      if (planner.touched.has(n.id)) continue
+      removals.push({ id: n.id, label: n.label, kind: n.kind })
+    }
+    for (const r of removals) {
+      if (options.keepIds?.has(r.id)) continue
+      for (const op of opsDeleteNodeBridging(planner.p, r.id)) planner.emit(op)
+    }
+  }
+
   const issues = [...parse.issues, ...planner.issues].sort((a, b) => a.line - b.line)
   return {
     ops: planner.ops,
@@ -542,6 +598,7 @@ export function planText(project: Project, text: string, options: PlanOptions): 
     parse,
     issues,
     effects: planner.effects.sort((a, b) => a.line - b.line),
+    removals,
     diff: diffProjects(project, planner.p),
     targetProcessId: processId,
     hasErrors: hasErrors || planner.issues.some((i) => i.severity === 'error'),

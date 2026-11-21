@@ -64,6 +64,8 @@ export interface ParsedItem {
   branches: ParsedBranch[]
   children: ParsedItem[]
   notes: string[]
+  /** Nimenmuutos: vaiheen aiempi nimi merkinnästä `(aiemmin: Vanha nimi)`. */
+  renamedFrom?: string
 }
 
 export interface Issue {
@@ -107,6 +109,9 @@ const BRANCH = /^([^:@[\]<>~?+]{1,40}?):\s*(.*)$/
 const KEYWORD_CONTINUE = /^(?:jatka|jatkuu|jatketaan)[.!]?$/i
 const KEYWORD_END = /^(?:loppu|lopeta|päättyy|paattyy)[.!]?$/i
 const KEYWORD_START = /^(?:alku|aloita)[.!]?$/i
+
+/** `(aiemmin: Vanha nimi)`, `(ent. Vanha nimi)` */
+const RENAMED = /\s*\((?:aiemmin|ent\.|aik\.)\s*:?\s*([^)]+)\)/iu
 
 const clean = (s: string) => s.replace(/\s+/g, ' ').trim()
 const splitList = (s: string) => s.split(/[,;]/).map(clean).filter(Boolean)
@@ -316,6 +321,14 @@ export function parseSyntax(text: string, options: ParseOptions = {}): ParseResu
       body = body.slice(1).trim()
     }
 
+    // Nimenmuutos: "Uusi nimi (aiemmin: Vanha nimi)"
+    let renamedFrom: string | undefined
+    body = body.replace(RENAMED, (_m, old: string) => {
+      renamedFrom = clean(old) || undefined
+      return ' '
+    })
+    body = body.trim()
+
     const { label, ann, warnings } = extractAnnotations(body, { io: kind !== 'decision' })
     for (const w of warnings) warn(raw.line, w)
     if (kind === 'decision' && (ann.inputs.length || ann.outputs.length))
@@ -338,7 +351,7 @@ export function parseSyntax(text: string, options: ParseOptions = {}): ParseResu
       err(raw.line, 'Nimi puuttuu')
     }
 
-    const item: ParsedItem = { ...base, kind, label, ann }
+    const item: ParsedItem = { ...base, kind, label, ann, ...(renamedFrom ? { renamedFrom } : {}) }
     if (kind === 'decision') {
       item.branches = children.map((c) => parseBranch(c))
       if (children.length === 0) warn(raw.line, 'Päätöksellä ei ole haaroja')

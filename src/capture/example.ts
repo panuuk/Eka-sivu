@@ -29,6 +29,10 @@ export const SYNTAX_HELP: { syntax: string; meaning: string }[] = [
     syntax: 'A@Rooli  C@Rooli  I@Rooli',
     meaning: 'RACI: vastuullinen, konsultoitava, informoitava',
   },
+  {
+    syntax: 'Uusi nimi (aiemmin: Vanha nimi)',
+    meaning: 'Vaiheen nimenmuutos: päivittää olemassa olevan vaiheen nimen eikä luo uutta',
+  },
   { syntax: '? Kysymys', meaning: 'Päätös. Haarat sisennettynä muodossa "kyllä: Vaihe".' },
   {
     syntax: 'ei: jatka | loppu | -> Vaihe',

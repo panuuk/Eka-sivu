@@ -101,8 +101,10 @@ test('tekoälyohje kopioituu leikepöydälle ja sisältää syntaksin, esimerkin
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.getByRole('button', { name: /Pikasyöte/ }).click()
+  await page.getByText('Tekoälyn apu').click()
+  await page.getByTestId('ai-template-format').click()
   await page.getByTestId('copy-ai-prompt').click()
-  await expect(page.getByTestId('copy-ai-prompt')).toHaveText('Ohje kopioitu')
+  await expect(page.getByTestId('copy-ai-prompt')).toHaveText('Kopioitu')
   const clip = await page.evaluate(() => navigator.clipboard.readText())
   expect(clip).toContain('SYNTAKSI')
   expect(clip).toContain('@Rooli')

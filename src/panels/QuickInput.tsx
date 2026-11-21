@@ -1,7 +1,7 @@
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { indentLines } from '../capture/indent'
 import { diffSummary } from '../capture/summary'
-import { buildAiPrompt } from '../capture/aiPrompt'
+import { cleanAiResponse, looksLikeAiResponse } from '../capture/aiResponse'
 import { EXAMPLE_TEXT, SYNTAX_HELP } from '../capture/example'
 import { looksLikeMarkdown, markdownToDsl } from '../capture/markdown'
 import { planText, type EffectStatus } from '../capture/plan'
@@ -10,6 +10,7 @@ import { downloadText, safeFilename } from '../export/download'
 import { useStore } from '../store/store'
 import { useUi } from '../store/ui'
 import { Icon } from '../ui/Icon'
+import { AiAssist } from './AiAssist'
 
 const STATUS_LABEL: Record<string, string> = {
   new: 'Uusi',
@@ -18,6 +19,7 @@ const STATUS_LABEL: Record<string, string> = {
   branch: 'Haara',
   link: 'Yhteys',
   note: 'Huom.',
+  renamed: 'Nimi muuttuu',
 }
 
 function AddTab() {
@@ -33,7 +35,9 @@ function AddTab() {
   const [saveSource, setSaveSource] = useState(true)
   const [skipped, setSkipped] = useState<Set<number>>(new Set())
   const areaRef = useRef<HTMLTextAreaElement>(null)
-  const [aiCopied, setAiCopied] = useState(false)
+  const [removeMissing, setRemoveMissing] = useState(false)
+  /** Poistoehdotukset, jotka käyttäjä haluaa säilyttää. */
+  const [keep, setKeep] = useState<Set<string>>(new Set())
   /** Markdown-muunnos: alkuperäinen teksti palautusta varten ja muunnoksen huomautukset. */
   const [mdUndo, setMdUndo] = useState<{
     original: string
@@ -62,8 +66,21 @@ function AddTab() {
         mode: standalone ? 'standalone' : 'append',
         skipLines: skipped,
         saveSource: false,
+        removeMissing,
+        keepIds: keep,
       }),
-    [project, deferred, processId, target, newName, anchorNode?.id, standalone, skipped],
+    [
+      project,
+      deferred,
+      processId,
+      target,
+      newName,
+      anchorNode?.id,
+      standalone,
+      skipped,
+      removeMissing,
+      keep,
+    ],
   )
 
   // Ohitetut rivit häviävät jäsennetystä tuloksesta, joten rivilista muodostetaan ohittamattomasta suunnitelmasta.
@@ -78,11 +95,35 @@ function AddTab() {
             anchorNodeId: anchorNode?.id,
             mode: standalone ? 'standalone' : 'append',
             saveSource: false,
+            removeMissing,
+            keepIds: keep,
           }),
-    [skipped.size, plan, project, deferred, processId, target, newName, anchorNode?.id, standalone],
+    [
+      skipped.size,
+      plan,
+      project,
+      deferred,
+      processId,
+      target,
+      newName,
+      anchorNode?.id,
+      standalone,
+      removeMissing,
+      keep,
+    ],
   )
   const lines = useMemo(() => deferred.split('\n'), [deferred])
-  const isMarkdown = useMemo(() => looksLikeMarkdown(deferred), [deferred])
+  const isAiResponse = useMemo(() => looksLikeAiResponse(deferred), [deferred])
+  const isMarkdown = useMemo(
+    () => !isAiResponse && looksLikeMarkdown(deferred),
+    [deferred, isAiResponse],
+  )
+  const cleanResponse = () => {
+    const r = cleanAiResponse(text)
+    setMdUndo({ original: text, summary: 'tekoälyn vastaus siivottu', notes: r.notes })
+    setSkipped(new Set())
+    setText(r.text)
+  }
   const convertMarkdown = () => {
     const r = markdownToDsl(text)
     setMdUndo({
@@ -118,6 +159,8 @@ function AddTab() {
       mode: standalone ? 'standalone' : 'append',
       skipLines: skipped,
       saveSource,
+      removeMissing,
+      keepIds: keep,
       sourceTitle: `Pikasyöte ${new Date().toLocaleString('fi-FI', { dateStyle: 'short', timeStyle: 'short' })}`,
     })
     if (result.hasErrors) return
@@ -170,6 +213,17 @@ function AddTab() {
             }
           }}
         />
+        {isAiResponse && (
+          <div className="quick__md" role="status" data-testid="ai-response-hint">
+            <p>
+              Teksti näyttää tekoälyn vastaukselta: mukana on johdantoa, koodilohko tai
+              loppuselitys, jotka eivät kuulu prosessiin.
+            </p>
+            <button type="button" className="btn-primary" onClick={cleanResponse}>
+              Siivoa vastaus
+            </button>
+          </div>
+        )}
         {isMarkdown && (
           <div className="quick__md" role="status" data-testid="markdown-hint">
             <p>
@@ -181,9 +235,9 @@ function AddTab() {
             </button>
           </div>
         )}
-        {mdUndo && !isMarkdown && (
+        {mdUndo && !isMarkdown && !isAiResponse && (
           <div className="quick__md" role="status" data-testid="markdown-done">
-            <p>Muunnettu: {mdUndo.summary}. Tarkista tulos ennen lisäämistä.</p>
+            <p>Valmis: {mdUndo.summary}. Tarkista tulos ennen lisäämistä.</p>
             {mdUndo.notes.length > 0 && (
               <ul>
                 {mdUndo.notes.map((n) => (
@@ -206,28 +260,7 @@ function AddTab() {
           Tab sisentää, Shift+Tab vähentää sisennystä (Esc, sitten Tab siirtää kohdistuksen pois).
           Ctrl+Enter lisää.
         </p>
-        <p className="field__hint">
-          Onko sinulla vain vapaita muistiinpanoja? Kopioi{' '}
-          <button
-            type="button"
-            className="linklike"
-            data-testid="copy-ai-prompt"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(buildAiPrompt())
-                setAiCopied(true)
-                setTimeout(() => setAiCopied(false), 2500)
-              } catch {
-                useStore
-                  .getState()
-                  .setError('Kopiointi ei onnistunut. Avaa Syntaksiohje ja kopioi ohje käsin.')
-              }
-            }}
-          >
-            {aiCopied ? 'Ohje kopioitu' : 'ohje tekoälylle'}
-          </button>
-          , liitä se tekoälyyn yhdessä muistiinpanojesi kanssa ja liitä vastaus tähän.
-        </p>
+        <AiAssist />
 
         <fieldset className="quick__options">
           <legend className="field__label">Mihin lisätään</legend>
@@ -257,6 +290,20 @@ function AddTab() {
                 />
                 Älä liitä olemassa olevaan
               </label>
+              {!standalone && !anchorNode && (
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    data-testid="remove-missing"
+                    checked={removeMissing}
+                    onChange={(e) => {
+                      setRemoveMissing(e.target.checked)
+                      setKeep(new Set())
+                    }}
+                  />
+                  Poista vaiheet, joita tekstissä ei ole (teksti kuvaa koko prosessin)
+                </label>
+              )}
             </div>
           )}
           <label className="check">
@@ -333,6 +380,34 @@ function AddTab() {
                 </li>
               ))}
             </ul>
+            {plan.removals.length > 0 && (
+              <>
+                <h4 className="quick__removals-title">Poistuu mallista</h4>
+                <ul className="effects effects--removals" data-testid="quick-removals">
+                  {plan.removals.map((r) => (
+                    <li key={r.id} className={keep.has(r.id) ? 'is-skipped' : ''}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={!keep.has(r.id)}
+                          aria-label={`Poista ${r.label}`}
+                          onChange={() =>
+                            setKeep((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(r.id)) next.delete(r.id)
+                              else next.add(r.id)
+                              return next
+                            })
+                          }
+                        />
+                        <code>{r.label}</code>
+                        <span className="badge badge--removed">Poistuu</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
             {skippedList.length > 0 && (
               <p className="field__hint">Ohitetut rivit: {skippedList.join(', ')}</p>
             )}

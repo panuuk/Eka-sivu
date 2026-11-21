@@ -10,6 +10,8 @@ export function diffSummary(d: ProjectDiff): string {
   if (steps) parts.push(plural(steps, 'uusi vaihe', 'uutta vaihetta'))
   if (decisions) parts.push(plural(decisions, 'uusi päätös', 'uutta päätöstä'))
   if (d.changedNodes.length) parts.push(plural(d.changedNodes.length, 'päivitys', 'päivitystä'))
+  if (d.removedNodes.length)
+    parts.push(plural(d.removedNodes.length, 'vaihe poistuu', 'vaihetta poistuu'))
   if (d.newEdges.length) parts.push(plural(d.newEdges.length, 'yhteys', 'yhteyttä'))
   if (d.removedEdges.length)
     parts.push(plural(d.removedEdges.length, 'yhteys poistuu', 'yhteyttä poistuu'))
