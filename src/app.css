@@ -706,9 +706,11 @@
 .canvas__empty {
   position: absolute;
   z-index: 4;
-  top: 50%;
+  top: calc(50% + 2.5rem);
   left: 50%;
   transform: translate(-50%, -50%);
+  max-height: calc(100% - 6rem);
+  overflow-y: auto;
   text-align: center;
   padding: 1.5rem 2rem;
   background: var(--surface);
@@ -721,6 +723,7 @@
   position: static;
   transform: none;
   margin: 4rem auto;
+  max-height: none;
 }
 .canvas__empty p {
   color: var(--muted);
@@ -3084,4 +3087,34 @@ button.cell:hover {
 .atable__sum td {
   font-weight: 700;
   border-top: 2px solid var(--border-strong);
+}
+
+/* ===== Kaavio kapealla näytöllä ===== */
+@media (max-width: 900px), (max-height: 560px) {
+  /* Tyhjän prosessin kortti täyttää kaavion ja vierittyy, jotta se ei jää työkalurivien alle */
+  .canvas__empty:not(.canvas__empty--static) {
+    inset: 0;
+    z-index: 8;
+    transform: none;
+    max-width: none;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 1.25rem 1rem 3rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .canvas__empty:not(.canvas__empty--static) .canvas__start {
+    max-width: none;
+  }
+}
+@media (max-width: 900px) {
+  /* Väritysvalinta ei saa peittää hakua: siirretään asettelun valitsimen yläpuolelle */
+  .canvas__heat {
+    top: auto;
+    right: 12px;
+    bottom: 56px;
+  }
 }
