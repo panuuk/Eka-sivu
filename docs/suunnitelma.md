@@ -10,23 +10,23 @@ Tämä dokumentti kertoo, mitä on tehty, miksi ja mitä on jätetty tekemättä
 
 ## Vaiheiden tila
 
-| #   | Vaihe                       | Tila         | Keskeiset tiedostot                                                                              |
-| --- | --------------------------- | ------------ | ------------------------------------------------------------------------------------------------ |
-| 0   | Perusta                     | Valmis       | `vite.config.ts`, `eslint.config.js`, `.github/workflows/`                                       |
-| 1   | Datamalli ja tallennus      | Valmis       | `src/model/`, `src/store/`, `src/storage/`                                                       |
-| 2   | Kaavio ja käsin muokkaus    | Valmis       | `src/canvas/`, `src/layout/`, `src/panels/Inspector.tsx`                                         |
-| 3   | Pikasyöte tekstinä          | Valmis       | `src/capture/syntax.ts`, `plan.ts`, `serialize.ts`, `src/panels/QuickInput.tsx`                  |
-| 4   | Dokumentit lähteinä         | Valmis       | `src/capture/importers.ts`, `suggest.ts`, `src/panels/SourcesView.tsx`                           |
-| 5   | Tarkentuminen               | Valmis       | `src/analysis/`, `src/panels/QuestionsPanel.tsx`                                                 |
-| 6   | Laajat prosessit            | Valmis       | `src/canvas/useCanvasModel.ts`, `src/layout/lanes.ts`, `hierarchy.ts`, `src/analysis/search.ts`  |
-| 7   | Esittäminen                 | Valmis       | `src/export/`, `src/panels/PresentView.tsx`, `ExportDialog.tsx`                                  |
-| 8   | Käyttöönotto ja datan turva | Valmis       | `src/storage/`, `src/store/storage.ts`, `src/panels/StorageDialog.tsx`, `build/serviceWorker.ts` |
-| 9   | Koekäyttö ja kitkan poisto  | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
-| 10  | Tietotyön rikkaampi malli   | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
-| 11  | Nykytila ja tavoitetila     | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
-| 14  | Esittämisen syventäminen    | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
-| 12  | Tuonnit                     | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
-| 13  | Paikallinen kielimalli      | Ei aloitettu | Ks. “Jatkosuunnitelma”                                                                           |
+| #   | Vaihe                       | Tila        | Keskeiset tiedostot                                                                                 |
+| --- | --------------------------- | ----------- | --------------------------------------------------------------------------------------------------- |
+| 0   | Perusta                     | Valmis      | `vite.config.ts`, `eslint.config.js`, `.github/workflows/`                                          |
+| 1   | Datamalli ja tallennus      | Valmis      | `src/model/`, `src/store/`, `src/storage/`                                                          |
+| 2   | Kaavio ja käsin muokkaus    | Valmis      | `src/canvas/`, `src/layout/`, `src/panels/Inspector.tsx`                                            |
+| 3   | Pikasyöte tekstinä          | Valmis      | `src/capture/syntax.ts`, `plan.ts`, `serialize.ts`, `src/panels/QuickInput.tsx`                     |
+| 4   | Dokumentit lähteinä         | Valmis      | `src/capture/importers.ts`, `suggest.ts`, `src/panels/SourcesView.tsx`                              |
+| 5   | Tarkentuminen               | Valmis      | `src/analysis/`, `src/panels/QuestionsPanel.tsx`                                                    |
+| 6   | Laajat prosessit            | Valmis      | `src/canvas/useCanvasModel.ts`, `src/layout/lanes.ts`, `hierarchy.ts`, `src/analysis/search.ts`     |
+| 7   | Esittäminen                 | Valmis      | `src/export/`, `src/panels/PresentView.tsx`, `ExportDialog.tsx`                                     |
+| 8   | Käyttöönotto ja datan turva | Valmis      | `src/storage/`, `src/store/storage.ts`, `src/panels/StorageDialog.tsx`, `build/serviceWorker.ts`    |
+| 9   | Koekäyttö ja kitkan poisto  | Valmis      | `src/capture/discover.ts`, `src/capture/eval/`, `src/model/clipboard.ts`, `src/analysis/replace.ts` |
+| 10  | Tietotyön rikkaampi malli   | Valmis      | `src/model/duration.ts`, `src/analysis/metrics.ts`, `src/panels/AnalysisView.tsx`, `WorkFields.tsx` |
+| 11  | Nykytila ja tavoitetila     | Valmis      | `src/analysis/compare.ts`, `src/panels/CompareView.tsx`, `VersionsDialog.tsx`                       |
+| 14  | Esittämisen syventäminen    | Valmis      | `src/export/deck.ts`, `pptx.ts`, `tiles.ts`, `views.ts`, `src/panels/SavedViewsDialog.tsx`          |
+| 12  | Tuonnit                     | Valmis      | `src/capture/table.ts`, `diagram.ts`, `bpmnImport.ts`, `mermaidImport.ts`, `office.ts`, `ocr.ts`    |
+| 13  | Paikallinen kielimalli      | Valmis osin | `src/capture/llm.ts`, `src/capture/eval/`, `src/panels/LlmPanel.tsx`, `src/store/llm.ts`            |
 
 ## Poikkeamat alkuperäisestä suunnitelmasta
 
@@ -88,7 +88,7 @@ Mitä muutettiin:
 
 Jätettiin tekemättä: solmujen käsin siirto uimaradoissa (vaatii oman raidoille sidotun asettelun, jää tunnetuksi rajoitukseksi). Palaan tähän, jos oikea käyttö osoittaa sen tarpeelliseksi.
 
-### Vaihe 10: Tietotyön rikkaampi malli ja analyysit (valmi)
+### Vaihe 10: Tietotyön rikkaampi malli ja analyysit (valmis)
 
 - **Malli** (skeema 2, vanhat projektit avautuvat sellaisenaan): vaiheelle työaika ja odotusaika (`DurationRange`: min, tyypillinen, max minuutteina; päivä = 8 h, viikko = 5 päivää), toistuvuus, RACI (rooli on suorittaja R, muut roolit `raci`-kentässä), kipupisteet (vakavuus 1–3 ja parannusidea) ja tunnisteet. Roolin poisto siivoaa viitteet.
 - **Syöttö.** Pikasyötteessä `=2 pv`, `^1-3 pv`, `%viikoittain`, `#tunniste`, `!3 Ongelma => Idea` ja `A@Rooli`/`C@Rooli`/`I@Rooli`; viety teksti ja takaisin tuotu teksti ovat samat (testattu), ja uudelleenlisäys on idempotentti. Ehdotusmoottori tunnistaa lähdetekstistä aikailmaisut (“kahden päivän kuluessa” on odotusaikaa), toistuvuuden ja ongelmalauseet (liitetään edelliseen vaiheeseen kipupisteeksi).
