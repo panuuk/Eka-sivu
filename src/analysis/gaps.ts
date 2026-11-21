@@ -39,6 +39,25 @@ export interface Gap {
   data?: Record<string, unknown>
 }
 
+const SIMILAR_THRESHOLD = 0.75
+
+/** Nimen sanavartalot (5 ensimmäistä kirjainta), joilla taivutusmuodot ja johdokset yhtyvät. Alle kahden sanan nimet eivät kelpaa. */
+function similarityTokens(label: string): Set<string> | null {
+  const stems = label
+    .toLocaleLowerCase('fi')
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w.length >= 3)
+    .map((w) => w.slice(0, 5))
+  const set = new Set(stems)
+  return set.size >= 2 ? set : null
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  let inter = 0
+  for (const x of a) if (b.has(x)) inter++
+  return inter / (a.size + b.size - inter)
+}
+
 const SEVERITY_RANK: Record<Severity, number> = { high: 0, medium: 1, low: 2 }
 
 /** Solmut ja reunat prosesseittain sekä reunat solmuittain: rakennetaan kerran, jotta analyysi on lineaarinen. */
@@ -162,6 +181,7 @@ export function findGaps(p: Project, index: GraphIndex = indexGraph(p)): Gap[] {
 
     // Solmukohtaiset säännöt
     const seen = new Map<string, string>()
+    const similarPool: { id: string; kind: string; label: string; tokens: Set<string> }[] = []
     for (const n of nodes) {
       if (!n.label.trim()) {
         push({
@@ -302,6 +322,25 @@ export function findGaps(p: Project, index: GraphIndex = indexGraph(p)): Gap[] {
           })
         } else {
           seen.set(norm, n.id)
+          // Lähes samannimiset: "Tarkista lasku" ja "Laskun tarkistus"
+          const tokens = similarityTokens(n.label)
+          if (tokens && similarPool.length < 800) {
+            const twin = similarPool.find(
+              (o) => o.kind === n.kind && jaccard(o.tokens, tokens) >= SIMILAR_THRESHOLD,
+            )
+            if (twin) {
+              push({
+                key: `duplicate-label:${n.id}`,
+                rule: 'duplicate-label',
+                processId,
+                targetId: n.id,
+                severity: 'low',
+                text: `Vaiheet “${twin.label}” ja “${n.label}” kuulostavat samalta. Ovatko ne sama vaihe?`,
+                data: { otherId: twin.id, similar: true },
+              })
+            }
+            similarPool.push({ id: n.id, kind: n.kind, label: n.label, tokens })
+          }
         }
       }
     }

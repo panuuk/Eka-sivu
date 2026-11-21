@@ -141,6 +141,18 @@ const ACTION_STEMS = [
   'tulevat',
   'etene',
   'edet',
+  'tekee',
+  'tekevät',
+  'tehdään',
+  'koost',
+  'perust',
+  'pitävät',
+  'pidetään',
+  'sopii',
+  'sovitaan',
+  'sopivat',
+  'kutsu',
+  'ilmoitta',
 ]
 /** Lyhyet verbit tunnistetaan vain kokonaisina sanoina (esim. "luo" ei saa osua sanaan "luottoraja"). */
 const SHORT_VERBS = [
@@ -155,19 +167,24 @@ const SHORT_VERBS = [
   'viedään',
   'avataan',
 ]
-const ACTION_RE = new RegExp(
+export const ACTION_RE = new RegExp(
   `(?<![\\p{L}])(?:(?:${ACTION_STEMS.join('|')})[\\p{L}]*|(?:${SHORT_VERBS.join('|')})(?![\\p{L}]))`,
   'iu',
 )
 /** Passiivin preesens ja imperfekti: "lähetetään", "tarkistettiin". */
-const PASSIVE_RE = /(?<![\p{L}])[\p{L}]{4,}(?:taan|tään|ttiin|ttäisiin)(?![\p{L}])/iu
+export const PASSIVE_RE = /(?<![\p{L}])[\p{L}]{4,}(?:taan|tään|ttiin|ttäisiin)(?![\p{L}])/iu
 const SEQUENCE_RE =
   /(?<![\p{L}])(?:ensin|aluksi|sitten|seuraavaksi|tämän jälkeen|sen jälkeen|jälkeenpäin|lopuksi|viimeiseksi|lopulta|samalla)(?![\p{L}])/iu
 const CONDITION_RE = /^\s*(?:jos taas|jos|mikäli|kun)\s+([^,;]{3,}?)\s*,\s*(.+)$/isu
 const ELSE_RE =
   /^\s*(?:muussa tapauksessa|muuten|jos ei|ellei|ellei niin|mikäli ei)\b[\s,:]*(.*)$/isu
+/** Lauseen alun täteosa, joka ei kuulu vaiheen nimeen: "Lopuksi", "Haastattelun jälkeen", "Tarvittaessa". */
+const LEAD_FILLER =
+  /^(?:ensin|aluksi|sitten|seuraavaksi|tämän jälkeen|sen jälkeen|lopuksi|viimeiseksi|lopulta|tarvittaessa|yleensä|myös|[\p{L}-]+ jälkeen|[\p{L}-]+ päätyttyä)$/iu
 const LEADING_SEQUENCE_RE =
-  /^(?:ensin|aluksi|sitten|seuraavaksi|tämän jälkeen|sen jälkeen|lopuksi|viimeiseksi|lopulta)\s*,?\s+/iu
+  /^(?:(?:ensin|aluksi|sitten|seuraavaksi|tämän jälkeen|sen jälkeen|lopuksi|viimeiseksi|lopulta|tarvittaessa|yleensä)|[\p{L}-]+ jälkeen|[\p{L}-]+ päätyttyä)\s*,?\s+/iu
+
+const isLeadFiller = (lead: string) => LEAD_FILLER.test(lead)
 
 function cleanLabel(s: string): string {
   const t = collapse(s)
@@ -188,11 +205,17 @@ interface Draft {
   kind: 'step' | 'decision'
   label: string
   branch?: 'yes' | 'no'
+  /** Osalause perii roolin aiemmalta luonnokselta ("A tekee X ja tekee Y"). */
+  inheritFrom?: number
   score: number
   reasons: string[]
 }
 
-function scoreSentence(text: string, listItem: boolean): { score: number; reasons: string[] } {
+function scoreSentence(
+  text: string,
+  listItem: boolean,
+  allowShort = false,
+): { score: number; reasons: string[] } {
   let score = 0
   const reasons: string[] = []
   if (listItem) {
@@ -210,9 +233,13 @@ function scoreSentence(text: string, listItem: boolean): { score: number; reason
     score += 1
     reasons.push('järjestyssana')
   }
+  if (/(?<![\p{L}])alkaa,?\s+(?:kun|silloin)(?![\p{L}])/iu.test(text)) {
+    score -= 2
+    reasons.push('prosessin alkuehto')
+  }
   const words = wordCount(text)
   if (words > 32) score -= 2
-  if (words < 3) score -= 2
+  if (words < 3 && !allowShort) score -= 2
   return { score, reasons }
 }
 
@@ -223,14 +250,45 @@ export function leadingRoleMention(
 ): string | undefined {
   const m = findMentions(project, text, ['role']).find((x) => {
     const lead = collapse(text.slice(0, x.start)).replace(/[,:\s]+$/, '')
-    return (
-      lead === '' ||
-      /^(?:ensin|aluksi|sitten|seuraavaksi|tämän jälkeen|sen jälkeen|lopuksi|viimeiseksi|lopulta)$/i.test(
-        lead,
-      )
-    )
+    return lead === '' || isLeadFiller(lead)
   })
   return m?.entityId
+}
+
+/** Verbin alku sanan alussa: samat kuin ACTION_RE, mutta ankkuroitu positioon. */
+const VERB_AHEAD = `(?=(?:(?:${ACTION_STEMS.join('|')})[\\p{L}]*|(?:${SHORT_VERBS.join('|')})(?![\\p{L}])))`
+const CLAUSE_SPLIT_RE = new RegExp(
+  `(?:,\\s*(?:ja\\s+|sekä\\s+)?|\\s+(?:ja|sekä)\\s+)${VERB_AHEAD}|,\\s*(?:jolloin|minkä jälkeen|jonka jälkeen)\\s+`,
+  'giu',
+)
+/** Substantiivien päätteitä, joiden perusteella "ja hyväksyntä" ei ole uusi toimenpide. */
+/** Äänteitä, joihin finiittiverbit (ja imperatiivit) päättyvät. Poistaa "ja arviointien perusteella" -tyyppiset osumat. */
+const FINITE =
+  /(?:aa|ää|ee|ii|oo|uu|yy|öö|uo|ie|ae|oi|äi|ui|ai|ei|ta|tä|vat|vät|[td]aan|[td]ään|ttiin|si)$/iu
+const NOUNISH = /(?:nti|ntä|ntö|minen|mis[\p{L}]*|us|ys|uus|yys|inta|ointi|ukset|ykset)$/iu
+
+/** Pilkkoo yhdistetyn lauseen ("A ja B") osalauseiksi, kun jälkimmäinen alkaa toimintaverbillä. */
+function splitClauses(sentence: string): { start: number; end: number }[] {
+  const cuts: { from: number; to: number }[] = []
+  CLAUSE_SPLIT_RE.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = CLAUSE_SPLIT_RE.exec(sentence))) {
+    const rest = sentence.slice(m.index + m[0].length)
+    const first = /^[\p{L}-]+/u.exec(rest)?.[0] ?? ''
+    // Pilkku ilman "ja"-sanaa on usein luettelo: vaadi silloin verbimäinen sana.
+    if (NOUNISH.test(first) || !FINITE.test(first)) continue
+    cuts.push({ from: m.index, to: m.index + m[0].length })
+    if (m[0].length === 0) CLAUSE_SPLIT_RE.lastIndex++
+  }
+  if (!cuts.length) return [{ start: 0, end: sentence.length }]
+  const parts: { start: number; end: number }[] = []
+  let at = 0
+  for (const c of cuts) {
+    parts.push({ start: at, end: c.from })
+    at = c.to
+  }
+  parts.push({ start: at, end: sentence.length })
+  return parts.filter((p) => collapse(sentence.slice(p.start, p.end)).split(' ').length >= 2)
 }
 
 export const ruleExtractor: Extractor = {
@@ -243,6 +301,27 @@ export const ruleExtractor: Extractor = {
       const sentence = span.text
       const cond = CONDITION_RE.exec(sentence)
       const other = ELSE_RE.exec(sentence)
+
+      if (cond && /^\s*kun\b/iu.test(sentence)) {
+        // "Kun X, tee Y": ajankohta, ei päätös. Vaihe on seuraus; ehto jää nimen ulkopuolelle.
+        const conseq = cond[2]
+        const conseqStart = span.start + sentence.lastIndexOf(conseq)
+        const sc = scoreSentence(conseq, false)
+        if (sc.score >= 1) {
+          drafts.push({
+            span,
+            start: conseqStart,
+            end: span.end,
+            text: text.slice(conseqStart, span.end),
+            kind: 'step',
+            label: cleanLabel(conseq),
+            score: sc.score,
+            reasons: ['ajankohtalause (kun)', ...sc.reasons],
+          })
+        }
+        lastWasDecision = false
+        continue
+      }
 
       if (cond) {
         const condText = cond[1]
@@ -313,16 +392,26 @@ export const ruleExtractor: Extractor = {
 
       const { score, reasons } = scoreSentence(sentence, span.listItem)
       if (score >= 1) {
-        drafts.push({
-          span,
-          start: span.start,
-          end: span.end,
-          text: sentence,
-          kind: 'step',
-          label: cleanLabel(sentence),
-          score,
-          reasons,
-        })
+        const parts = span.listItem ? [{ start: 0, end: sentence.length }] : splitClauses(sentence)
+        let firstIndex = -1
+        for (const [k, part] of parts.entries()) {
+          const partText = sentence.slice(part.start, part.end)
+          // Jokainen osalause arvioidaan itse, mutta ensimmäinen säilyttää koko lauseen pisteet.
+          const sc = k === 0 ? { score, reasons } : scoreSentence(partText, false, true)
+          if (k > 0 && sc.score < 1) continue
+          if (k === 0) firstIndex = drafts.length
+          drafts.push({
+            span,
+            start: span.start + part.start,
+            end: span.start + part.end,
+            text: partText,
+            kind: 'step',
+            label: cleanLabel(partText),
+            score: sc.score,
+            reasons: k === 0 ? reasons : [...sc.reasons, 'osalause'],
+            inheritFrom: k > 0 ? firstIndex : undefined,
+          })
+        }
       }
       lastWasDecision = false
     }
@@ -344,25 +433,29 @@ export const ruleExtractor: Extractor = {
       }
       return found
     }
+    // Rooli on toimija: se tunnistetaan vain lauseen alusta (subjekti), jottei vastaanottaja
+    // ("lähetetään esimiehelle") tulkita vastuutahoksi.
+    const leadingRole = (d: Draft) =>
+      d.kind === 'step'
+        ? mentionsIn(d.start, d.end).find((m) => {
+            if (m.kind !== 'role') return false
+            const lead = collapse(text.slice(d.start, m.start)).replace(/[,:\s]+$/, '')
+            return lead === '' || isLeadFiller(lead)
+          })
+        : undefined
+    const roles = drafts.map(leadingRole)
     return drafts.map((d, i) => {
       const inside = mentionsIn(d.start, d.end)
       // Järjestelmät voivat olla missä tahansa lauseessa; ehdon seurauksella katsotaan koko lausetta.
       const scope = d.kind === 'step' && d.branch ? mentionsIn(d.span.start, d.span.end) : inside
-      // Rooli on toimija: se tunnistetaan vain lauseen alusta (subjekti), jottei vastaanottaja
-      // ("lähetetään esimiehelle") tulkita vastuutahoksi.
-      const role =
-        d.kind === 'step'
-          ? inside.find((m) => {
-              if (m.kind !== 'role') return false
-              const lead = collapse(text.slice(d.start, m.start)).replace(/[,:\s]+$/, '')
-              return (
-                lead === '' ||
-                /^(?:ensin|aluksi|sitten|seuraavaksi|tämän jälkeen|sen jälkeen|lopuksi|viimeiseksi|lopulta)$/i.test(
-                  lead,
-                )
-              )
-            })
-          : undefined
+      const ownRole = roles[i]
+      const role = ownRole ?? (d.inheritFrom !== undefined ? roles[d.inheritFrom] : undefined)
+      // Alussa oleva rooli kuuluu rooliksi, ei vaiheen nimeen: "HR tarkistaa pyynnön" -> "Tarkistaa pyynnön".
+      let label = d.label
+      if (ownRole && d.kind === 'step') {
+        const rest = collapse(text.slice(ownRole.end, d.end))
+        if (wordCount(rest) >= 2) label = cleanLabel(rest)
+      }
       const systems =
         d.kind === 'step'
           ? [...new Set(scope.filter((m) => m.kind === 'system').map((m) => m.entityId))]
@@ -383,7 +476,7 @@ export const ruleExtractor: Extractor = {
         start: d.start,
         end: d.end,
         quote: d.text,
-        label: d.label,
+        label,
         roleId: role?.entityId,
         systemIds: systems,
         branch: d.branch,

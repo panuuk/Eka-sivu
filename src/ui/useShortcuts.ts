@@ -1,11 +1,40 @@
 import { useEffect } from 'react'
-import { addNode, deleteSelection } from '../store/actions'
+import {
+  addNode,
+  copySelection,
+  deleteSelection,
+  moveSelection,
+  pasteSelection,
+  type MoveDirection,
+} from '../store/actions'
 import { useStore } from '../store/store'
 import { useUi } from '../store/ui'
 
 function isTyping(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false
   return el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)
+}
+
+/**
+ * Nuolinäppäimet liikuttavat valintaa prosessin kulussa. Kuuntelija on sieppausvaiheessa ja
+ * pysäyttää tapahtuman, jotta React Flow ei siirrä valittua vaihetta nuolinäppäimellä.
+ */
+function onArrowKey(e: KeyboardEvent) {
+  if (useUi.getState().presenting) return
+  const inDialog = e.target instanceof HTMLElement && !!e.target.closest('dialog')
+  if (isTyping(e.target) || inDialog || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return
+  if (useUi.getState().view !== 'canvas' || !e.key.startsWith('Arrow')) return
+  if (e.target instanceof HTMLElement && e.target.closest('button, a, [role="menuitem"]')) return
+  const { layoutMode, direction } = useUi.getState()
+  const horizontal = layoutMode === 'lanes' || direction === 'RIGHT'
+  const map: Record<string, MoveDirection> = horizontal
+    ? { ArrowRight: 'next', ArrowLeft: 'prev', ArrowDown: 'sibling-next', ArrowUp: 'sibling-prev' }
+    : { ArrowDown: 'next', ArrowUp: 'prev', ArrowRight: 'sibling-next', ArrowLeft: 'sibling-prev' }
+  const dir = map[e.key]
+  if (!dir) return
+  e.preventDefault()
+  e.stopPropagation()
+  moveSelection(dir)
 }
 
 /** Yleiset pikanäppäimet. Kirjoitettaessa kenttään vain kumoa/tee uudelleen toimivat. */
@@ -27,13 +56,38 @@ export function useShortcuts() {
         useStore.getState().redo()
         return
       }
+      if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'h' && !inDialog) {
+        e.preventDefault()
+        useUi.getState().setReplaceOpen(true)
+        return
+      }
       if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         if (useUi.getState().quickOpen) useUi.getState().closeQuick()
         else useUi.getState().openQuick('add')
         return
       }
+      const noText = !isTyping(e.target) && !inDialog && !e.altKey
+      const view = useUi.getState().view
+      const selectedText = window.getSelection()?.toString() ?? ''
+      // Ctrl+C ja Ctrl+V käsittelevät vaiheita vain, kun tekstiä ei ole valittuna ja ollaan kaaviossa tai listassa
+      if (mod && noText && !e.shiftKey && view !== 'sources' && !selectedText) {
+        const k = e.key.toLowerCase()
+        if (k === 'c' && useStore.getState().selection.nodeIds.length > 0) {
+          if (copySelection()) e.preventDefault()
+          return
+        }
+        if (k === 'v') {
+          if (pasteSelection()) e.preventDefault()
+          return
+        }
+      }
       if (isTyping(e.target) || inDialog || mod || e.altKey) return
+      if (e.key === '?') {
+        e.preventDefault()
+        useUi.getState().setHelpOpen(true)
+        return
+      }
       if (e.key === '/' && !e.shiftKey) {
         const el = document.getElementById('global-search')
         if (el) {
@@ -63,6 +117,10 @@ export function useShortcuts() {
       }
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('keydown', onArrowKey, true)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keydown', onArrowKey, true)
+    }
   }, [])
 }

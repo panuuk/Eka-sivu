@@ -4,6 +4,9 @@ import { findMentions } from '../capture/mentions'
 import { importFile, SUPPORTED_EXTENSIONS } from '../capture/importers'
 import { refsOfSource } from '../capture/refs'
 import type { Mark } from '../capture/segments'
+import { discoverEntities, type Candidate } from '../capture/discover'
+import { ensureEntity } from '../model/commands'
+import type { Operation } from '../model/operations'
 import { ruleExtractor, type Suggestion } from '../capture/suggest'
 import { resolveAnchor } from '../store/actions'
 import {
@@ -190,6 +193,10 @@ function SourceWorkspace({ source, sources }: { source: Source; sources: Source[
   const allSuggestions = useMemo(
     () => ruleExtractor.suggest(entityScope, source.id, source.text),
     [entityScope, source.text, source.id],
+  )
+  const candidates = useMemo(
+    () => discoverEntities(entityScope, source.text),
+    [entityScope, source.text],
   )
   const allMatching = useMemo(() => {
     const covered = (s: Suggestion) =>
@@ -535,6 +542,7 @@ function SourceWorkspace({ source, sources }: { source: Source; sources: Source[
 
           {tab === 'suggestions' && (
             <div className="side-section">
+              {candidates.length > 0 && <CandidatePanel candidates={candidates} />}
               <div className="side-actions side-actions--row">
                 <button
                   type="button"
@@ -697,4 +705,66 @@ function scrollToOffset(container: HTMLElement | null, offset: number) {
     else break
   }
   target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+}
+
+/** Tekstistä löydetyt uudet roolit ja järjestelmät: yhdellä klikkauksella malliin, jolloin ehdotukset saavat roolinsa. */
+function CandidatePanel({ candidates }: { candidates: Candidate[] }) {
+  const [off, setOff] = useState<Set<string>>(new Set())
+  const key = (c: Candidate) => `${c.kind}:${c.name}`
+  const chosen = candidates.filter((c) => (c.likely ? !off.has(key(c)) : off.has(key(c))))
+  const toggle = (c: Candidate) =>
+    setOff((prev) => {
+      const next = new Set(prev)
+      if (next.has(key(c))) next.delete(key(c))
+      else next.add(key(c))
+      return next
+    })
+  const addChosen = () => {
+    const project = useStore.getState().project
+    if (!project) return
+    const ops: Operation[] = []
+    for (const c of chosen) ops.push(...ensureEntity(project, c.kind, c.name, ops).ops)
+    useStore.getState().dispatch(ops)
+  }
+  return (
+    <div className="candidates" data-testid="candidates">
+      <h4>Löydetyt roolit ja järjestelmät</h4>
+      <p className="field__hint">
+        Lisää nämä ensin, niin ehdotukset saavat roolinsa ja järjestelmänsä automaattisesti.
+      </p>
+      {(['role', 'system'] as const).map((kind) => {
+        const group = candidates.filter((c) => c.kind === kind)
+        if (group.length === 0) return null
+        return (
+          <div key={kind} className="candidates__group">
+            <span className="candidates__label">{kind === 'role' ? 'Roolit' : 'Järjestelmät'}</span>
+            <ul className="candidates__list">
+              {group.map((c) => {
+                const on = c.likely ? !off.has(key(c)) : off.has(key(c))
+                return (
+                  <li key={key(c)}>
+                    <label
+                      className={`chip-check ${on ? 'is-on' : ''}`}
+                      title={`${c.count} mainintaa`}
+                    >
+                      <input type="checkbox" checked={on} onChange={() => toggle(c)} />
+                      {c.name} <span className="muted">{c.count}×</span>
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )
+      })}
+      <button
+        type="button"
+        disabled={chosen.length === 0}
+        onClick={addChosen}
+        data-testid="candidates-add"
+      >
+        Lisää valitut ({chosen.length})
+      </button>
+    </div>
+  )
 }

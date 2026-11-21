@@ -36,11 +36,11 @@ describe('suggestionsToDsl', () => {
     const { text, lineRefs } = suggestionsToDsl(p, s, 'src1')
     expect(text.split('\n')).toEqual([
       '- Ostolasku saapuu ostoreskontraan',
-      '- Ostoreskontra tarkistaa laskun tiedot ERP-järjestelmästä @Ostoreskontra [ERP]',
+      '- Tarkistaa laskun tiedot ERP-järjestelmästä @Ostoreskontra [ERP]',
       '? Tiedot eivät täsmää?',
       '  kyllä: Laskuttajalle lähetetään korjauspyyntö',
       '  ei: Lasku lähetetään esimiehelle hyväksyttäväksi',
-      '- Esimies hyväksyy laskun @Esimies',
+      '- Hyväksyy laskun @Esimies',
       '- Lasku kirjataan',
     ])
     expect(lineRefs.size).toBe(7)
@@ -66,11 +66,9 @@ describe('suggestionsToDsl', () => {
       'Tiedot eivät täsmää? -[ei]-> Lasku lähetetään esimiehelle hyväksyttäväksi',
     )
     // molemmat haarat jatkuvat samaan seuraavaan vaiheeseen
-    expect(edges).toContain('Laskuttajalle lähetetään korjauspyyntö -> Esimies hyväksyy laskun')
-    expect(edges).toContain(
-      'Lasku lähetetään esimiehelle hyväksyttäväksi -> Esimies hyväksyy laskun',
-    )
-    const node = Object.values(after.nodes).find((n) => n.label === 'Esimies hyväksyy laskun')!
+    expect(edges).toContain('Laskuttajalle lähetetään korjauspyyntö -> Hyväksyy laskun')
+    expect(edges).toContain('Lasku lähetetään esimiehelle hyväksyttäväksi -> Hyväksyy laskun')
+    const node = Object.values(after.nodes).find((n) => n.label === 'Hyväksyy laskun')!
     expect(node.sources[0].sourceId).toBe('src1')
     expect(TEXT.slice(node.sources[0].start, node.sources[0].end)).toBe('Esimies hyväksyy laskun.')
     expect(after.sources.src1.text).toBe(TEXT) // ei uutta lähdettä

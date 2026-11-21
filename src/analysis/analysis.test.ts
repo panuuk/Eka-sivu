@@ -230,6 +230,18 @@ describe('findGaps', () => {
     expect(rules(mixed.p)).not.toContain('duplicate-label')
   })
 
+  it('löytää lähes samannimiset vaiheet mutta ei eri toimenpiteitä samasta kohteesta', () => {
+    const similar = build({ nodes: [['Tarkista lasku'], ['Laskun tarkistus']], edges: [] })
+    const g = findGaps(similar.p).find((x) => x.rule === 'duplicate-label')
+    expect(g?.text).toMatch(/kuulostavat samalta/)
+    expect(g?.data?.similar).toBe(true)
+    const different = build({ nodes: [['Tarkista lasku'], ['Hyväksy lasku']], edges: [] })
+    expect(rules(different.p)).not.toContain('duplicate-label')
+    // yhden sanan nimiä ei verrata sumeasti
+    const single = build({ nodes: [['Tarkista'], ['Tarkastus']], edges: [] })
+    expect(rules(single.p)).not.toContain('duplicate-label')
+  })
+
   it('järjestää vakavuuden mukaan ja avaimet ovat vakaat ajosta toiseen', () => {
     const { p } = build({
       nodes: [['Alku', { kind: 'start' }], ['A'], ['Orpo']],

@@ -61,15 +61,19 @@ Samannimiset vaiheet tunnistetaan, joten tekstiä voi lisätä uudelleen tai tä
 
 ## Pikanäppäimet
 
-| Näppäin                                      | Toiminto                    |
-| -------------------------------------------- | --------------------------- |
-| `Ctrl+K`                                     | Pikasyöte auki/kiinni       |
-| `Ctrl+Z`, `Ctrl+Shift+Z`                     | Kumoa, tee uudelleen        |
-| `Enter`                                      | Lisää vaihe valitun jälkeen |
-| `F2`, `Delete`                               | Nimeä uudelleen, poista     |
-| `/`                                          | Hae vaiheita                |
-| `Esc`                                        | Tyhjennä valinta tai sulje  |
-| Esityksessä `←`, `→`, `Space`, `+`, `-`, `0` | Läpikäynti, zoom, sovitus   |
+| Näppäin                                      | Toiminto                                                          |
+| -------------------------------------------- | ----------------------------------------------------------------- |
+| `Ctrl+K`                                     | Pikasyöte auki/kiinni                                             |
+| `Ctrl+Z`, `Ctrl+Shift+Z`                     | Kumoa, tee uudelleen                                              |
+| `Enter`                                      | Lisää vaihe valitun jälkeen                                       |
+| `↑ ↓ ← →`                                    | Liiku vaiheesta toiseen (↓↑ eteen ja taakse, ←→ haarojen välillä) |
+| `Ctrl+C`, `Ctrl+V`                           | Kopioi ja liitä vaiheet (myös toiseen prosessiin)                 |
+| `Ctrl+H`                                     | Etsi ja korvaa                                                    |
+| `?`                                          | Pikanäppäinohje                                                   |
+| `F2`, `Delete`                               | Nimeä uudelleen, poista                                           |
+| `/`                                          | Hae vaiheita                                                      |
+| `Esc`                                        | Tyhjennä valinta tai sulje                                        |
+| Esityksessä `←`, `→`, `Space`, `+`, `-`, `0` | Läpikäynti, zoom, sovitus                                         |
 
 ## Tiedot ja yksityisyys
 

@@ -135,12 +135,13 @@ describe('ruleExtractor', () => {
     const s = run(TEXT)
     expect(s.map((x) => [x.kind, x.branch ?? '', x.label])).toEqual([
       ['step', '', 'Ostolasku saapuu verkkolaskuoperaattorilta ostoreskontraan'],
-      ['step', '', 'Ostoreskontra tarkistaa laskun tiedot ERP-järjestelmästä'],
+      ['step', '', 'Tarkistaa laskun tiedot ERP-järjestelmästä'],
       ['decision', '', 'Tiedot eivät täsmää?'],
       ['step', 'yes', 'Laskuttajalle lähetetään korjauspyyntö'],
       ['step', 'no', 'Lasku lähetetään esimiehelle hyväksyttäväksi'],
-      ['step', '', 'Esimies hyväksyy laskun'],
-      ['step', '', 'Lasku kirjataan ja viedään maksuun'],
+      ['step', '', 'Hyväksyy laskun'],
+      ['step', '', 'Lasku kirjataan'],
+      ['step', '', 'Viedään maksuun'],
     ])
   })
 
@@ -154,10 +155,10 @@ describe('ruleExtractor', () => {
 
   it('liittää roolit ja järjestelmät maininnoista', () => {
     const s = run(TEXT)
-    const check = s.find((x) => x.label.startsWith('Ostoreskontra tarkistaa'))!
+    const check = s.find((x) => x.label.startsWith('Tarkistaa laskun'))!
     expect(p.entities[check.roleId!].name).toBe('Ostoreskontra')
     expect(check.systemIds.map((i) => p.entities[i].name)).toEqual(['ERP'])
-    const approve = s.find((x) => x.label.startsWith('Esimies hyväksyy'))!
+    const approve = s.find((x) => x.label.startsWith('Hyväksyy laskun'))!
     expect(p.entities[approve.roleId!].name).toBe('Esimies')
     expect(s.find((x) => x.kind === 'decision')!.roleId).toBeUndefined()
     expect(check.reasons.join(' ')).toMatch(/rooli: Ostoreskontra/)

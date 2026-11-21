@@ -2380,3 +2380,154 @@
   flex-wrap: wrap;
   margin: 1rem 0;
 }
+
+/* Löydetyt roolit ja järjestelmät */
+.candidates {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.75rem;
+  background: var(--accent-soft);
+}
+.candidates h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.9rem;
+}
+.candidates__list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.4rem 0 0.6rem;
+  padding: 0;
+}
+.candidates__group {
+  margin-top: 0.4rem;
+}
+.candidates__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.chip-check {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.chip-check.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.chip-check input {
+  margin: 0;
+}
+
+.bulk {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.6rem;
+}
+.bulk__title {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Etsi ja korvaa */
+.replace__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.replace__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  align-items: end;
+  margin: 0.75rem 0;
+}
+.replace__preview {
+  min-height: 4.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-2);
+}
+.replace__preview ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+.replace__preview del {
+  color: var(--danger);
+}
+.replace__preview ins {
+  color: var(--ok);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.canvas__start {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  text-align: left;
+  max-width: 34rem;
+}
+.canvas__start h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.4rem;
+}
+.canvas__start ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.25rem;
+  color: var(--muted);
+}
+.help__section h3 {
+  font-size: 0.95rem;
+  margin: 0.9rem 0 0.35rem;
+}
+.help__rows {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+}
+.help__rows > div {
+  display: grid;
+  grid-template-columns: 14rem 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+.help__rows dd {
+  margin: 0;
+  color: var(--muted);
+}
+kbd {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface-2);
+}
+@media (max-width: 640px) {
+  .help__rows > div {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+}

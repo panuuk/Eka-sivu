@@ -100,6 +100,13 @@ interface UiState extends Persisted {
     confirmLabel?: string
   }) => Promise<string | null>
   closePrompt: (value: string | null) => void
+  /** Leikepöydällä olevien vaiheiden määrä (liitä-painikkeen tila). */
+  clipSize: number
+  setClipSize: (n: number) => void
+  replaceOpen: boolean
+  setReplaceOpen: (open: boolean) => void
+  helpOpen: boolean
+  setHelpOpen: (open: boolean) => void
   entityManagerOpen: boolean
   /** Tallennus ja varmuuskopiot -ikkuna. */
   storageOpen: boolean
@@ -119,6 +126,10 @@ interface UiState extends Persisted {
   centerRequest: { nodeId: string; nonce: number } | null
   requestCenter: (nodeId: string) => void
   clearCenterRequest: () => void
+  /** Kaavio vierittää vaiheen näkyviin (ei muuta zoomia), esim. nuolinäppäinnavigoinnin jälkeen. */
+  revealRequest: { nodeId: string; nonce: number } | null
+  requestReveal: (nodeId: string) => void
+  clearRevealRequest: () => void
   rightTab: 'props' | 'questions'
   setRightTab: (t: 'props' | 'questions') => void
   /** Avaa oikean paneelin annetulle välilehdelle. */
@@ -191,6 +202,12 @@ export const useUi = create<UiState>((set, get) => {
       set({ promptReq: null })
       r.resolve(value)
     },
+    clipSize: 0,
+    setClipSize: (clipSize) => set({ clipSize }),
+    replaceOpen: false,
+    setReplaceOpen: (replaceOpen) => set({ replaceOpen }),
+    helpOpen: false,
+    setHelpOpen: (helpOpen) => set({ helpOpen }),
     entityManagerOpen: false,
     storageOpen: false,
     setStorageOpen: (storageOpen) => set({ storageOpen }),
@@ -212,6 +229,9 @@ export const useUi = create<UiState>((set, get) => {
     centerRequest: null,
     requestCenter: (nodeId) => set({ centerRequest: { nodeId, nonce: Date.now() } }),
     clearCenterRequest: () => set({ centerRequest: null }),
+    revealRequest: null,
+    requestReveal: (nodeId) => set({ revealRequest: { nodeId, nonce: Date.now() } }),
+    clearRevealRequest: () => set({ revealRequest: null }),
     rightTab: 'props',
     setRightTab: (rightTab) => set({ rightTab }),
     showRight: (rightTab) => {

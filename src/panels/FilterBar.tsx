@@ -68,6 +68,15 @@ export function FilterBar({ className = '' }: { className?: string }) {
         >
           Suodattimet
         </button>
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="Etsi ja korvaa"
+          title="Etsi ja korvaa (Ctrl+H)"
+          onClick={() => useUi.getState().setReplaceOpen(true)}
+        >
+          <Icon name="edit" size={16} />
+        </button>
         {active && (
           <>
             <span className="filterbar__count" role="status">

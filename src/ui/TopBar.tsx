@@ -103,6 +103,10 @@ export function TopBar() {
       onSelect: () => void useStore.getState().adoptProject(buildSampleProject()),
     },
     {
+      label: 'Pikanäppäimet ja ohje',
+      onSelect: () => useUi.getState().setHelpOpen(true),
+    },
+    {
       label: 'Nimeä projekti uudelleen…',
       onSelect: async () => {
         const name = await useUi.getState().prompt({
