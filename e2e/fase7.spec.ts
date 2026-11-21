@@ -187,6 +187,8 @@ test('esitystilassa näppäimet eivät muokkaa mallia ja alaprosessiin voi porau
   await loadSample(page)
   await page.locator('.node__label', { hasText: 'Vastaanota lasku' }).click()
   await page.getByRole('button', { name: 'Esitä', exact: true }).click()
+  // Esitysnäkymä ladataan vasta tarvittaessa: odota, että se on auki ennen näppäimiä
+  await expect(page.getByTestId('present-svg')).toBeVisible()
   const before = await page.evaluate(() => indexedDB.databases().then((d) => d.length))
   await page.keyboard.press('Delete')
   await page.keyboard.press('Control+z')

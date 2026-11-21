@@ -8,6 +8,7 @@ import { useStore } from '../store/store'
 import { useUi } from '../store/ui'
 import { Icon } from './Icon'
 import { Menu, type MenuItem } from './Menu'
+import { useNarrow } from './useMedia'
 
 function ReadinessPill() {
   const analysis = useAnalysis()
@@ -76,6 +77,7 @@ export function TopBar() {
   const rightOpen = useUi((s) => s.rightOpen)
   const fileRef = useRef<HTMLInputElement>(null)
   const installPrompt = usePwa((s) => s.installPrompt)
+  const narrow = useNarrow()
 
   const path = processPath(project, currentProcessId)
 
@@ -159,6 +161,33 @@ export function TopBar() {
         })
         if (ok) await useStore.getState().deleteProject(project.id)
       },
+    },
+  ]
+
+  // Puhelimella harvemmin tarvittavat toiminnot ovat yhdessä valikossa, jotta yläpalkki mahtuu yhdelle riville.
+  const moreItems: MenuItem[] = [
+    { label: 'Esitä muille', onSelect: () => useUi.getState().setPresenting(true) },
+    { label: 'Vie ja jaa…', onSelect: () => useUi.getState().setExportOpen(true) },
+    {
+      label: 'Roolit, järjestelmät ja tuotokset…',
+      onSelect: () => useUi.getState().setEntityManagerOpen(true),
+    },
+    {
+      label: rightOpen ? 'Piilota ominaisuudet' : 'Näytä ominaisuudet',
+      onSelect: () => useUi.getState().toggleRight(),
+    },
+    ...(view === 'canvas' && layoutMode !== 'lanes'
+      ? [
+          {
+            label: direction === 'DOWN' ? 'Asettelu vaakasuuntaan' : 'Asettelu pystysuuntaan',
+            onSelect: () => useUi.getState().setDirection(direction === 'DOWN' ? 'RIGHT' : 'DOWN'),
+          },
+        ]
+      : []),
+    {
+      label: 'Tallennus ja varmuuskopiot…',
+      separatorBefore: true,
+      onSelect: () => useUi.getState().setStorageOpen(true),
     },
   ]
 
@@ -250,6 +279,7 @@ export function TopBar() {
           type="button"
           role="radio"
           aria-checked={view === 'canvas'}
+          aria-label="Kaavio"
           className={view === 'canvas' ? 'is-on' : ''}
           onClick={() => useUi.getState().setView('canvas')}
         >
@@ -259,6 +289,7 @@ export function TopBar() {
           type="button"
           role="radio"
           aria-checked={view === 'list'}
+          aria-label="Lista"
           className={view === 'list' ? 'is-on' : ''}
           onClick={() => useUi.getState().setView('list')}
         >
@@ -268,6 +299,7 @@ export function TopBar() {
           type="button"
           role="radio"
           aria-checked={view === 'sources'}
+          aria-label="Lähteet"
           className={view === 'sources' ? 'is-on' : ''}
           onClick={() => useUi.getState().setView('sources')}
         >
@@ -277,6 +309,7 @@ export function TopBar() {
           type="button"
           role="radio"
           aria-checked={view === 'analysis'}
+          aria-label="Analyysi"
           className={view === 'analysis' ? 'is-on' : ''}
           onClick={() => useUi.getState().setView('analysis')}
         >
@@ -286,6 +319,7 @@ export function TopBar() {
           type="button"
           role="radio"
           aria-checked={view === 'compare'}
+          aria-label="Vertailu"
           className={view === 'compare' ? 'is-on' : ''}
           onClick={() => useUi.getState().setView('compare')}
         >
@@ -293,7 +327,7 @@ export function TopBar() {
         </button>
       </div>
 
-      {view === 'canvas' && layoutMode !== 'lanes' && (
+      {!narrow && view === 'canvas' && layoutMode !== 'lanes' && (
         <button
           type="button"
           className="icon-btn"
@@ -314,42 +348,54 @@ export function TopBar() {
       >
         <Icon name="edit" size={16} /> <span className="hide-sm">Pikasyöte</span>
       </button>
-      <button
-        type="button"
-        className="btn-quick btn-quick--plain"
-        aria-label="Esitä"
-        title="Esitä muille: siisti koko ruudun näkymä ja läpikäynti"
-        onClick={() => useUi.getState().setPresenting(true)}
-      >
-        <Icon name="play" size={16} /> <span className="hide-sm">Esitä</span>
-      </button>
-      <button
-        type="button"
-        className="btn-quick btn-quick--plain"
-        aria-label="Vie ja jaa"
-        title="Vie kuvana, dokumenttina tai tiedostona"
-        onClick={() => useUi.getState().setExportOpen(true)}
-      >
-        <Icon name="download" size={16} /> <span className="hide-sm">Vie</span>
-      </button>
-      <button
-        type="button"
-        className="icon-btn"
-        aria-label="Roolit, järjestelmät ja tuotokset"
-        title="Roolit, järjestelmät ja tuotokset"
-        onClick={() => useUi.getState().setEntityManagerOpen(true)}
-      >
-        <Icon name="user" />
-      </button>
-      <button
-        type="button"
-        className="icon-btn"
-        aria-label="Näytä tai piilota ominaisuudet"
-        aria-pressed={rightOpen}
-        onClick={() => useUi.getState().toggleRight()}
-      >
-        <Icon name="panelRight" />
-      </button>
+      {narrow ? (
+        <Menu
+          label="Lisää toimintoja"
+          align="right"
+          triggerClassName="icon-btn"
+          trigger={<Icon name="dots" />}
+          items={moreItems}
+        />
+      ) : (
+        <>
+          <button
+            type="button"
+            className="btn-quick btn-quick--plain"
+            aria-label="Esitä"
+            title="Esitä muille: siisti koko ruudun näkymä ja läpikäynti"
+            onClick={() => useUi.getState().setPresenting(true)}
+          >
+            <Icon name="play" size={16} /> <span className="hide-sm">Esitä</span>
+          </button>
+          <button
+            type="button"
+            className="btn-quick btn-quick--plain"
+            aria-label="Vie ja jaa"
+            title="Vie kuvana, dokumenttina tai tiedostona"
+            onClick={() => useUi.getState().setExportOpen(true)}
+          >
+            <Icon name="download" size={16} /> <span className="hide-sm">Vie</span>
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Roolit, järjestelmät ja tuotokset"
+            title="Roolit, järjestelmät ja tuotokset"
+            onClick={() => useUi.getState().setEntityManagerOpen(true)}
+          >
+            <Icon name="user" />
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Näytä tai piilota ominaisuudet"
+            aria-pressed={rightOpen}
+            onClick={() => useUi.getState().toggleRight()}
+          >
+            <Icon name="panelRight" />
+          </button>
+        </>
+      )}
     </header>
   )
 }

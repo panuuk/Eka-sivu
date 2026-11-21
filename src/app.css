@@ -3139,3 +3139,143 @@ button.cell:hover {
   padding-left: 1.1rem;
   color: var(--muted);
 }
+
+/* ===== Puhelin: kaavion työkalut, yläpalkki ja paneelit ===== */
+.canvas__tools {
+  display: contents;
+}
+.canvas__toolsbtn {
+  display: none;
+}
+.canvas__linkhint {
+  position: absolute;
+  z-index: 9;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.4rem 0.7rem;
+  max-width: calc(100% - 24px);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow);
+}
+.canvas__toolbar button.is-on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.workspace__backdrop {
+  display: none;
+}
+@media (pointer: coarse) {
+  .react-flow__handle {
+    width: 20px;
+    height: 20px;
+  }
+  .node.is-selected .react-flow__handle {
+    opacity: 1;
+  }
+}
+@media (max-width: 700px) {
+  .canvas__toolsbtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    position: absolute;
+    z-index: 10;
+    right: 12px;
+    bottom: 12px;
+    padding: 0.5em 0.8em;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+  }
+  .canvas__tools {
+    display: none;
+    position: absolute;
+    z-index: 9;
+    left: 12px;
+    right: 12px;
+    bottom: 64px;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.6rem;
+    max-height: 60%;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+  .canvas__tools.is-open {
+    display: flex;
+  }
+  .canvas__tools > * {
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    box-shadow: none !important;
+  }
+  .canvas__tools .canvas__hint {
+    display: block;
+  }
+  .canvas__tools .canvas__mode {
+    align-self: stretch;
+  }
+  .canvas__tools .canvas__mode button {
+    flex: 1;
+  }
+  .canvas__linkhint {
+    bottom: 64px;
+  }
+  .react-flow__minimap {
+    display: none;
+  }
+  .react-flow__controls {
+    margin-bottom: 64px;
+  }
+  /* Yläpalkki yhdelle riville: näkymävalitsin kutistuu kuvakkeiksi */
+  .topbar {
+    flex-wrap: nowrap;
+    gap: 0.1rem;
+  }
+  .topbar .icon-btn {
+    width: 30px;
+    flex: none;
+  }
+  .topbar .segmented--compact {
+    flex: none;
+  }
+  .topbar .segmented--compact button {
+    padding: 0.35em 0.5em;
+  }
+  .topbar .project-btn {
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .readiness-pill {
+    display: none;
+  }
+  .btn-quick {
+    padding: 0.4em 0.5em;
+  }
+  /* Sivupaneelit avautuvat sisällön päälle ja sulkeutuvat taustaa napauttamalla */
+  .workspace__backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 19;
+    background: rgb(15 23 42 / 40%);
+  }
+  .workspace__right {
+    width: min(360px, 92vw);
+  }
+}
