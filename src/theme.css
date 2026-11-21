@@ -1,0 +1,735 @@
+/*
+ * Visuaalinen kerros: kelluva kehys, pehmeät kortit, pillit ja tumma pääpainike.
+ * Ladataan app.css:n jälkeen. Värit ja säteet tulevat index.css:n tokeneista,
+ * joten vaalea ja tumma teema pysyvät yhtenäisinä.
+ */
+
+/* ===== Kehys ===== */
+@media (min-width: 1000px) and (min-height: 600px) {
+  .app:not(.app--present) {
+    height: calc(100% - 20px);
+    margin: 10px;
+    border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
+    border-radius: 22px;
+    background: var(--surface);
+    box-shadow:
+      0 1px 2px rgb(16 24 40 / 6%),
+      0 18px 48px rgb(16 24 40 / 12%);
+    overflow: hidden;
+  }
+}
+.app--present {
+  background: var(--bg);
+}
+
+/* ===== Yläpalkki ===== */
+.topbar {
+  gap: 0.6rem;
+  padding: 0.55rem 1rem;
+  min-height: 60px;
+  border-bottom: 1px solid var(--border);
+}
+@media (min-width: 901px) {
+  .topbar > * {
+    flex-shrink: 0;
+  }
+}
+.topbar .btn-group {
+  gap: 2px;
+}
+.project-btn {
+  flex-shrink: 1;
+  min-width: 0;
+  padding: 0.3em 0.5em;
+  border-radius: 10px;
+  box-shadow: none;
+  font-size: 1rem;
+}
+.project-btn strong {
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+.project-btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: transparent;
+}
+.breadcrumb {
+  flex-shrink: 1;
+  min-width: 0;
+}
+.breadcrumb ol {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.breadcrumb li::before {
+  content: '/';
+  margin: 0 0.4rem 0 0.1rem;
+  color: var(--border-strong);
+}
+.breadcrumb [aria-current] {
+  font-weight: 600;
+}
+.breadcrumb .linklike:hover {
+  color: var(--text);
+}
+.save-status {
+  box-shadow: none;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  min-width: 0;
+}
+.icon-btn {
+  border-radius: 10px;
+  box-shadow: none;
+  width: 36px;
+  height: 36px;
+}
+.icon-btn[aria-pressed='true'] {
+  background: var(--accent-soft);
+}
+
+/* Näkymävalitsin: pehmeä "raide" ja valkoinen valittu pilli */
+.segmented {
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-3);
+  box-shadow: none;
+  overflow: visible;
+}
+.segmented button {
+  border-radius: 9px;
+  box-shadow: none;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.segmented button + button {
+  border-left: 0;
+}
+.segmented button:hover:not(:disabled):not(.is-on) {
+  color: var(--text);
+  border-color: transparent;
+}
+.segmented .is-on {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+.segmented--compact button {
+  padding: 0.32em 0.75em;
+  font-size: 0.9rem;
+}
+.segmented .is-on svg {
+  color: var(--accent);
+}
+
+/* Ääriviivapainikkeet saavat kevyen varjon; litteät (tekstipainikkeet, solut) eivät */
+.dialog__actions button:not(.btn-primary):not(.btn-danger),
+.inspector__actions button,
+.canvas__empty-actions button:not(.btn-primary),
+.canvas__start button {
+  box-shadow: var(--shadow-sm);
+}
+
+/* Tumma pääpainike ja ääriviivapainike */
+.btn-quick {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--ink-contrast);
+  font-weight: 600;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.btn-quick:hover:not(:disabled) {
+  border-color: var(--ink);
+  filter: brightness(1.25);
+}
+.btn-quick--plain {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+.btn-quick--plain:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  filter: none;
+  background: var(--surface-2);
+}
+.btn-primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-contrast);
+  font-weight: 600;
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.25);
+}
+
+/* Valmiusaste: pieni edistymispilli */
+.readiness-pill {
+  white-space: nowrap;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  font-variant-numeric: tabular-nums;
+  padding: 0.28em 0.75em;
+}
+.readiness-pill__bar {
+  width: 52px;
+  background: var(--surface-3);
+}
+.readiness-pill__bar span {
+  background: var(--grad-bar);
+  border-radius: 999px;
+}
+.readiness-pill__q {
+  background: var(--warn);
+  color: var(--surface);
+}
+
+/* Kapeammalla työpöydällä vain kuvakkeet; ensisijainen toiminto säilyttää tekstinsä */
+@media (max-width: 1600px) {
+  .topbar .btn-quick--plain .hide-sm {
+    display: none;
+  }
+  /* Pääprosessin nimi näkyy jo puussa; alaprosessin murupolku säilyy aina */
+  .breadcrumb--root {
+    display: none;
+  }
+}
+/* Tallennuksen tila supistuu pisteeksi, mutta painike ja tilailmoitus säilyvät */
+@media (max-width: 1500px) {
+  .save-status {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+  }
+  .save-status span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+  .save-status::before {
+    content: '';
+    position: absolute;
+    inset: 11px;
+    border-radius: 50%;
+    background: var(--ok);
+  }
+  .save-status--saving::before {
+    background: var(--warn);
+  }
+  .save-status--error::before {
+    background: var(--danger);
+  }
+}
+@media (max-width: 1300px) {
+  .topbar .segmented .hide-sm {
+    display: none;
+  }
+}
+
+/* ===== Sivupaneelit ===== */
+.workspace__left,
+.workspace__right {
+  background: var(--surface);
+}
+.workspace.has-left {
+  grid-template-columns: 260px 1fr;
+}
+.workspace.has-left.has-right {
+  grid-template-columns: 260px 1fr 340px;
+}
+.workspace.has-right {
+  grid-template-columns: 1fr 340px;
+}
+@media (max-width: 900px) {
+  .workspace.has-left,
+  .workspace.has-right,
+  .workspace.has-left.has-right {
+    grid-template-columns: 1fr;
+  }
+}
+.panel__title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 1rem 1rem 0.5rem;
+}
+.tree ul {
+  padding: 0 0.6rem 1rem;
+}
+.tree__row {
+  border-radius: 10px;
+  margin-bottom: 2px;
+}
+.tree__row:hover:not(.is-current) {
+  background: var(--surface-2);
+}
+.tree__row.is-current {
+  background: var(--accent-soft);
+}
+.tree__name {
+  gap: 0.5rem;
+  padding: 0.5em 0.65em;
+  box-shadow: none;
+  border-radius: 10px;
+}
+.tree__name:hover:not(:disabled) {
+  border-color: transparent;
+}
+.tree__row.is-current .tree__name {
+  font-weight: 600;
+}
+.tree__chip {
+  flex: none;
+  white-space: nowrap;
+  padding: 0.05em 0.55em;
+  background: var(--surface-3);
+  font-variant-numeric: tabular-nums;
+}
+.tree__row.is-current .tree__chip {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+/* Oikea paneeli: alleviivatut välilehdet */
+.tabs--panel {
+  padding: 0.5rem 1rem 0;
+  gap: 1.25rem;
+}
+.tabs button {
+  box-shadow: none;
+  padding: 0.55em 0.1em;
+  font-weight: 500;
+  color: var(--muted);
+}
+.tabs button:hover:not(:disabled) {
+  border-color: transparent;
+  border-bottom-color: var(--border-strong);
+  color: var(--text);
+}
+.tabs .is-on {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom: 2px solid var(--ink);
+  border-bottom-color: var(--ink);
+}
+.tabs .is-on:hover:not(:disabled) {
+  border-bottom-color: var(--ink);
+}
+.inspector__body {
+  padding: 0.25rem 1rem 1.5rem;
+}
+.field__label {
+  font-weight: 550;
+  letter-spacing: -0.005em;
+}
+.field__hint {
+  color: var(--muted);
+}
+
+/* Kortit paneeleissa */
+.stats div,
+.readiness,
+.acard {
+  border-radius: var(--radius);
+}
+.stats div {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.readiness {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 0.9rem 1rem;
+}
+.readiness__head strong {
+  font-size: 1.9rem;
+  letter-spacing: -0.03em;
+}
+.readiness__bar {
+  height: 8px;
+  background: var(--surface-3);
+}
+.readiness__bar div {
+  background: var(--grad-bar);
+}
+
+/* ===== Pillit ja merkit ===== */
+.chip {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+  font-weight: 500;
+}
+.chip__dot {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--chip) 20%, transparent);
+}
+.badge {
+  padding: 0.1em 0.6em;
+}
+.questions__done {
+  border-radius: var(--radius-sm);
+  background: var(--ok-soft);
+}
+
+/* ===== Kaavio ===== */
+.react-flow {
+  --xy-background-color: var(--bg);
+  --xy-background-pattern-dots-color: color-mix(in srgb, var(--border-strong) 75%, transparent);
+  --xy-edge-stroke: color-mix(in srgb, var(--muted) 55%, transparent);
+  --xy-selection-background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  --xy-controls-button-border-color: transparent;
+}
+.react-flow__controls {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.react-flow__controls-button {
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+}
+.react-flow__controls-button:last-child {
+  border-bottom: 0;
+}
+.react-flow__edge-path {
+  stroke-width: 1.5;
+}
+.react-flow__edge-textbg {
+  fill: var(--bg);
+}
+
+.node {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgb(16 24 40 / 5%),
+    0 4px 14px rgb(16 24 40 / 6%);
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s;
+}
+.node:hover {
+  border-color: var(--border-strong);
+  box-shadow:
+    0 1px 2px rgb(16 24 40 / 6%),
+    0 8px 24px rgb(16 24 40 / 10%);
+}
+.node.is-selected {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 8px 24px rgb(16 24 40 / 10%);
+}
+.node[data-confidence='confirmed'] {
+  border-width: 1.5px;
+}
+.node__body {
+  padding: 0.5rem 0.8rem 0.5rem 1rem;
+}
+.node__label {
+  letter-spacing: -0.01em;
+}
+.node__meta {
+  color: var(--muted);
+}
+.node__role-bar {
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  border-radius: 0 6px 6px 0;
+}
+.node--start,
+.node--end {
+  font-weight: 600;
+}
+.node--start {
+  background: var(--ok-soft);
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+  color: var(--ok);
+}
+.node--end {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  color: var(--danger);
+}
+.node--decision .node__shape {
+  stroke: var(--border-strong);
+  filter: drop-shadow(0 2px 6px rgb(16 24 40 / 10%));
+}
+.node--decision:hover .node__shape {
+  stroke: var(--muted);
+}
+.node--decision.is-selected .node__shape {
+  stroke: var(--accent);
+}
+.node__badge {
+  border-color: var(--bg);
+  box-shadow: var(--shadow-sm);
+}
+.node__badge--q {
+  color: var(--surface);
+}
+
+/* Kellukkeet kaavion päällä: työkalut ylärivillä, sen alla suodatin ja asettelu */
+.canvas__toolbar {
+  top: 14px;
+  padding: 0.3rem;
+  gap: 2px;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  scrollbar-width: none;
+}
+.canvas__toolbar::-webkit-scrollbar {
+  display: none;
+}
+.canvas__toolbar button {
+  border-radius: 11px;
+  box-shadow: none;
+  padding: 0.38em 0.6em;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.canvas__toolbar button:hover:not(:disabled) {
+  border-color: transparent;
+}
+.canvas__toolbar button:not(:disabled) svg {
+  color: var(--muted);
+}
+.canvas__filter,
+.canvas__mode {
+  top: 74px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.canvas__mode {
+  padding: 3px;
+  gap: 2px;
+  background: var(--surface-3);
+  overflow: visible;
+}
+.canvas__mode button {
+  border-radius: 10px;
+  box-shadow: none;
+  color: var(--muted);
+}
+.canvas__mode button + button {
+  border-left: 0;
+}
+.canvas__mode .is-on {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.canvas__heat {
+  top: 122px;
+  right: 12px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.canvas__hint {
+  top: 172px;
+}
+
+/* Tyhjän prosessin kortti: pastellihehku ylhäällä */
+.canvas__empty {
+  border-radius: 22px;
+  box-shadow: var(--shadow-lg);
+  background:
+    radial-gradient(
+      120% 70% at 50% -10%,
+      color-mix(in srgb, var(--violet) 14%, transparent),
+      transparent 70%
+    ),
+    var(--surface);
+}
+.canvas__empty h2,
+.canvas__empty h3 {
+  letter-spacing: -0.02em;
+}
+
+/* ===== Dialogit ===== */
+.dialog {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  padding: 1.5rem;
+}
+.dialog::backdrop {
+  background: rgb(10 14 24 / 45%);
+  backdrop-filter: blur(5px);
+}
+.dialog h2 {
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+}
+.menu__list {
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Tekoälyn kopioi-liitä-ohjeet ja muut "vinkki"-kortit saavat pastellitaustan */
+.quick__ai {
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--violet) 25%, var(--border));
+  background: var(--grad-soft);
+}
+.quick__ai summary {
+  font-weight: 600;
+  color: var(--text);
+}
+.quick__ai-list button.is-on {
+  background: var(--surface);
+  border-color: var(--accent);
+}
+
+/* ===== Analyysi: kojelaudan tyyli ===== */
+.analysis {
+  max-width: 1180px;
+  padding: 1.5rem 1.75rem 4rem;
+  background: var(--bg);
+  min-height: 100%;
+}
+.analysis__head h2 {
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+.asection {
+  margin-top: 1.25rem;
+  padding: 1.1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.asection h3 {
+  font-size: 1rem;
+  font-weight: 650;
+  margin: 0 0 0.75rem;
+}
+.acards {
+  gap: 1rem;
+}
+.acard {
+  position: relative;
+  padding: 1.1rem 1.2rem 1rem;
+  gap: 0.3rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.acard__icon {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--tone-soft, var(--accent-soft));
+  color: var(--tone, var(--accent));
+}
+.acard__title {
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  padding-right: 2.6rem;
+}
+.acard__value {
+  font-size: 2rem;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+.acard__hint {
+  font-size: 0.8rem;
+}
+.acard--ok {
+  --tone: var(--ok);
+  --tone-soft: var(--ok-soft);
+}
+.acard--warn {
+  --tone: var(--warn);
+  --tone-soft: var(--warn-soft);
+}
+.acard--violet {
+  --tone: var(--violet);
+  --tone-soft: var(--violet-soft);
+}
+.acard--danger {
+  --tone: var(--danger);
+  --tone-soft: var(--danger-soft);
+}
+.loads__bar {
+  height: 0.55rem;
+  background: var(--surface-3);
+}
+.loads__work {
+  background: linear-gradient(90deg, #2f7bff, #6d5cff);
+}
+.loads__wait {
+  background: linear-gradient(90deg, #ffb020, #ff8a3d);
+}
+.atable th {
+  font-weight: 600;
+}
+
+/* ===== Lista, lähteet ja muut näkymät: pehmeämmät reunat ===== */
+.list,
+.sources,
+.compare {
+  background: var(--bg);
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    padding: 0.4rem 0.6rem;
+  }
+  .analysis {
+    padding: 1rem 0.9rem 3rem;
+  }
+}
+
+/* Puhelin: yläpalkin kaikki painikkeet mahtuvat yhdelle riville */
+@media (max-width: 700px) {
+  .topbar {
+    gap: 0.15rem;
+    padding: 0.4rem 0.5rem;
+  }
+  .topbar .icon-btn {
+    width: 30px;
+    height: 30px;
+  }
+  .topbar .project-btn {
+    max-width: 62px;
+    padding: 0.3em 0.2em;
+  }
+  .topbar .segmented {
+    padding: 2px;
+  }
+  .topbar .segmented--compact button {
+    padding: 0.3em 0.4em;
+  }
+  .topbar .btn-quick {
+    padding: 0.4em 0.55em;
+  }
+}
+@media (max-width: 380px) {
+  .topbar .project-btn {
+    max-width: 34px;
+  }
+}

@@ -235,7 +235,10 @@ export function TopBar() {
         }}
       />
 
-      <nav className="breadcrumb" aria-label="Sijainti">
+      <nav
+        className={`breadcrumb${path.length <= 1 ? ' breadcrumb--root' : ''}`}
+        aria-label="Sijainti"
+      >
         <ol>
           {path.map((p, i) => (
             <li key={p.id}>

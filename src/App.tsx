@@ -15,6 +15,7 @@ import { TopBar } from './ui/TopBar'
 import { useShortcuts } from './ui/useShortcuts'
 import { useNarrow } from './ui/useMedia'
 import './app.css'
+import './theme.css'
 
 const EntityManager = lazy(() =>
   import('./panels/EntityManager').then((m) => ({ default: m.EntityManager })),
