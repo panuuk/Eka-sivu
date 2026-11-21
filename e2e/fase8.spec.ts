@@ -50,6 +50,12 @@ test.describe('PWA', () => {
     // Työ tallentuu offline-tilassakin ja pysyy uudelleenlatauksen yli
     await page.reload()
     await expect(page.locator('.react-flow__node').first()).toBeVisible()
+    // Vasta tarvittaessa ladattavat näkymät ja ikkunat tulevat välimuistista
+    await page.getByRole('radio', { name: 'Analyysi' }).click()
+    await expect(page.locator('.analysis')).toBeVisible()
+    await page.getByRole('button', { name: /Pikasyöte/ }).click()
+    await expect(page.getByLabel('Kirjoita tai liitä prosessin kuvaus')).toBeVisible()
+    await page.keyboard.press('Escape')
     await context.setOffline(false)
   })
 

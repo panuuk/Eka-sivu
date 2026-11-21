@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import { ocrAssetsPlugin } from './build/ocrAssets'
 import { serviceWorkerPlugin } from './build/serviceWorker'
 
-// Suhteellinen base-polku, jotta sovellus toimii myös alihakemistossa (esim. GitHub Pages).
+// Suhteellinen base-polku, jotta sovellus toimii myös alihakemistossa (esim. GitHub Pages tai Vercelin esikatselu).
 export default defineConfig({
   base: './',
   plugins: [react(), ocrAssetsPlugin(), serviceWorkerPlugin()],
