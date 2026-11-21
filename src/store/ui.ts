@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { EMPTY_FILTER, type Filter } from '../analysis/search'
 import { DEFAULT_THEME, sanitizeTheme, type Theme } from '../export/theme'
 
-export type ViewMode = 'canvas' | 'list' | 'sources' | 'analysis'
+export type ViewMode = 'canvas' | 'list' | 'sources' | 'analysis' | 'compare'
 export type Direction = 'DOWN' | 'RIGHT'
 /** Kaavion asettelutapa: vapaa (muokattava), uimaradat (rooleittain) tai kokonaiskuva (alaprosessit auki). */
 export type LayoutMode = 'free' | 'lanes' | 'overview'
@@ -22,6 +22,8 @@ export interface PresentOptions {
   showMetrics: boolean
   /** Lämpökartta esityksessä ja viennissä. */
   heat: Heatmap
+  /** Korosta muutokset lähtötilanteeseen verrattuna. */
+  changes: boolean
 }
 
 export const DEFAULT_PRESENT: PresentOptions = {
@@ -32,6 +34,7 @@ export const DEFAULT_PRESENT: PresentOptions = {
   showUncertainty: false,
   showMetrics: false,
   heat: 'off',
+  changes: false,
 }
 
 interface Persisted {
@@ -117,6 +120,12 @@ interface UiState extends Persisted {
   setReplaceOpen: (open: boolean) => void
   helpOpen: boolean
   setHelpOpen: (open: boolean) => void
+  versionsOpen: boolean
+  setVersionsOpen: (open: boolean) => void
+  /** Vertailun lähtötila (version tunniste) ja kohde (version tunniste tai 'current'). */
+  compareBaseId: string | null
+  compareTargetId: string
+  setCompare: (base: string | null, target?: string) => void
   entityManagerOpen: boolean
   /** Tallennus ja varmuuskopiot -ikkuna. */
   storageOpen: boolean
@@ -219,6 +228,12 @@ export const useUi = create<UiState>((set, get) => {
     setReplaceOpen: (replaceOpen) => set({ replaceOpen }),
     helpOpen: false,
     setHelpOpen: (helpOpen) => set({ helpOpen }),
+    versionsOpen: false,
+    setVersionsOpen: (versionsOpen) => set({ versionsOpen }),
+    compareBaseId: null,
+    compareTargetId: 'current',
+    setCompare: (compareBaseId, compareTargetId = 'current') =>
+      set({ compareBaseId, compareTargetId }),
     entityManagerOpen: false,
     storageOpen: false,
     setStorageOpen: (storageOpen) => set({ storageOpen }),

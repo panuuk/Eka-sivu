@@ -3,6 +3,8 @@ import { workerRunner } from '../layout/runner'
 import { descendantProcessIds } from '../model/operations'
 import type { Project } from '../model/types'
 import { useUi, type PresentOptions } from '../store/ui'
+import { compareProjects, type Comparison } from '../analysis/compare'
+import { pickBaseline, projectFromSnapshot } from '../model/commands'
 import { toBpmn } from './bpmn'
 import { buildDocumentHtml } from './document'
 import { downloadBlob, downloadText, safeFilename } from './download'
@@ -67,6 +69,25 @@ export interface ExportRequest {
   theme: Theme
   options: PresentOptions
   direction: 'DOWN' | 'RIGHT'
+  /** Muutokset lähtötilaan verrattuna (kun "Korosta muutokset" on päällä ja versio on olemassa). */
+  comparison?: { comparison: Comparison; baseName: string }
+}
+
+const comparisonCache = new WeakMap<Project, ExportRequest['comparison'] | null>()
+
+/** Nykytilan vertailu oletuslähtötilaan (tavoitetilaprojektin lähtötilanne tai uusin versio). */
+export function comparisonFor(project: Project): ExportRequest['comparison'] {
+  const hit = comparisonCache.get(project)
+  if (hit !== undefined) return hit ?? undefined
+  const v = pickBaseline(project)
+  const result = v
+    ? {
+        comparison: compareProjects(projectFromSnapshot(project, v.snapshot), project),
+        baseName: v.name,
+      }
+    : null
+  comparisonCache.set(project, result)
+  return result ?? undefined
 }
 
 export function renderOptions(
@@ -91,6 +112,7 @@ export function svgOptions(req: ExportRequest, title: string): SvgOptions {
     showUncertainty: req.options.showUncertainty,
     showMetrics: req.options.showMetrics,
     heat: req.options.heat,
+    marks: req.comparison?.comparison.targetMarks,
     title,
   }
 }
@@ -164,6 +186,7 @@ export async function buildDocument(
     interactive: opts.interactive,
     includeQuestions: opts.includeQuestions,
     questions: analysis.open,
+    comparison: req.comparison,
   })
 }
 
@@ -242,5 +265,12 @@ export async function previewText(
 
 export function currentRequest(project: Project, processId: string): ExportRequest {
   const ui = useUi.getState()
-  return { project, processId, theme: ui.theme, options: ui.present, direction: ui.direction }
+  return {
+    project,
+    processId,
+    theme: ui.theme,
+    options: ui.present,
+    direction: ui.direction,
+    comparison: ui.present.changes ? comparisonFor(project) : undefined,
+  }
 }

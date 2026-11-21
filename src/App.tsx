@@ -3,6 +3,8 @@ import { Canvas } from './canvas/Canvas'
 import { EntityManager } from './panels/EntityManager'
 import { ExportDialog } from './panels/ExportDialog'
 import { PresentView } from './panels/PresentView'
+import { CompareView } from './panels/CompareView'
+import { VersionsDialog } from './panels/VersionsDialog'
 import { AnalysisView } from './panels/AnalysisView'
 import { HelpDialog } from './panels/HelpDialog'
 import { ListView } from './panels/ListView'
@@ -71,6 +73,8 @@ function App() {
               <ListView />
             ) : view === 'analysis' ? (
               <AnalysisView />
+            ) : view === 'compare' ? (
+              <CompareView />
             ) : (
               <SourcesView />
             )}
@@ -86,6 +90,7 @@ function App() {
       <StorageDialog />
       <ReplaceDialog />
       <HelpDialog />
+      <VersionsDialog />
       <ExportDialog />
       <QuickInput />
       <ConfirmHost />

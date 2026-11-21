@@ -1,4 +1,5 @@
 import { FONTS, type Palette } from '../export/theme'
+import { useStore } from '../store/store'
 import { useUi, type Heatmap } from '../store/ui'
 
 const PALETTES: { id: Palette; label: string }[] = [
@@ -13,7 +14,12 @@ export function PresentSettings({ idPrefix = 'ps' }: { idPrefix?: string }) {
   const options = useUi((s) => s.present)
   const setTheme = useUi((s) => s.setTheme)
   const setOptions = useUi((s) => s.setPresentOptions)
-  const check = (key: Exclude<keyof typeof options, 'heat'>, label: string, hint?: string) => (
+  const hasVersions = useStore((s) => Object.keys(s.project?.versions ?? {}).length > 0)
+  const check = (
+    key: Exclude<keyof typeof options, 'heat' | 'changes'>,
+    label: string,
+    hint?: string,
+  ) => (
     <label className="check" title={hint}>
       <input
         type="checkbox"
@@ -37,6 +43,18 @@ export function PresentSettings({ idPrefix = 'ps' }: { idPrefix?: string }) {
         {check('showSystems', 'Näytä järjestelmät')}
         {check('showUncertainty', 'Näytä varmuus (arvaukset katkoviivalla)')}
         {check('showMetrics', 'Näytä kestot ja kipupisteet')}
+        <label
+          className="check"
+          title={hasVersions ? undefined : 'Tallenna ensin versio tai luo tavoitetila'}
+        >
+          <input
+            type="checkbox"
+            checked={options.changes && hasVersions}
+            disabled={!hasVersions}
+            onChange={(e) => setOptions({ changes: e.target.checked })}
+          />
+          Korosta muutokset lähtötilaan verrattuna
+        </label>
         <label className="gap-select">
           <span className="field__label">Väritys</span>
           <select

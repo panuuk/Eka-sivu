@@ -1,4 +1,4 @@
-import { SCHEMA_VERSION, type Project } from './types'
+import { SCHEMA_VERSION, type Project, type Version } from './types'
 import { validateProject } from './validate'
 
 export const FILE_APP_ID = 'prosessikartta'
@@ -17,6 +17,8 @@ export interface ProjectFile {
 const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = {
   // v1 -> v2: tietotyön kentät (RACI, kesto, odotus, kipupisteet, tunnisteet) ovat valinnaisia, joten data säilyy sellaisenaan.
   1: (raw) => raw,
+  // v2 -> v3: versiot (valinnainen kenttä).
+  2: (raw) => raw,
 }
 
 export class ImportError extends Error {
@@ -73,6 +75,30 @@ function normalizeProject(raw: Record<string, unknown>): Project {
     n.label ??= ''
   }
   for (const e of Object.values(p.entities)) e.aliases ??= []
+  // Vioittunut versio ei saa estää projektin avaamista: se pudotetaan.
+  if (p.versions !== undefined) {
+    const ok: NonNullable<Project['versions']> = {}
+    const v = p.versions as unknown
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      for (const [id, ver] of Object.entries(v as Record<string, Version>)) {
+        const s = ver?.snapshot
+        if (
+          ver &&
+          typeof ver.name === 'string' &&
+          s &&
+          typeof s.rootProcessId === 'string' &&
+          s.processes &&
+          s.nodes &&
+          s.edges &&
+          s.entities &&
+          s.processes[s.rootProcessId]
+        ) {
+          ok[id] = { ...ver, kind: ver.kind === 'baseline' ? 'baseline' : 'manual' }
+        }
+      }
+    }
+    p.versions = Object.keys(ok).length ? ok : undefined
+  }
   const issues = validateProject(p)
   if (issues.length) {
     throw new ImportError(

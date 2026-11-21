@@ -72,15 +72,38 @@ export function PresentView() {
     [walking, steps, idx],
   )
 
+  // Pyyntö luetaan storesta jokaisella piirrolla, ja sen osat ovat muistin riippuvuuksia, jotta
+  // asetusten (teema, lämpökartta, muutosten korostus) vaihto päivittää kuvan.
+  const req = currentRequest(project, processId)
+  const { options: reqOptions, theme: reqTheme, comparison: reqComparison } = req
   const svg = useMemo(() => {
     if (!graph) return ''
     const name = project.processes[processId]?.name ?? 'Prosessi'
-    const req = currentRequest(project, processId)
     return renderSvg(graph, {
-      ...svgOptions(req, name),
+      ...svgOptions(
+        {
+          project,
+          processId,
+          theme: reqTheme,
+          options: reqOptions,
+          direction,
+          comparison: reqComparison,
+        },
+        name,
+      ),
       highlight: currentId ? { current: currentId, visited } : undefined,
     })
-  }, [graph, project, processId, currentId, visited])
+  }, [
+    graph,
+    project,
+    processId,
+    currentId,
+    visited,
+    reqOptions,
+    reqTheme,
+    reqComparison,
+    direction,
+  ])
 
   // Keskitä kuva korostettuun vaiheeseen
   useEffect(() => {

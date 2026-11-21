@@ -97,3 +97,13 @@ Jätettiin tekemättä: solmujen käsin siirto uimaradoissa (vaatii oman raidoil
 - **Viennit.** Esitys ja SVG/PNG/PDF: kestot, kipupistemerkit ja lämpökartta valittavissa. Prosessidokumentti: kesto- ja odotussarakkeet, mittarit, RACI-matriisi ja kipupisteliite (vain, jos tietoja on, joten vanhat projektit tuottavat saman dokumentin kuin ennen).
 
 Rajoitus: arviot ovat vain niin hyviä kuin annetut kestot. Päätösten haarojen todennäköisyyksiä ei mallinneta, joten läpimenoaika esitetään välinä eikä odotusarvona. Kestot ovat työaikaa, eivät kalenteriaikaa.
+
+### Vaihe 11: Nykytila ja tavoitetila (valmis)
+
+- **Versiot** (`Project.versions`, skeema 3) ovat nimettyjä tilannekuvia prosessin rakenteesta (prosessit, vaiheet, yhteydet, roolit ja muut entiteetit). Ne kulkevat projektin mukana JSON-viennissä, varmuuskopioissa ja tiedostoyhteydessä, ja ne ovat tavallisia operaatioita (`addVersion`, `updateVersion`, `deleteVersion`, `restoreVersion`), joten kumoaminen toimii. Palautus korvaa rakenteen, mutta säilyttää lähteet ja versiot ja siivoaa viitteet, joita ei enää ole. Vioittunut versio pudotetaan tuonnissa, eikä se estä projektin avaamista.
+- **Tavoitetila** on nykytilan kopio uutena projektina. Vaiheet, yhteydet ja roolit säilyttävät tunnisteensa, joten vertailu tunnistaa ne samoiksi luotettavasti. Lähtötilanne tallentuu kopion versioksi (`baseline`), ja alkuperäinen projekti ei muutu.
+- **Vertailu** (`compare.ts`): lisätyt, poistetut ja muuttuneet vaiheet kenttätasolla (nimi, tyyppi, rooli, järjestelmät, syötteet, tuotokset, kestot, RACI, kipupisteet, tunnisteet), yhteydet, prosessit, roolimuutokset sekä mittarien muutos molemmista tiloista laskettuna. Jos vaihe on luotu uudelleen samalla nimellä ja tyypillä, se tunnistetaan samaksi eikä näy poistettuna ja lisättynä.
+- **Näkymät.** Vertailu-näkymässä muutosluettelo ja kaaviot rinnakkain (lisätty vihreä, poistettu punainen katkoviiva, muuttunut keltainen). Versiot ja tavoitetila löytyvät projektivalikosta.
+- **Esitys ja viennit.** “Korosta muutokset lähtötilaan verrattuna” värjää vaiheet esityksessä ja kuvaviennissä, ja prosessidokumenttiin tulee muutosluettelo mittareineen.
+
+Rajoitus: versio sisältää vain prosessin rakenteen, ei lähteitä tai kysymyksiä. Vertailu tunnistaa vaiheet tunnisteen tai nimen perusteella, joten täysin uudelleen kirjoitettu ja uudelleen nimetty vaihe näkyy poistettuna ja lisättynä.

@@ -1,4 +1,14 @@
-import type { Entity, Process, ProcessEdge, ProcessNode, Project, Question, Source } from './types'
+import type {
+  Entity,
+  Process,
+  ProcessEdge,
+  ProcessNode,
+  Project,
+  ProjectSnapshot,
+  Question,
+  Source,
+  Version,
+} from './types'
 
 /**
  * Kaikki mallin muutokset ovat operaatioita. Käsin muokkaus, tekstisyöte, dokumenteista poiminta
@@ -33,6 +43,11 @@ export type Operation =
   | { type: 'addQuestion'; question: Question }
   | { type: 'updateQuestion'; id: string; patch: Partial<Omit<Question, 'id'>> }
   | { type: 'deleteQuestion'; id: string }
+  | { type: 'addVersion'; version: Version }
+  | { type: 'updateVersion'; id: string; patch: Partial<Pick<Version, 'name' | 'comment'>> }
+  | { type: 'deleteVersion'; id: string }
+  /** Palauttaa prosessin rakenteen versiosta. Lähteet säilyvät, versiot säilyvät. */
+  | { type: 'restoreVersion'; id: string }
   | { type: 'batch'; ops: Operation[] }
 
 export class OperationError extends Error {
@@ -132,6 +147,32 @@ function stripEntityRefs(n: ProcessNode, entityId: string): ProcessNode {
     systemIds: n.systemIds.filter((x) => x !== entityId),
     inputIds: n.inputIds.filter((x) => x !== entityId),
     outputIds: n.outputIds.filter((x) => x !== entityId),
+  }
+}
+
+/** Korvaa prosessin rakenteen tilannekuvalla ja siivoaa viitteet, jotka eivät enää päde. */
+export function restoreSnapshot(p: Project, snap: ProjectSnapshot): Project {
+  const nodes: Record<string, ProcessNode> = {}
+  for (const n of Object.values(snap.nodes)) {
+    // Lähde on voitu poistaa version ottamisen jälkeen
+    nodes[n.id] = n.sources.some((s) => !p.sources[s.sourceId])
+      ? { ...n, sources: n.sources.filter((s) => p.sources[s.sourceId]) }
+      : n
+  }
+  const questions: Record<string, Question> = {}
+  for (const q of Object.values(p.questions)) {
+    if (!snap.processes[q.processId]) continue
+    if (q.targetId && !nodes[q.targetId]) continue
+    questions[q.id] = q
+  }
+  return {
+    ...p,
+    rootProcessId: snap.rootProcessId,
+    processes: snap.processes,
+    nodes,
+    edges: snap.edges,
+    entities: snap.entities,
+    questions,
   }
 }
 
@@ -280,6 +321,25 @@ export function applyOperation(p: Project, op: Operation): Project {
       need(p.questions, op.id, 'Kysymys')
       return { ...p, questions: omit(p.questions, op.id) }
     }
+    case 'addVersion': {
+      if (p.versions?.[op.version.id])
+        throw new OperationError(`Versio on jo olemassa: ${op.version.id}`)
+      return { ...p, versions: { ...p.versions, [op.version.id]: op.version } }
+    }
+    case 'updateVersion': {
+      const cur = need(p.versions ?? {}, op.id, 'Versio')
+      return { ...p, versions: { ...p.versions, [op.id]: applyPatch(cur, op.patch) } }
+    }
+    case 'deleteVersion': {
+      need(p.versions ?? {}, op.id, 'Versio')
+      const rest = omit(p.versions!, op.id)
+      return { ...p, versions: Object.keys(rest).length ? rest : undefined }
+    }
+    case 'restoreVersion': {
+      const v = need(p.versions ?? {}, op.id, 'Versio')
+      return restoreSnapshot(p, v.snapshot)
+    }
+
     case 'batch':
       return op.ops.reduce(applyOperation, p)
   }

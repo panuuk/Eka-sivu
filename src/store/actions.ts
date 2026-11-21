@@ -8,6 +8,7 @@ import {
 } from '../model/commands'
 import type { NodePatch, Operation } from '../model/operations'
 import { copyNodes, opsPaste, type Clip } from '../model/clipboard'
+import { createVersion, forkAsTarget } from '../model/commands'
 import { flowOrder } from '../model/flow'
 import { incoming, nodesOf, outgoing } from '../model/selectors'
 import type { NodeKind, Project } from '../model/types'
@@ -290,4 +291,38 @@ export function moveSelection(dir: MoveDirection): string | undefined {
   st().select({ nodeIds: [target], edgeIds: [] })
   useUi.getState().requestReveal(target)
   return target
+}
+
+// --- Versiot ---
+
+export function saveVersion(name: string, comment?: string): string | undefined {
+  const { project } = st()
+  if (!project) return undefined
+  const version = createVersion(project, name, comment)
+  return st().dispatch({ type: 'addVersion', version }) ? version.id : undefined
+}
+
+export async function restoreVersionAction(id: string): Promise<boolean> {
+  const { project } = st()
+  const v = project?.versions?.[id]
+  if (!project || !v) return false
+  const ok = await useUi.getState().ask({
+    title: `Palautetaanko “${v.name}”?`,
+    message:
+      'Prosessin rakenne (vaiheet, yhteydet, roolit) korvataan version sisällöllä. Lähteet ja versiot säilyvät. Voit kumota palautuksen (Ctrl+Z).',
+    confirmLabel: 'Palauta',
+  })
+  if (!ok) return false
+  return st().dispatch({ type: 'restoreVersion', id })
+}
+
+/** Tekee nykytilasta kopion tavoitetilaksi ja avaa vertailun. */
+export async function createTargetProject() {
+  const { project } = st()
+  if (!project) return
+  const target = forkAsTarget(project)
+  await st().adoptProject(target)
+  const baseline = Object.values(target.versions ?? {})[0]
+  useUi.getState().setCompare(baseline?.id ?? null, 'current')
+  useUi.getState().setView('compare')
 }

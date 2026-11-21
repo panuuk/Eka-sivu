@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import ELK from 'elkjs/lib/elk.bundled.js'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { compareProjects } from '../analysis/compare'
+import { forkAsTarget, pickBaseline, projectFromSnapshot } from '../model/commands'
+import { createNode } from '../model/factory'
 import { useDeterministicIds } from '../model/ids'
+import { applyOperations } from '../model/operations'
 import { buildSampleProject } from '../model/sample'
 import { buildDocumentHtml } from './document'
 import { buildRenderGraph, DEFAULT_RENDER } from './graph'
@@ -74,5 +78,35 @@ describe('tietotyön tiedot vienneissä', () => {
     expect(on).toContain('>!</text>')
     // Kipupisteellinen vaihe saa punertavan täytön, muut oletuspinnan
     expect(on).not.toBe(renderSvg(g, { ...svgOpts, showMetrics: true }))
+  })
+
+  it('muutosluettelo ja korostukset tulevat dokumenttiin ja kuvaan', async () => {
+    const target0 = forkAsTarget(p)
+    const added = createNode(target0.rootProcessId, { label: 'Automaattitarkistus <b>' })
+    const target = applyOperations(target0, [{ type: 'addNode', node: added }])
+    const baseline = pickBaseline(target)!
+    const cmp = compareProjects(projectFromSnapshot(target, baseline.snapshot), target)
+    const comparison = { comparison: cmp, baseName: baseline.name }
+    const html = buildDocumentHtml(target, {
+      processId: target.rootProcessId,
+      theme: DEFAULT_THEME,
+      svgs: {},
+      includeQuestions: false,
+      interactive: false,
+      comparison,
+    })
+    expect(html).toContain('Muutokset lähtötilaan “Nykytila (lähtötilanne)” verrattuna')
+    expect(html).toContain('1 lisätty, 0 poistettu, 0 muuttunut')
+    expect(html).toContain('Automaattitarkistus &lt;b&gt;') // escapattu
+    expect(html).not.toContain('Automaattitarkistus <b>')
+
+    const g = await buildRenderGraph(
+      target,
+      { ...DEFAULT_RENDER, processId: target.rootProcessId },
+      run,
+    )
+    const svg = renderSvg(g, { ...svgOpts, marks: cmp.targetMarks })
+    expect(svg).toContain('stroke-width="3"')
+    expect(renderSvg(g, svgOpts)).not.toContain('stroke-width="3"')
   })
 })

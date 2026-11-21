@@ -13,6 +13,8 @@ export interface SvgOptions {
   showMetrics?: boolean
   /** Lämpökartan tyyppi (värisävy). */
   heat?: 'off' | 'time' | 'pain' | 'handoff'
+  /** Vertailun merkinnät: lisätty (vihreä), poistettu (punainen katkoviiva), muuttunut (keltainen). */
+  marks?: ReadonlyMap<string, 'added' | 'removed' | 'changed'>
   title?: string
   margin?: number
   /** Läpikäynti: korostettu vaihe ja jo käydyt; muut himmennetään. */
@@ -145,9 +147,12 @@ function renderNode(
   current: boolean,
 ): string {
   const s = strokeFor(n, opts, c)
-  const stroke = current ? c.accent : s.stroke
-  const sw = current ? 3 : s.width
-  const dash = s.dash ? ` stroke-dasharray="${s.dash}"` : ''
+  const mark = opts.marks?.get(n.id)
+  const markColor = mark === 'added' ? c.ok : mark === 'removed' ? c.danger : c.warn
+  const stroke = current ? c.accent : mark ? markColor : s.stroke
+  const sw = current ? 3 : mark ? 3 : s.width
+  const dash =
+    mark === 'removed' ? ' stroke-dasharray="6 4"' : s.dash ? ` stroke-dasharray="${s.dash}"` : ''
   const open = `<g data-id="${esc(n.id)}" data-kind="${n.kind}" opacity="${dim ? 0.25 : 1}"${n.hasChild && n.kind === 'subprocess' ? ' data-has-child="1"' : ''}>`
   const out: string[] = [open]
   const glow = current ? ` filter="drop-shadow(0 0 6px ${c.accent})"` : ''
@@ -155,7 +160,7 @@ function renderNode(
   if (n.kind === 'decision') {
     const { x, y, w, h } = n
     out.push(
-      `<polygon points="${x + w / 2},${y} ${x + w},${y + h / 2} ${x + w / 2},${y + h} ${x},${y + h / 2}" fill="${c.surface}" stroke="${stroke}" stroke-width="${sw}"${dash}${glow}/>`,
+      `<polygon points="${x + w / 2},${y} ${x + w},${y + h / 2} ${x + w / 2},${y + h} ${x},${y + h / 2}" fill="${mark && !print ? tint(markColor, c.surface, 0.16) : c.surface}" stroke="${stroke}" stroke-width="${sw}"${dash}${glow}/>`,
     )
     const lines = wrapLabel(n.label, charsFor(w * 0.62, 12.5), 3)
     const start = y + h / 2 - ((lines.length - 1) * 15) / 2 + 4
@@ -188,13 +193,15 @@ function renderNode(
       )
     }
     const heatFill =
-      n.heat !== undefined && opts.heat && opts.heat !== 'off' && !print
-        ? tint(
-            opts.heat === 'pain' ? '#c62828' : opts.heat === 'handoff' ? '#7e3fd0' : '#e04a2f',
-            c.surface,
-            opts.heat === 'handoff' ? 0.28 : 0.1 + n.heat * 0.45,
-          )
-        : c.surface
+      mark && !print
+        ? tint(markColor, c.surface, 0.16)
+        : n.heat !== undefined && opts.heat && opts.heat !== 'off' && !print
+          ? tint(
+              opts.heat === 'pain' ? '#c62828' : opts.heat === 'handoff' ? '#7e3fd0' : '#e04a2f',
+              c.surface,
+              opts.heat === 'handoff' ? 0.28 : 0.1 + n.heat * 0.45,
+            )
+          : c.surface
     out.push(
       `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="12" fill="${heatFill}" stroke="${stroke}" stroke-width="${sw}"${dash}${glow}/>`,
     )

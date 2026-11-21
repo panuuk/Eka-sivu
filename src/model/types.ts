@@ -121,6 +121,25 @@ export interface Question {
   key: string
 }
 
+/** Prosessin rakenne ilman lähteitä, kysymyksiä ja versioita: sitä verrataan ja se voidaan palauttaa. */
+export interface ProjectSnapshot {
+  rootProcessId: string
+  processes: Record<string, Process>
+  nodes: Record<string, ProcessNode>
+  edges: Record<string, ProcessEdge>
+  entities: Record<string, Entity>
+}
+
+/** Nimetty versio: projektin tila tiettynä hetkenä. `baseline` on tavoitetilaprojektin lähtötilanne. */
+export interface Version {
+  id: string
+  name: string
+  comment?: string
+  createdAt: number
+  kind: 'manual' | 'baseline'
+  snapshot: ProjectSnapshot
+}
+
 export interface Project {
   schemaVersion: number
   id: string
@@ -134,9 +153,11 @@ export interface Project {
   entities: Record<string, Entity>
   sources: Record<string, Source>
   questions: Record<string, Question>
+  /** Nimetyt versiot (valinnainen). Ne kulkevat projektin mukana vienneissä ja varmuuskopioissa. */
+  versions?: Record<string, Version>
 }
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 export const CONFIDENCE_LABELS: Record<Confidence, string> = {
   guess: 'Arvaus',

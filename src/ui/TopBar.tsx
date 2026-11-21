@@ -127,8 +127,12 @@ export function TopBar() {
         ]
       : []),
     {
-      label: 'Tallennus ja varmuuskopiot…',
+      label: 'Versiot ja tavoitetila…',
       separatorBefore: true,
+      onSelect: () => useUi.getState().setVersionsOpen(true),
+    },
+    {
+      label: 'Tallennus ja varmuuskopiot…',
       onSelect: () => useUi.getState().setStorageOpen(true),
     },
     { label: 'Vie projekti (JSON)', onSelect: () => void useStorage.getState().exportJson() },
@@ -269,6 +273,15 @@ export function TopBar() {
           onClick={() => useUi.getState().setView('analysis')}
         >
           <Icon name="graph" size={16} /> <span className="hide-sm">Analyysi</span>
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={view === 'compare'}
+          className={view === 'compare' ? 'is-on' : ''}
+          onClick={() => useUi.getState().setView('compare')}
+        >
+          <Icon name="merge" size={16} /> <span className="hide-sm">Vertailu</span>
         </button>
       </div>
 

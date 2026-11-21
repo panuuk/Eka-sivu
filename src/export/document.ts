@@ -1,3 +1,4 @@
+import type { Comparison } from '../analysis/compare'
 import type { Gap } from '../analysis/gaps'
 import { metricsOf, summarizeScope } from '../analysis/metrics'
 import { raciStateOf } from '../model/commands'
@@ -20,6 +21,8 @@ export interface DocumentOptions {
   /** Klikkaus kaaviossa korostaa taulukon rivin. Itsenäiseen HTML-tiedostoon. */
   interactive: boolean
   generatedAt?: Date
+  /** Muutosluettelo lähtötilaan verrattuna. */
+  comparison?: { comparison: Comparison; baseName: string }
 }
 
 const CONF = { guess: 'arvaus', likely: 'todennäköinen', confirmed: 'vahvistettu' } as const
@@ -192,6 +195,34 @@ ${matrixRows}
         .join('')}</tbody></table></section>`
     : ''
 
+  const changeSection = (() => {
+    const cm = opts.comparison
+    if (!cm) return ''
+    const c = cm.comparison
+    const KIND = { added: 'Lisätty', removed: 'Poistettu', changed: 'Muuttunut' } as const
+    const nodeRows = c.nodes
+      .map(
+        (n) =>
+          `<tr class="chg chg--${n.kind}"><td>${KIND[n.kind]}</td><th scope="row">${esc(n.label)}</th><td>${esc(n.processName)}</td><td>${n.fields.map((f) => `${esc(f.label)}: ${esc(f.before)} → ${esc(f.after)}`).join('<br>')}</td></tr>`,
+      )
+      .join('')
+    const edgeRows = c.edges
+      .map(
+        (e) =>
+          `<li>${KIND[e.kind]}: ${esc(e.fromLabel)} → ${esc(e.toLabel)}${e.kind === 'changed' ? ` (${esc(e.before ?? '')} → ${esc(e.after ?? '')})` : ''}</li>`,
+      )
+      .join('')
+    const metric = (label: string, a: string, b: string) =>
+      `<li><strong>${label}:</strong> ${a} → ${b}</li>`
+    const t = (n?: number) => (n === undefined ? '–' : formatTotal(n))
+    return `<section class="appendix"><h2>Muutokset lähtötilaan “${esc(cm.baseName)}” verrattuna</h2>
+<p>${c.counts.added} lisätty, ${c.counts.removed} poistettu, ${c.counts.changed} muuttunut vaihe; ${c.counts.edgesAdded} uutta ja ${c.counts.edgesRemoved} poistunutta yhteyttä.</p>
+<ul class="metrics">${metric('Vaiheet', String(c.base.steps), String(c.target.steps))}${metric('Luovutukset', String(c.base.handoffs), String(c.target.handoffs))}${metric('Kierrokset', String(c.base.loops), String(c.target.loops))}${metric('Läpimeno', t(c.base.lead?.high), t(c.target.lead?.high))}${metric('Työaika', t(c.base.effort), t(c.target.effort))}${metric('Odotus', t(c.base.waiting), t(c.target.waiting))}</ul>
+${c.nodes.length ? `<table class="changes"><thead><tr><th scope="col">Muutos</th><th scope="col">Vaihe</th><th scope="col">Prosessi</th><th scope="col">Tiedot</th></tr></thead><tbody>${nodeRows}</tbody></table>` : '<p class="muted">Ei muutoksia vaiheissa.</p>'}
+${edgeRows ? `<h4>Yhteydet</h4><ul>${edgeRows}</ul>` : ''}
+</section>`
+  })()
+
   const questions =
     opts.includeQuestions && opts.questions?.length
       ? `<section class="appendix"><h2>Avoimet kysymykset</h2><ul class="questions">${opts.questions
@@ -264,6 +295,7 @@ ${root?.description ? `<p class="lead">${esc(root.description)}</p>` : ''}
 ${sections.join('\n')}
 ${appendix}
 ${painSection}
+${changeSection}
 ${questions}
 </main>
 ${script}

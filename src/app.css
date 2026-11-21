@@ -2817,3 +2817,129 @@ button.cell:hover {
     gap: 0.15rem;
   }
 }
+
+/* Versiot ja vertailu */
+.versions__form {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+@media (max-width: 700px) {
+  .versions__form {
+    grid-template-columns: 1fr;
+  }
+}
+.compare {
+  height: 100%;
+  overflow: auto;
+  padding: 1rem 1.25rem 3rem;
+}
+.compare--empty {
+  max-width: 34rem;
+  margin: 3rem auto;
+}
+.compare__head {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.compare__head h2 {
+  font-size: 1.2rem;
+  margin: 0;
+  align-self: center;
+}
+.cmpmetrics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.9rem;
+}
+.delta--good {
+  color: var(--ok);
+  font-weight: 600;
+}
+.delta--bad {
+  color: var(--danger);
+  font-weight: 600;
+}
+.changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+.change {
+  padding: 0.35rem 0.6rem;
+  border-left: 4px solid var(--border-strong);
+  background: var(--surface);
+  border-radius: 6px;
+}
+.change--added {
+  border-left-color: var(--ok);
+}
+.change--removed {
+  border-left-color: var(--danger);
+}
+.change--changed {
+  border-left-color: var(--warn);
+}
+.change__kind {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-right: 0.4rem;
+}
+.change__fields {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+  font-size: 0.88rem;
+}
+.change del {
+  color: var(--danger);
+}
+.change ins {
+  color: var(--ok);
+  text-decoration: none;
+  font-weight: 600;
+}
+.compare__panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+@media (max-width: 1000px) {
+  .compare__panes {
+    grid-template-columns: 1fr;
+  }
+}
+.comparepane {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+.comparepane figcaption {
+  padding: 0.4rem 0.75rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.comparepane__svg {
+  overflow: auto;
+  max-height: 70vh;
+  padding: 0.5rem;
+}
+.comparepane__svg svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}

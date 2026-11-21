@@ -323,7 +323,7 @@ describe('serialisointi', () => {
     expect(() => parseProjectJson('ei json')).toThrow(ImportError)
     expect(() => parseProjectJson('{"foo":1}')).toThrow(/Prosessikartan/)
     const { p } = sample()
-    const text = projectToJson(p).replace('"schemaVersion": 2', '"schemaVersion": 99')
+    const text = projectToJson(p).replace(/"schemaVersion": \d+/, '"schemaVersion": 99')
     expect(() => parseProjectJson(text)).toThrow(/uudemmasta/)
   })
 
