@@ -105,3 +105,35 @@ describe('joinPdfItems', () => {
     expect(joinPdfItems([item('', 700), item('a', 700)])).toBe('a')
   })
 })
+
+describe('joinPdfItems: rakenne', () => {
+  const it2 = (str: string, x: number, y: number, h = 11, w = str.length * 5) => ({
+    str,
+    transform: [h, 0, 0, h, x, y],
+    width: w,
+  })
+
+  it('suurempi lyhyt rivi on otsikko', () => {
+    const text = joinPdfItems([
+      it2('Vaiheet', 50, 700, 16),
+      it2('Esimies tarkistaa laskun.', 50, 680),
+      it2('Talous maksaa.', 50, 667),
+    ])
+    expect(text).toBe('## Vaiheet\n\nEsimies tarkistaa laskun.\nTalous maksaa.')
+  })
+
+  it('rivi, jossa on leveitä sarakevälejä, on taulukon rivi', () => {
+    const row = (y: number, a: string, b: string, c: string) => [
+      it2(a, 50, y),
+      it2(' ', 90, y, 11, 60),
+      it2(b, 150, y),
+      it2(' ', 190, y, 11, 60),
+      it2(c, 250, y),
+    ]
+    const text = joinPdfItems([
+      ...row(600, 'Vaihe', 'Rooli', 'Järjestelmä'),
+      ...row(587, 'Maksu', 'Talous', 'ERP'),
+    ])
+    expect(text).toBe('| Vaihe | Rooli | Järjestelmä |\n| Maksu | Talous | ERP |')
+  })
+})

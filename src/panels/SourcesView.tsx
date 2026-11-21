@@ -38,7 +38,10 @@ interface Range {
 const MAX_SUGGESTIONS = 150
 const MAX_MENTION_MARKS = 4000
 
-const ACCEPT = SUPPORTED_EXTENSIONS.map((e) => `.${e}`).join(',')
+/** Lähdetekstien lisäksi valitaan taulukot ja kaaviot, jotka ohjataan Tuo-ikkunaan. */
+const ACCEPT = [...SUPPORTED_EXTENSIONS, 'xlsx', 'xlsm', 'csv', 'tsv', 'bpmn', 'mmd', 'mermaid']
+  .map((e) => `.${e}`)
+  .join(',')
 
 /** Tiedostotuonti ja muistiinpanon luonti, jaettu tyhjän tilan ja työnäkymän kesken. */
 function useSourceCreation() {
@@ -49,6 +52,16 @@ function useSourceCreation() {
     setBusy(true)
     const errors: string[] = []
     for (const file of Array.from(files)) {
+      // Taulukot ja kaaviot eivät ole lähdetekstiä: ne tuodaan Tuo-ikkunassa, jossa sarakkeet ja rakenne luetaan
+      const ext = /\.([^.]+)$/.exec(file.name)?.[1]?.toLowerCase() ?? ''
+      if (['xlsx', 'xlsm', 'csv', 'tsv'].includes(ext)) {
+        useUi.getState().openImportWith(file, 'table')
+        continue
+      }
+      if (['bpmn', 'mmd', 'mermaid'].includes(ext)) {
+        useUi.getState().openImportWith(file, 'diagram')
+        continue
+      }
       const controller = new AbortController()
       abort.current = controller
       try {

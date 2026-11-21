@@ -136,6 +136,10 @@ interface UiState extends Persisted {
   setPresentScenario: (id: string | null) => void
   importOpen: boolean
   setImportOpen: (open: boolean) => void
+  /** Tuo-ikkunaan ohjattu tiedosto (esim. Lähteet-näkymään pudotettu Excel), jonka ikkuna lukee avautuessaan. */
+  importFile: { file: File; tab: 'table' | 'diagram' } | null
+  openImportWith: (file: File, tab: 'table' | 'diagram') => void
+  clearImportFile: () => void
   entityManagerOpen: boolean
   /** Tallennus ja varmuuskopiot -ikkuna. */
   storageOpen: boolean
@@ -252,6 +256,9 @@ export const useUi = create<UiState>((set, get) => {
     setPresentScenario: (presentScenarioId) => set({ presentScenarioId }),
     importOpen: false,
     setImportOpen: (importOpen) => set({ importOpen }),
+    importFile: null,
+    openImportWith: (file, tab) => set({ importFile: { file, tab }, importOpen: true }),
+    clearImportFile: () => set({ importFile: null }),
     entityManagerOpen: false,
     storageOpen: false,
     setStorageOpen: (storageOpen) => set({ storageOpen }),

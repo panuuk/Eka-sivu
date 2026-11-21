@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { indentLines } from '../capture/indent'
 import { diffSummary } from '../capture/summary'
+import { buildAiPrompt } from '../capture/aiPrompt'
 import { EXAMPLE_TEXT, SYNTAX_HELP } from '../capture/example'
 import { looksLikeMarkdown, markdownToDsl } from '../capture/markdown'
 import { planText, type EffectStatus } from '../capture/plan'
@@ -32,6 +33,7 @@ function AddTab() {
   const [saveSource, setSaveSource] = useState(true)
   const [skipped, setSkipped] = useState<Set<number>>(new Set())
   const areaRef = useRef<HTMLTextAreaElement>(null)
+  const [aiCopied, setAiCopied] = useState(false)
   /** Markdown-muunnos: alkuperäinen teksti palautusta varten ja muunnoksen huomautukset. */
   const [mdUndo, setMdUndo] = useState<{
     original: string
@@ -203,6 +205,28 @@ function AddTab() {
         <p id="quick-hint" className="field__hint">
           Tab sisentää, Shift+Tab vähentää sisennystä (Esc, sitten Tab siirtää kohdistuksen pois).
           Ctrl+Enter lisää.
+        </p>
+        <p className="field__hint">
+          Onko sinulla vain vapaita muistiinpanoja? Kopioi{' '}
+          <button
+            type="button"
+            className="linklike"
+            data-testid="copy-ai-prompt"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(buildAiPrompt())
+                setAiCopied(true)
+                setTimeout(() => setAiCopied(false), 2500)
+              } catch {
+                useStore
+                  .getState()
+                  .setError('Kopiointi ei onnistunut. Avaa Syntaksiohje ja kopioi ohje käsin.')
+              }
+            }}
+          >
+            {aiCopied ? 'Ohje kopioitu' : 'ohje tekoälylle'}
+          </button>
+          , liitä se tekoälyyn yhdessä muistiinpanojesi kanssa ja liitä vastaus tähän.
         </p>
 
         <fieldset className="quick__options">

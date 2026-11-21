@@ -406,6 +406,10 @@ function splitClauses(sentence: string): { start: number; end: number }[] {
   return parts.filter((p) => collapse(sentence.slice(p.start, p.end)).split(' ').length >= 2)
 }
 
+/** Dokumentin omaa sisältöä esittelevä lause ("Tämä kuvaus kertoo ...") ei ole prosessin vaihe. */
+const META_SENTENCE =
+  /^\s*(?:tämä|tässä|seuraavassa|alla|ohessa)\s+(?:\S+\s+){0,3}?(?:dokumentti|dokumentissa|kuvaus|kuvauksessa|ohje|ohjeessa|asiakirja|asiakirjassa|esitys|esityksessä|sivu|sivulla)\b/iu
+
 export const ruleExtractor: Extractor = {
   suggest(project, sourceId, rawText) {
     // Markdown-merkinnät (koodilohkot, taulukot, lihavointi) peitetään pituutta muuttamatta
@@ -416,6 +420,11 @@ export const ruleExtractor: Extractor = {
 
     for (const span of sentences) {
       const sentence = span.text
+      if (META_SENTENCE.test(sentence)) {
+        // "Tämä dokumentti kuvaa ..." kertoo dokumentista, ei prosessista
+        lastWasDecision = false
+        continue
+      }
       const cond = CONDITION_RE.exec(sentence)
       const other = ELSE_RE.exec(sentence)
 

@@ -16,6 +16,7 @@ const BULLET = /^\s*(?:[-*+]|\d+[.)])\s+/
 const FENCE = /^\s*(?:[-*+]\s+)?```/
 const TABLE_ROW = /^\s*(?:[-*+]\s+)?\|.*\|\s*$/
 const HEADING = /^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/
+const MAIL_HEADER = /^(?:Lähettäjä|Vastaanottaja|Kopio|Päivä|Aihe):\s/
 const RULE = /^\s*(?:[-*_]\s*){3,}$/
 
 /** Näyttääkö teksti Markdown-dokumentilta eikä pikasyötteen tekstiltä? */
@@ -49,7 +50,9 @@ export function stripInline(s: string): string {
 export function maskMarkdown(text: string): string {
   const lines = text.split('\n')
   let inFence = false
-  const out = lines.map((line) => {
+  const out = lines.map((line, i) => {
+    // Sähköpostin otsikkorivit (lähettäjä, aihe jne.) eivät ole prosessin sisältöä
+    if (i < 8 && MAIL_HEADER.test(line)) return ' '.repeat(line.length)
     if (FENCE.test(line)) {
       inFence = !inFence
       return ' '.repeat(line.length)

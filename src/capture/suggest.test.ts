@@ -249,3 +249,39 @@ describe('aikailmaisut, toistuvuus ja kipupisteet', () => {
     expect(dsl).toContain('!3 Käsittely viivästyy usein')
   })
 })
+
+describe('otsikot, luettelomerkit ja dokumentin esittelylauseet', () => {
+  it('otsikon näköinen rivi ei yhdisty seuraavaan lauseeseen', () => {
+    const s = splitSentences('Vaiheet\nEsimies tarkistaa laskun.\nTalous maksaa.')
+    expect(s.map((x) => x.text)).toEqual(['Vaiheet', 'Esimies tarkistaa laskun.', 'Talous maksaa.'])
+  })
+
+  it('rivinvaihdolla katkennut lause pysyy koossa', () => {
+    const s = splitSentences(
+      'Palkka-asiantuntija tarkistaa verovapaat korvaukset ja kirjaa laskun\npalkanlaskentajärjestelmään.',
+    )
+    expect(s).toHaveLength(1)
+  })
+
+  it('Wordin ja PDF:n luettelomerkit muuttuvat luetteloviivoiksi', () => {
+    expect(normalizeText('\uF0B7 Kirjaa lasku\n  \uF0A7 Hyväksy')).toBe(
+      '- Kirjaa lasku\n  - Hyväksy',
+    )
+  })
+
+  it('"Tämä dokumentti kuvaa ..." ei ole vaihe, mutta oikea vaihe on', () => {
+    const p = createProject()
+    const labels = (t: string) =>
+      ruleExtractor.suggest(p, 's', t).map((x) => (x as { label: string }).label)
+    expect(
+      labels('Tämä kuvaus kertoo, miten lasku käsitellään. Esimies tarkistaa laskun.'),
+    ).toEqual(['Esimies tarkistaa laskun'])
+  })
+
+  it('sähköpostin otsikkorivit eivät tuota ehdotuksia', () => {
+    const p = createProject()
+    const t = 'Lähettäjä: a@b.fi\nVastaanottaja: c@d.fi\nAihe: Lasku\n\nEsimies tarkistaa laskun.'
+    const got = ruleExtractor.suggest(p, 's', t).map((x) => x.quote)
+    expect(got).toEqual(['Esimies tarkistaa laskun.'])
+  })
+})

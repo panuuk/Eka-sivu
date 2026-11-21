@@ -32,7 +32,38 @@ export function paragraphsOfSlideXml(xml: string): string[] {
 
 const slideNo = (name: string) => Number(/(\d+)\.xml$/.exec(name)?.[1] ?? 0)
 
-/** PowerPoint (.pptx) tekstiksi: jokaisesta diasta otsikko “Dia n”, sen tekstit ja puhujan muistiinpanot. */
+/** Dian rakenne tekstiksi: otsikko `## `-otsikoksi, sisältökentän kappaleet luetteloksi ja taulukot `| a | b |` -riveiksi. */
+export function slideToText(xml: string, n: number): string[] {
+  const blocks = xml.match(
+    /<p:sp[ >][\s\S]*?<\/p:sp>|<p:graphicFrame[ >][\s\S]*?<\/p:graphicFrame>/g,
+  )
+  if (!blocks) return [`## Dia ${n}`, ...paragraphsOfSlideXml(xml)]
+  let title = ''
+  const body: string[] = []
+  for (const b of blocks) {
+    if (b.startsWith('<p:graphicFrame')) {
+      for (const row of b.match(/<a:tr[ >][\s\S]*?<\/a:tr>/g) ?? []) {
+        const cells = (row.match(/<a:tc[ >][\s\S]*?<\/a:tc>/g) ?? []).map((c) =>
+          paragraphsOfSlideXml(c).join(' '),
+        )
+        if (cells.some(Boolean)) body.push(`| ${cells.join(' | ')} |`)
+      }
+      continue
+    }
+    const paras = paragraphsOfSlideXml(b)
+    if (!paras.length) continue
+    if (/<p:ph[^>]*type="(?:title|ctrTitle|subTitle)"/.test(b)) {
+      if (!title) title = paras.join(' ')
+      else body.push(...paras)
+    } else if (/<p:ph[^>]*(?:type="body"|idx="1")|<a:bu(?:Char|AutoNum)/.test(b)) {
+      // Sisältökentän kappaleet ovat luettelokohtia (luettelomerkki tulee kentän tyylistä)
+      body.push(...paras.map((l) => `- ${l}`))
+    } else body.push(...paras)
+  }
+  return [`## ${title || `Dia ${n}`}`, ...body]
+}
+
+/** PowerPoint (.pptx) tekstiksi: jokaisesta diasta otsikko, sen tekstit ja puhujan muistiinpanot. */
 export async function pptxToText(data: ArrayBuffer): Promise<string> {
   const { default: JSZip } = await import('jszip')
   const zip = await JSZip.loadAsync(data)
@@ -44,7 +75,7 @@ export async function pptxToText(data: ArrayBuffer): Promise<string> {
   const out: string[] = []
   for (const name of slides) {
     const n = slideNo(name)
-    const body = paragraphsOfSlideXml(await zip.files[name].async('string'))
+    const body = slideToText(await zip.files[name].async('string'), n)
     const notesName = `ppt/notesSlides/notesSlide${n}.xml`
     const notes = zip.files[notesName]
       ? paragraphsOfSlideXml(await zip.files[notesName].async('string')).filter(
@@ -52,11 +83,71 @@ export async function pptxToText(data: ArrayBuffer): Promise<string> {
           (l) => !/^\d+$/.test(l),
         )
       : []
-    out.push(
-      [`Dia ${n}`, ...body, ...(notes.length ? ['Muistiinpanot:', ...notes] : [])].join('\n'),
-    )
+    out.push([...body, ...(notes.length ? ['Muistiinpanot:', ...notes] : [])].join('\n'))
   }
   return out.join('\n\n')
+}
+
+/**
+ * Wordin HTML-muunnos (mammoth) rakenteiseksi tekstiksi: otsikot `#`-merkeillä, luettelot,
+ * numeroidut luettelot ja taulukot `| a | b |` -riveinä. Rakenne säilyy, joten vaiheet löytyvät luettelokohdista.
+ */
+export function htmlToStructuredText(html: string, parse: (h: string) => Document): string {
+  const doc = parse(`<body>${html}</body>`)
+  const out: string[] = []
+  const text = (el: Element) => (el.textContent ?? '').replace(/\s+/g, ' ').trim()
+  const list = (el: Element, depth: number) => {
+    const ordered = el.tagName === 'OL'
+    let i = 0
+    for (const li of Array.from(el.children)) {
+      if (li.tagName !== 'LI') continue
+      i++
+      const own = Array.from(li.childNodes)
+        .filter((c) => !(c instanceof Element && (c.tagName === 'UL' || c.tagName === 'OL')))
+        .map((c) => c.textContent ?? '')
+        .join('')
+        .replace(/\s+/g, ' ')
+        .trim()
+      if (own) out.push(`${'  '.repeat(depth)}${ordered ? `${i}.` : '-'} ${own}`)
+      for (const sub of Array.from(li.children))
+        if (sub.tagName === 'UL' || sub.tagName === 'OL') list(sub, depth + 1)
+    }
+  }
+  const block = (el: Element) => {
+    const tag = el.tagName
+    if (/^H[1-6]$/.test(tag)) {
+      const t = text(el)
+      if (t) out.push('', `${'#'.repeat(Number(tag[1]))} ${t}`, '')
+    } else if (tag === 'UL' || tag === 'OL') {
+      out.push('')
+      list(el, 0)
+      out.push('')
+    } else if (tag === 'TABLE') {
+      out.push('')
+      for (const tr of Array.from(el.querySelectorAll('tr'))) {
+        const cells = Array.from(tr.children)
+          .filter((c) => c.tagName === 'TD' || c.tagName === 'TH')
+          .map(text)
+        if (cells.some(Boolean)) out.push(`| ${cells.join(' | ')} |`)
+      }
+      out.push('')
+    } else if (tag === 'P') {
+      const t = text(el)
+      if (t) out.push('', t, '')
+    } else {
+      const kids = Array.from(el.children)
+      if (kids.length) kids.forEach(block)
+      else {
+        const t = text(el)
+        if (t) out.push('', t, '')
+      }
+    }
+  }
+  Array.from(doc.body.children).forEach(block)
+  return out
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 // --- Sähköposti (.eml) ---

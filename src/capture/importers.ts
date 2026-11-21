@@ -115,6 +115,17 @@ async function readDocx(data: ArrayBuffer): Promise<string> {
   try {
     const mammoth = await import('mammoth')
     const api = (mammoth as unknown as { default?: typeof mammoth }).default ?? mammoth
+    try {
+      // HTML-muunnos säilyttää otsikot, luettelot ja taulukot, jotka raakateksti hävittäisi
+      const { htmlToStructuredText } = await import('./office')
+      const html = (await api.convertToHtml({ arrayBuffer: data })).value
+      const text = htmlToStructuredText(html, (h) =>
+        new DOMParser().parseFromString(h, 'text/html'),
+      )
+      if (text) return text
+    } catch {
+      // Jos rakenteen luku epäonnistuu, käytetään raakatekstiä
+    }
     const res = await api.extractRawText({ arrayBuffer: data })
     return res.value
   } catch (e) {
@@ -125,27 +136,86 @@ async function readDocx(data: ArrayBuffer): Promise<string> {
 interface PdfItem {
   str: string
   transform: number[]
+  width?: number
   hasEOL?: boolean
 }
 
-/** Yhdistää PDF-sivun tekstinpalat riveiksi ja kappaleiksi sijainnin perusteella. */
+/**
+ * Yhdistää PDF-sivun tekstinpalat riveiksi ja kappaleiksi sijainnin perusteella. Tavallista suurempi
+ * lyhyt rivi on otsikko (`## `), ja rivi, jonka palojen välissä on useita leveitä välejä, on taulukon rivi
+ * (`| a | b | c |`).
+ */
 export function joinPdfItems(items: PdfItem[]): string {
-  let out = ''
-  let lastY: number | undefined
+  interface Line {
+    y: number
+    h: number
+    parts: { x: number; w?: number; str: string }[]
+  }
+  const lines: Line[] = []
   let lastH = 10
   for (const it of items) {
     if (!it.str && !it.hasEOL) continue
     const y = it.transform[5]
     const h = Math.abs(it.transform[3]) || lastH
-    if (lastY !== undefined) {
-      const dy = Math.abs(lastY - y)
-      if (dy > h * 1.9) out += '\n\n'
-      else if (dy > h * 0.5) out += '\n'
-      else if (it.str && !out.endsWith(' ') && !it.str.startsWith(' ')) out += ' '
-    }
-    out += it.str
-    lastY = y
     lastH = h
+    const cur = lines[lines.length - 1]
+    if (cur && Math.abs(cur.y - y) <= Math.max(cur.h, h) * 0.5) {
+      if (it.str) cur.parts.push({ x: it.transform[4], w: it.width, str: it.str })
+      cur.h = Math.max(cur.h, h)
+    } else {
+      lines.push({
+        y,
+        h,
+        parts: it.str ? [{ x: it.transform[4], w: it.width, str: it.str }] : [],
+      })
+    }
+  }
+  const heights = lines.map((l) => l.h).sort((a, b) => a - b)
+  const body = heights[Math.floor(heights.length / 2)] ?? 10
+
+  let out = ''
+  let lastY: number | undefined
+  let lastH2 = 10
+  let lastWasHeading = false
+  for (const line of lines) {
+    let text = ''
+    let gaps = 0
+    let prevEnd: number | undefined
+    let wideSpace = false
+    for (const part of line.parts) {
+      // PDF:n sarakevälit ovat usein yksi leveä välilyöntipala, ei tyhjää tilaa palojen välissä
+      if (!part.str.trim()) {
+        if (part.w !== undefined && part.w > line.h * 1.5) wideSpace = true
+        prevEnd = part.w !== undefined ? part.x + part.w : undefined
+        continue
+      }
+      if (text) {
+        const wide = wideSpace || (prevEnd !== undefined && part.x - prevEnd > line.h * 1.5)
+        if (wide) {
+          text += '\t'
+          gaps++
+        } else if (!text.endsWith(' ') && !part.str.startsWith(' ')) text += ' '
+      }
+      wideSpace = false
+      text += part.str
+      prevEnd = part.w !== undefined ? part.x + part.w : undefined
+    }
+    text = text.replace(/[ ]*\t[ ]*/g, '\t')
+    if (gaps >= 2) text = `| ${text.split('\t').join(' | ')} |`
+    else text = text.replace(/\t/g, ' ')
+    const heading =
+      gaps < 2 && line.h > body * 1.2 && text.trim().length > 0 && text.trim().length <= 90
+    if (heading) text = `## ${text.trim()}`
+    if (lastY !== undefined) {
+      const dy = Math.abs(lastY - line.y)
+      if (dy > lastH2 * 1.9 || heading || lastWasHeading) out += '\n\n'
+      else if (dy > line.h * 0.5) out += '\n'
+      else if (text && !out.endsWith(' ') && !text.startsWith(' ')) out += ' '
+    }
+    out += text
+    lastY = line.y
+    lastH2 = line.h
+    lastWasHeading = heading
   }
   return out
 }
