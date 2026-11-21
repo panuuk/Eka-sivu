@@ -367,7 +367,7 @@ function CanvasInner() {
         </button>
         <button
           type="button"
-          onClick={() => void deleteSelection()}
+          onClick={() => void deleteSelection({ confirm: true })}
           disabled={selection.nodeIds.length + selection.edgeIds.length === 0}
           title="Poista valinta (Delete)"
         >

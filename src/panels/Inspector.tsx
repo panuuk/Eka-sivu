@@ -180,7 +180,11 @@ function NodeInspector({ node }: { node: ProcessNode }) {
             <Icon name="unlock" size={16} /> Vapauta sijainti
           </button>
         )}
-        <button type="button" className="btn-danger-ghost" onClick={() => void deleteSelection()}>
+        <button
+          type="button"
+          className="btn-danger-ghost"
+          onClick={() => void deleteSelection({ confirm: true })}
+        >
           <Icon name="trash" size={16} /> Poista
         </button>
       </div>
@@ -212,7 +216,11 @@ function EdgeInspector({ edgeId }: { edgeId: string }) {
         }
       />
       <div className="inspector__actions">
-        <button type="button" className="btn-danger-ghost" onClick={() => void deleteSelection()}>
+        <button
+          type="button"
+          className="btn-danger-ghost"
+          onClick={() => void deleteSelection({ confirm: true })}
+        >
           <Icon name="trash" size={16} /> Poista yhteys
         </button>
       </div>
@@ -350,7 +358,11 @@ export function Inspector() {
           <button type="button" onClick={groupSelection} disabled={selection.nodeIds.length < 2}>
             <Icon name="group" size={16} /> Ryhmitä alaprosessiksi
           </button>
-          <button type="button" className="btn-danger-ghost" onClick={() => void deleteSelection()}>
+          <button
+            type="button"
+            className="btn-danger-ghost"
+            onClick={() => void deleteSelection({ confirm: true })}
+          >
             <Icon name="trash" size={16} /> Poista valitut
           </button>
         </div>

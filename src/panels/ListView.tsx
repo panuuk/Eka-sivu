@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { filterActive, matchNodes } from '../analysis/search'
 import { useAnalysis } from '../analysis/useAnalysis'
 import { flowOrder } from '../model/flow'
@@ -19,6 +19,8 @@ export function ListView() {
   const editId = useUi((s) => s.editNodeId)
 
   const rows = useMemo(() => flowOrder(project, processId), [project, processId])
+  // Viimeksi valittu rivi: Shift+napsautus valitsee alueen siitä tähän riviin.
+  const anchor = useRef<string | null>(null)
   const filter = useUi((s) => s.filter)
   const analysis = useAnalysis()
   const matchIds = useMemo(
@@ -28,6 +30,27 @@ export function ListView() {
         : null,
     [filter, project, analysis.perNode],
   )
+
+  const selectedIds = selection.nodeIds
+  const setNodes = (ids: string[]) => select({ nodeIds: ids, edgeIds: [] })
+  /** Valintaotsikon kohteet: suodattimen ollessa päällä vain osuvat rivit. */
+  const targetIds = rows.map((r) => r.node.id).filter((id) => !matchIds || matchIds.has(id))
+  const targetSelected = targetIds.filter((id) => selectedIds.includes(id)).length
+  const allSelected = targetIds.length > 0 && targetSelected === targetIds.length
+
+  const toggle = (id: string) => {
+    anchor.current = id
+    setNodes(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id])
+  }
+  const rangeTo = (id: string) => {
+    const order = rows.map((r) => r.node.id)
+    const from = anchor.current ? order.indexOf(anchor.current) : -1
+    const to = order.indexOf(id)
+    if (from < 0 || to < 0) return toggle(id)
+    const [a, b] = from < to ? [from, to] : [to, from]
+    const range = order.slice(a, b + 1)
+    setNodes([...new Set([...selectedIds, ...range])])
+  }
 
   if (rows.length === 0) {
     return (
@@ -56,6 +79,18 @@ export function ListView() {
         <caption className="sr-only">Prosessin vaiheet</caption>
         <thead>
           <tr>
+            <th scope="col" className="check-col">
+              <input
+                type="checkbox"
+                aria-label="Valitse kaikki vaiheet"
+                data-testid="list-select-all"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = targetSelected > 0 && !allSelected
+                }}
+                onChange={() => setNodes(allSelected ? [] : targetIds)}
+              />
+            </th>
             <th scope="col">#</th>
             <th scope="col">Vaihe</th>
             <th scope="col">Rooli</th>
@@ -75,8 +110,23 @@ export function ListView() {
                 key={node.id}
                 className={`${selected ? 'is-selected' : ''} ${orphan ? 'is-orphan' : ''} ${matchIds && !matchIds.has(node.id) ? 'is-dim' : ''}`}
                 aria-selected={selected}
-                onClick={() => select({ nodeIds: [node.id], edgeIds: [] })}
+                onClick={(e) => {
+                  if (e.shiftKey) return rangeTo(node.id)
+                  if (e.ctrlKey || e.metaKey) return toggle(node.id)
+                  anchor.current = node.id
+                  setNodes([node.id])
+                }}
               >
+                <td className="check-col" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    aria-label={`Valitse ${node.label || 'nimetön vaihe'}`}
+                    checked={selected}
+                    onChange={(e) =>
+                      (e.nativeEvent as MouseEvent).shiftKey ? rangeTo(node.id) : toggle(node.id)
+                    }
+                  />
+                </td>
                 <td className="num">{i + 1}</td>
                 <td>
                   <div className="cell-label" style={{ paddingLeft: depth * 18 }}>
@@ -195,7 +245,7 @@ export function ListView() {
                     onClick={(e) => {
                       e.stopPropagation()
                       select({ nodeIds: [node.id], edgeIds: [] })
-                      void deleteSelection()
+                      void deleteSelection({ confirm: true })
                     }}
                   >
                     <Icon name="trash" size={16} />
@@ -206,6 +256,24 @@ export function ListView() {
           })}
         </tbody>
       </table>
+      {selectedIds.length >= 2 && (
+        <div className="bulkbar" role="toolbar" aria-label="Valitut vaiheet" data-testid="bulk-bar">
+          <span className="bulkbar__count" role="status">
+            {selectedIds.length} vaihetta valittu
+          </span>
+          <button
+            type="button"
+            className="bulkbar__danger"
+            data-testid="bulk-delete"
+            onClick={() => void deleteSelection({ confirm: true })}
+          >
+            <Icon name="trash" size={16} /> Poista valitut
+          </button>
+          <button type="button" className="bulkbar__plain" onClick={() => setNodes([])}>
+            Tyhjennä valinta
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -115,23 +115,52 @@ export function startProcessSkeleton() {
   useUi.getState().setEditNode(step.id)
 }
 
-export async function deleteSelection() {
+/**
+ * Poistaa valitut vaiheet ja yhteydet. `confirm` kysyy vahvistuksen aina (painikkeet);
+ * pikanäppäin poistaa suoraan, koska poiston voi kumota. Alaprosessin poisto varmistetaan kummassakin tapauksessa.
+ */
+export async function deleteSelection(opts: { confirm?: boolean } = {}) {
   const { project, selection } = st()
   if (!project) return
   const ops: Operation[] = []
-  const nodeIds = new Set(selection.nodeIds)
-  const withChildren = selection.nodeIds.filter((id) => project.nodes[id]?.childProcessId)
-  if (withChildren.length) {
-    const names = withChildren.map((id) => `“${project.nodes[id].label}”`).join(', ')
+  const nodeIds = new Set(selection.nodeIds.filter((id) => project.nodes[id]))
+  const edgeCount = selection.edgeIds.filter(
+    (id) =>
+      project.edges[id] &&
+      !nodeIds.has(project.edges[id].from) &&
+      !nodeIds.has(project.edges[id].to),
+  ).length
+  if (nodeIds.size === 0 && edgeCount === 0) return
+  const withChildren = [...nodeIds].filter((id) => project.nodes[id]?.childProcessId)
+  if (opts.confirm || withChildren.length) {
+    const what =
+      nodeIds.size === 1
+        ? `vaihe “${project.nodes[[...nodeIds][0]].label || 'Nimetön'}”`
+        : nodeIds.size > 1
+          ? `${nodeIds.size} vaihetta`
+          : edgeCount === 1
+            ? 'yhteys'
+            : `${edgeCount} yhteyttä`
+    const parts: string[] = []
+    if (withChildren.length) {
+      const names = withChildren.map((id) => `“${project.nodes[id].label}”`).join(', ')
+      parts.push(`${names} sisältää alaprosessin, joka poistetaan kaikkine vaiheineen.`)
+    }
+    if (nodeIds.size > 0 && opts.confirm)
+      parts.push('Vaiheiden ympärillä olevat yhteydet korjataan niin, että kulku säilyy ehjänä.')
+    parts.push('Voit kumota poiston (Ctrl+Z).')
     const ok = await useUi.getState().ask({
-      title: 'Poistetaanko alaprosessi?',
-      message: `${names} sisältää alaprosessin, joka poistetaan kaikkine vaiheineen. Voit kumota poiston (Ctrl+Z).`,
+      title:
+        withChildren.length && !opts.confirm
+          ? 'Poistetaanko alaprosessi?'
+          : `Poistetaanko ${what}?`,
+      message: parts.join(' '),
       confirmLabel: 'Poista',
       danger: true,
     })
     if (!ok) return
   }
-  for (const id of selection.nodeIds) {
+  for (const id of nodeIds) {
     // Siltaus lasketaan alkuperäisestä mallista; poistettavien naapureihin ei siltata.
     const bridged = opsDeleteNodeBridging(project, id).filter(
       (op) => op.type !== 'addEdge' || (!nodeIds.has(op.edge.from) && !nodeIds.has(op.edge.to)),

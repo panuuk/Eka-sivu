@@ -733,3 +733,59 @@
     max-width: 34px;
   }
 }
+
+/* ===== Listan monivalinta ===== */
+.listview .check-col {
+  width: 2.25rem;
+  padding-right: 0;
+}
+.listview .check-col input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.bulkbar {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 1rem auto 0;
+  padding: 0.45rem 0.55rem 0.45rem 1rem;
+  border-radius: 16px;
+  background: var(--ink);
+  color: var(--ink-contrast);
+  box-shadow: var(--shadow-lg);
+}
+.bulkbar__count {
+  font-weight: 600;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+}
+.bulkbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 11px;
+  white-space: nowrap;
+}
+.bulkbar__danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  font-weight: 600;
+}
+.bulkbar__plain {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--ink-contrast) 30%, transparent);
+  color: var(--ink-contrast);
+}
+.bulkbar__plain:hover:not(:disabled) {
+  border-color: var(--ink-contrast);
+}
