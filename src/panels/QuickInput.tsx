@@ -2,6 +2,7 @@ import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState
 import { indentLines } from '../capture/indent'
 import { diffSummary } from '../capture/summary'
 import { EXAMPLE_TEXT, SYNTAX_HELP } from '../capture/example'
+import { looksLikeMarkdown, markdownToDsl } from '../capture/markdown'
 import { planText, type EffectStatus } from '../capture/plan'
 import { processToText } from '../capture/serialize'
 import { downloadText, safeFilename } from '../export/download'
@@ -31,6 +32,12 @@ function AddTab() {
   const [saveSource, setSaveSource] = useState(true)
   const [skipped, setSkipped] = useState<Set<number>>(new Set())
   const areaRef = useRef<HTMLTextAreaElement>(null)
+  /** Markdown-muunnos: alkuperäinen teksti palautusta varten ja muunnoksen huomautukset. */
+  const [mdUndo, setMdUndo] = useState<{
+    original: string
+    summary: string
+    notes: string[]
+  } | null>(null)
   /** Kohdistimen paikka, joka asetetaan heti kun React on päivittänyt tekstikentän arvon. */
   const pendingSel = useRef<[number, number] | null>(null)
 
@@ -73,6 +80,17 @@ function AddTab() {
     [skipped.size, plan, project, deferred, processId, target, newName, anchorNode?.id, standalone],
   )
   const lines = useMemo(() => deferred.split('\n'), [deferred])
+  const isMarkdown = useMemo(() => looksLikeMarkdown(deferred), [deferred])
+  const convertMarkdown = () => {
+    const r = markdownToDsl(text)
+    setMdUndo({
+      original: text,
+      summary: `${r.steps} vaihetta ${r.fromDiagram ? 'Mermaid-kaaviosta' : 'otsikoista ja luettelosta'}`,
+      notes: r.notes,
+    })
+    setSkipped(new Set())
+    setText(r.dsl)
+  }
   // Yksi rivi voi tuottaa useita vaikutuksia (esim. haara ja uusi vaihe): yhdistä ne yhdeksi riviksi.
   const effectRows = useMemo(() => {
     const byLine = new Map<number, EffectStatus[]>()
@@ -150,6 +168,38 @@ function AddTab() {
             }
           }}
         />
+        {isMarkdown && (
+          <div className="quick__md" role="status" data-testid="markdown-hint">
+            <p>
+              Teksti näyttää Markdown-dokumentilta (otsikoita, taulukoita tai koodilohkoja).
+              Pikasyöte tulkitsisi jokaisen rivin erilliseksi vaiheeksi.
+            </p>
+            <button type="button" className="btn-primary" onClick={convertMarkdown}>
+              Muunna vaiheiksi
+            </button>
+          </div>
+        )}
+        {mdUndo && !isMarkdown && (
+          <div className="quick__md" role="status" data-testid="markdown-done">
+            <p>Muunnettu: {mdUndo.summary}. Tarkista tulos ennen lisäämistä.</p>
+            {mdUndo.notes.length > 0 && (
+              <ul>
+                {mdUndo.notes.map((n) => (
+                  <li key={n}>{n}</li>
+                ))}
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setText(mdUndo.original)
+                setMdUndo(null)
+              }}
+            >
+              Palauta alkuperäinen
+            </button>
+          </div>
+        )}
         <p id="quick-hint" className="field__hint">
           Tab sisentää, Shift+Tab vähentää sisennystä (Esc, sitten Tab siirtää kohdistuksen pois).
           Ctrl+Enter lisää.

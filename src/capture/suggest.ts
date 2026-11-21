@@ -1,5 +1,6 @@
 import { parseDuration } from '../model/duration'
 import type { DurationRange, PainSeverity, Project } from '../model/types'
+import { maskMarkdown } from './markdown'
 import { findMentions } from './mentions'
 import { capitalize, collapse, splitSentences, truncate, type Span } from './text'
 
@@ -406,7 +407,9 @@ function splitClauses(sentence: string): { start: number; end: number }[] {
 }
 
 export const ruleExtractor: Extractor = {
-  suggest(project, sourceId, text) {
+  suggest(project, sourceId, rawText) {
+    // Markdown-merkinnät (koodilohkot, taulukot, lihavointi) peitetään pituutta muuttamatta
+    const text = maskMarkdown(rawText)
     const drafts: Draft[] = []
     const sentences = splitSentences(text)
     let lastWasDecision = false
@@ -598,7 +601,7 @@ export const ruleExtractor: Extractor = {
         kind: d.kind,
         start: d.start,
         end: d.end,
-        quote: d.text,
+        quote: rawText.slice(d.start, d.end),
         label,
         roleId: role?.entityId,
         systemIds: systems,
