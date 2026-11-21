@@ -17,6 +17,30 @@ export interface Point {
   y: number
 }
 
+/** Arvio minuutteina: vähintään, tyypillinen ja enintään. Työpäivä = 480 min, viikko = 5 työpäivää. */
+export interface DurationRange {
+  min?: number
+  typical?: number
+  max?: number
+}
+
+export type PainSeverity = 1 | 2 | 3
+
+/** Kipupiste: vaiheen ongelma ja mahdollinen parannusidea. */
+export interface PainPoint {
+  id: string
+  text: string
+  severity: PainSeverity
+  idea?: string
+}
+
+/** RACI: rooli (`roleId`) on vastuullinen suorittaja (R). Muut roolit tallennetaan tähän. */
+export interface Raci {
+  accountableIds?: string[]
+  consultedIds?: string[]
+  informedIds?: string[]
+}
+
 export interface ProcessNode {
   id: string
   processId: string
@@ -35,6 +59,16 @@ export interface ProcessNode {
   /** Käsin asetettu sijainti. Käytössä vain, kun `locked` on tosi. */
   position?: Point
   locked?: boolean
+  /** Muut RACI-roolit kuin suorittaja. */
+  raci?: Raci
+  /** Vaiheen työaika. */
+  duration?: DurationRange
+  /** Odotusaika ennen vaihetta (jonotus, vastausta odottaminen). */
+  waiting?: DurationRange
+  /** Toistuvuus vapaana tekstinä: "päivittäin", "viikoittain", "tapahtumapohjainen". */
+  frequency?: string
+  painPoints?: PainPoint[]
+  tags?: string[]
 }
 
 export interface ProcessEdge {
@@ -102,7 +136,7 @@ export interface Project {
   questions: Record<string, Question>
 }
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export const CONFIDENCE_LABELS: Record<Confidence, string> = {
   guess: 'Arvaus',

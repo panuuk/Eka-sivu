@@ -1,4 +1,7 @@
 import type { Gap } from '../analysis/gaps'
+import { metricsOf, summarizeScope } from '../analysis/metrics'
+import { raciStateOf } from '../model/commands'
+import { formatRange, formatTotal } from '../model/duration'
 import { flowOrder } from '../model/flow'
 import { processTree } from '../model/selectors'
 import type { Project } from '../model/types'
@@ -47,6 +50,42 @@ export function buildDocumentHtml(p: Project, opts: DocumentOptions): string {
   const root = p.processes[opts.processId]
   const when = (opts.generatedAt ?? new Date()).toLocaleDateString('fi-FI')
   const sections: string[] = []
+  const metrics = metricsOf(p)
+  const anyTiming = Object.values(p.nodes).some((n) => n.duration || n.waiting)
+  const anyRaci = Object.values(p.nodes).some(
+    (n) =>
+      n.raci?.accountableIds?.length || n.raci?.consultedIds?.length || n.raci?.informedIds?.length,
+  )
+
+  const processMetricsHtml = (id: string) => {
+    const m = metrics.perProcess.get(id)
+    if (!m) return ''
+    const items: string[] = []
+    if (m.lead.typicalHigh !== undefined) {
+      const range =
+        m.lead.typicalLow !== undefined && m.lead.typicalLow !== m.lead.typicalHigh
+          ? `${formatTotal(m.lead.typicalLow)}–${formatTotal(m.lead.typicalHigh)}`
+          : formatTotal(m.lead.typicalHigh)
+      items.push(
+        `<li><strong>Läpimenoaika:</strong> ${esc(range)} (nopeimmillaan ${esc(formatTotal(m.lead.best ?? 0))}, hitaimmillaan ${esc(formatTotal(m.lead.worst ?? 0))}). Arvio kattaa ${m.lead.coveredSteps}/${m.lead.pathSteps} vaihetta pisimmällä polulla.</li>`,
+      )
+    }
+    if (m.handoffs.length) {
+      const pairs = summarizeScope(p, metrics.perProcess, [id])
+        .rolePairs.slice(0, 5)
+        .map(
+          (r) =>
+            `${esc(p.entities[r.fromRoleId]?.name ?? '')} → ${esc(p.entities[r.toRoleId]?.name ?? '')} (${r.count})`,
+        )
+        .join(', ')
+      items.push(`<li><strong>Luovutukset:</strong> ${m.handoffs.length}. ${pairs}</li>`)
+    }
+    if (m.loops.length)
+      items.push(
+        `<li><strong>Uudelleenkierrokset:</strong> ${m.loops.length}${m.loops.map((l) => ` · ${esc(p.nodes[l.fromId]?.label ?? '')} → ${esc(p.nodes[l.toId]?.label ?? '')}${l.extraMinutes !== undefined ? ` (+${esc(formatTotal(l.extraMinutes))})` : ''}`).join('')}</li>`,
+      )
+    return items.length ? `<h4>Mittarit</h4><ul class="metrics">${items.join('')}</ul>` : ''
+  }
 
   processes.forEach(({ id, depth }, index) => {
     const proc = p.processes[id]
@@ -66,12 +105,23 @@ export function buildDocumentHtml(p: Project, opts: DocumentOptions): string {
   <td>${esc(names(p, node.systemIds))}</td>
   <td>${esc(names(p, node.inputIds))}</td>
   <td>${esc(names(p, node.outputIds))}</td>
+  ${anyTiming ? `<td>${esc(formatRange(node.duration))}</td><td>${esc(formatRange(node.waiting))}</td>` : ''}
   <td>${nextText}</td>
   <td>${esc(node.description ?? '')}${node.confidence !== 'confirmed' ? ` <span class="conf conf--${node.confidence}">${CONF[node.confidence]}</span>` : ''}</td>
 </tr>`
       })
       .join('\n')
 
+    // Matriisiin otetaan mukaan myös RACI-roolit
+    if (anyRaci) {
+      for (const { node } of rows)
+        for (const r of [
+          ...(node.raci?.accountableIds ?? []),
+          ...(node.raci?.consultedIds ?? []),
+          ...(node.raci?.informedIds ?? []),
+        ])
+          if (!roleIds.includes(r)) roleIds.push(r)
+    }
     const matrixHead = roleIds
       .map((r) => `<th scope="col">${esc(p.entities[r]?.name ?? '')}</th>`)
       .join('')
@@ -80,7 +130,10 @@ export function buildDocumentHtml(p: Project, opts: DocumentOptions): string {
       .map(
         ({ node }) =>
           `<tr><th scope="row">${numbering.get(node.id)}. ${esc(node.label)}</th>${roleIds
-            .map((r) => `<td class="mark">${node.roleId === r ? '●' : ''}</td>`)
+            .map((r) => {
+              const st = raciStateOf(p, node.id, r)
+              return `<td class="mark">${anyRaci ? st : st === 'R' ? '●' : ''}</td>`
+            })
             .join('')}</tr>`,
       )
       .join('\n')
@@ -92,15 +145,16 @@ ${opts.svgs[id] ? `<figure class="diagram">${opts.svgs[id]}</figure>` : ''}
 ${
   rows.length
     ? `<h4>Vaiheet</h4>
-<table class="steps"><thead><tr><th>#</th><th scope="col">Vaihe</th><th scope="col">Rooli</th><th scope="col">Järjestelmät</th><th scope="col">Syötteet</th><th scope="col">Tuotokset</th><th scope="col">Seuraava</th><th scope="col">Huomiot</th></tr></thead>
+<table class="steps"><thead><tr><th>#</th><th scope="col">Vaihe</th><th scope="col">Rooli</th><th scope="col">Järjestelmät</th><th scope="col">Syötteet</th><th scope="col">Tuotokset</th>${anyTiming ? '<th scope="col">Kesto</th><th scope="col">Odotus</th>' : ''}<th scope="col">Seuraava</th><th scope="col">Huomiot</th></tr></thead>
 <tbody>
 ${tr}
 </tbody></table>`
     : '<p class="muted">Ei vaiheita.</p>'
 }
+${processMetricsHtml(id)}
 ${
   roleIds.length
-    ? `<h4>Vastuumatriisi</h4>
+    ? `<h4>${anyRaci ? 'RACI-matriisi' : 'Vastuumatriisi'}</h4>
 <table class="matrix"><thead><tr><th scope="col">Vaihe</th>${matrixHead}</tr></thead>
 <tbody>
 ${matrixRows}
@@ -126,6 +180,17 @@ ${matrixRows}
     return `<h4>${title}</h4><ul class="entities">${list.map((e) => `<li>${esc(e.name)}${e.aliases.length ? ` <span class="muted">(${esc(e.aliases.join(', '))})</span>` : ''}</li>`).join('')}</ul>`
   }
   const appendix = `<section class="appendix"><h2>Liite: roolit, järjestelmät ja tuotokset</h2>${entityList('role', 'Roolit')}${entityList('system', 'Järjestelmät')}${entityList('artifact', 'Syötteet ja tuotokset')}</section>`
+
+  const scopeIds = processes.map((x) => x.id)
+  const pains = summarizeScope(p, metrics.perProcess, scopeIds).painPoints
+  const painSection = pains.length
+    ? `<section class="appendix"><h2>Liite: kipupisteet ja parannusideat</h2><table class="pains"><thead><tr><th scope="col">Vaihe</th><th scope="col">Kipupiste</th><th scope="col">Vakavuus</th><th scope="col">Parannusidea</th></tr></thead><tbody>${pains
+        .map(
+          (x) =>
+            `<tr><th scope="row">${esc(p.nodes[x.nodeId]?.label ?? '')}</th><td>${esc(x.text)}</td><td>${['', 'pieni', 'kohtalainen', 'vakava'][x.severity]}</td><td>${esc(x.idea ?? '')}</td></tr>`,
+        )
+        .join('')}</tbody></table></section>`
+    : ''
 
   const questions =
     opts.includeQuestions && opts.questions?.length
@@ -198,6 +263,7 @@ ${root?.description ? `<p class="lead">${esc(root.description)}</p>` : ''}
 </header>
 ${sections.join('\n')}
 ${appendix}
+${painSection}
 ${questions}
 </main>
 ${script}

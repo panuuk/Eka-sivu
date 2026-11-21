@@ -1,5 +1,5 @@
 import { FONTS, type Palette } from '../export/theme'
-import { useUi } from '../store/ui'
+import { useUi, type Heatmap } from '../store/ui'
 
 const PALETTES: { id: Palette; label: string }[] = [
   { id: 'light', label: 'Vaalea' },
@@ -13,7 +13,7 @@ export function PresentSettings({ idPrefix = 'ps' }: { idPrefix?: string }) {
   const options = useUi((s) => s.present)
   const setTheme = useUi((s) => s.setTheme)
   const setOptions = useUi((s) => s.setPresentOptions)
-  const check = (key: keyof typeof options, label: string, hint?: string) => (
+  const check = (key: Exclude<keyof typeof options, 'heat'>, label: string, hint?: string) => (
     <label className="check" title={hint}>
       <input
         type="checkbox"
@@ -36,6 +36,20 @@ export function PresentSettings({ idPrefix = 'ps' }: { idPrefix?: string }) {
         {check('showRoles', 'Näytä roolit')}
         {check('showSystems', 'Näytä järjestelmät')}
         {check('showUncertainty', 'Näytä varmuus (arvaukset katkoviivalla)')}
+        {check('showMetrics', 'Näytä kestot ja kipupisteet')}
+        <label className="gap-select">
+          <span className="field__label">Väritys</span>
+          <select
+            id={`${idPrefix}-heat`}
+            value={options.heat}
+            onChange={(e) => setOptions({ heat: e.target.value as Heatmap })}
+          >
+            <option value="off">Ei väritystä</option>
+            <option value="time">Aika (työ ja odotus)</option>
+            <option value="pain">Kipupisteet</option>
+            <option value="handoff">Luovutukset</option>
+          </select>
+        </label>
       </fieldset>
       <fieldset>
         <legend className="field__label">Ulkoasu</legend>

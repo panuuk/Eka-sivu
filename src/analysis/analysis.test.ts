@@ -504,3 +504,29 @@ describe('analyze ja valmiusaste', () => {
     expect(createProcess('x').name).toBe('x')
   })
 })
+
+describe('tiedon kulku', () => {
+  it('ehdottaa kysymyksen tuotoksesta, jota kukaan ei käytä, mutta ei lopputuloksesta', () => {
+    const base = createProject()
+    const root = base.rootProcessId
+    const doc = createEntity('artifact', 'Raportti')
+    const final = createEntity('artifact', 'Maksettu lasku')
+    const a = createNode(root, { label: 'Laadi', outputIds: [doc.id] })
+    const b = createNode(root, { label: 'Maksa', outputIds: [final.id] })
+    const end = createNode(root, { kind: 'end', label: 'Loppu' })
+    const p = applyOperations(base, [
+      { type: 'addEntity', entity: doc },
+      { type: 'addEntity', entity: final },
+      ...[a, b, end].map((node) => ({ type: 'addNode' as const, node })),
+      { type: 'addEdge', edge: createEdge(root, a.id, b.id) },
+      { type: 'addEdge', edge: createEdge(root, b.id, end.id) },
+    ])
+    const gaps = findGaps(p).filter((g) => g.rule === 'output-unused')
+    expect(gaps.map((g) => g.entityId)).toEqual([doc.id])
+    // kun seuraava vaihe käyttää sitä syötteenä, kysymys poistuu
+    const used = applyOperations(p, [
+      { type: 'updateNode', id: b.id, patch: { inputIds: [doc.id] } },
+    ])
+    expect(findGaps(used).some((g) => g.rule === 'output-unused')).toBe(false)
+  })
+})

@@ -1,4 +1,5 @@
-import type { Confidence } from '../model/types'
+import { parseDuration } from '../model/duration'
+import type { Confidence, DurationRange, PainSeverity } from '../model/types'
 
 /**
  * Pikasyötteen tekstisyntaksi.
@@ -10,10 +11,18 @@ import type { Confidence } from '../model/types'
  *     ei: jatka                           (jatka | loppu | -> Vaiheen nimi)
  *   + Alaprosessi @Rooli                  (sisällä sisennetyt vaiheet)
  *   -> Vaiheen nimi                       (hyppy olemassa olevaan vaiheeseen)
+ *   Tietotyön merkinnät: =2 pv (työaika) ^1-3 pv (odotus) %viikoittain (toistuvuus) #tunniste
+ *     !3 Ongelma => Parannusidea (kipupiste, vakavuus 1-3) A@Rooli C@Rooli I@Rooli (RACI)
  *   alku / loppu                          (alku- ja loppupiste; nimellä: "alku: Lasku saapuu")
  *   ---                                   (erotin: seuraava ketju ei jatka edellistä)
  *   // kommentti
  */
+
+export interface ParsedPain {
+  text: string
+  severity: PainSeverity
+  idea?: string
+}
 
 export interface Annotations {
   role?: string
@@ -21,6 +30,13 @@ export interface Annotations {
   inputs: string[]
   outputs: string[]
   confidence?: Confidence
+  /** Työaika (=), odotusaika (^), toistuvuus (%), tunnisteet (#), kipupisteet (!) ja RACI (A@, C@, I@). */
+  duration?: DurationRange
+  waiting?: DurationRange
+  frequency?: string
+  tags: string[]
+  pains: ParsedPain[]
+  raci: { a: string[]; c: string[]; i: string[] }
 }
 
 export type ItemKind = 'step' | 'decision' | 'subprocess' | 'start' | 'end' | 'goto' | 'break'
@@ -100,9 +116,61 @@ export function extractAnnotations(
   text: string,
   opts: { io: boolean } = { io: true },
 ): { label: string; ann: Annotations; warnings: string[] } {
-  const ann: Annotations = { systems: [], inputs: [], outputs: [] }
+  const ann = emptyAnn()
   const warnings: string[] = []
   let rest = ` ${text} `
+
+  // Kipupiste ensin: sen teksti saa sisältää muita merkkejä aina seuraavaan merkintään asti.
+  rest = rest.replace(
+    /\s!([123])?\s*((?:(?!\s(?:[@[<>~#%^]|[ACI]@)|\s=(?!>)).)+)/gu,
+    (_m, sev: string | undefined, body: string) => {
+      const [t, idea] = body.split(/\s*=>\s*/, 2)
+      const text = clean(t)
+      if (!text) return ' '
+      ann.pains.push({
+        text,
+        severity: (sev ? Number(sev) : 2) as PainSeverity,
+        ...(idea && clean(idea) ? { idea: clean(idea) } : {}),
+      })
+      return ' '
+    },
+  )
+
+  // Kestot: =työaika ja ^odotus. Tunnistamaton arvo jätetään tekstiin ("Summa = 100 €").
+  const DURATION = /\s([=^])\s*(\d+(?:[.,]\d+)?(?:-\d+(?:[.,]\d+)?){0,2})\s*([\p{L}]+)(?![\p{L}])/gu
+  const BARE = /\s([=^])\s*(viikko|päivä|tunti)(?![\p{L}])/gu
+  const setDuration = (marker: string, value: string, m: string) => {
+    const d = parseDuration(value)
+    if (!d) return m
+    if (marker === '=') ann.duration = d
+    else ann.waiting = d
+    return ' '
+  }
+  rest = rest.replace(DURATION, (m, mk: string, num: string, unit: string) =>
+    setDuration(mk, `${num} ${unit}`, m),
+  )
+  rest = rest.replace(BARE, (m, mk: string, unit: string) => setDuration(mk, unit, m))
+
+  rest = rest.replace(/\s%(?:\(([^)]*)\)|([^\s@[\]<>~#=^!%]+))/gu, (_m, a?: string, b?: string) => {
+    const f = clean(a ?? b ?? '')
+    if (f) ann.frequency = f
+    return ' '
+  })
+
+  rest = rest.replace(/\s#([\p{L}\p{N}_-]+)/gu, (_m, tag: string) => {
+    if (!ann.tags.includes(tag)) ann.tags.push(tag)
+    return ' '
+  })
+
+  // RACI: A@Rooli, C@(Monisanainen rooli), I@Rooli (suorittaja R on tavallinen @Rooli)
+  rest = rest.replace(
+    /\s([ACI])@(?:\(([^)]*)\)|"([^"]*)"|([^\s@[\]<>~,;]+))/g,
+    (_m, letter: string, a?: string, b?: string, c?: string) => {
+      const name = clean((a ?? b ?? (c ?? '').replace(/_/g, ' ')) || '')
+      if (name) ann.raci[letter.toLowerCase() as 'a' | 'c' | 'i'].push(name)
+      return ' '
+    },
+  )
 
   rest = rest.replace(/\s~\s*([^\s]+)/g, (m, word: string) => {
     const c = CONFIDENCE_WORDS[word.toLocaleLowerCase('fi').replace(/[.,;:!]+$/, '')]
@@ -143,7 +211,14 @@ export function extractAnnotations(
 }
 
 function emptyAnn(): Annotations {
-  return { systems: [], inputs: [], outputs: [] }
+  return {
+    systems: [],
+    inputs: [],
+    outputs: [],
+    tags: [],
+    pains: [],
+    raci: { a: [], c: [], i: [] },
+  }
 }
 
 export function parseSyntax(text: string, options: ParseOptions = {}): ParseResult {

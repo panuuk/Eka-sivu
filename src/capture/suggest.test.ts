@@ -4,7 +4,7 @@ import { useDeterministicIds } from '../model/ids'
 import { applyOperations } from '../model/operations'
 import type { Project } from '../model/types'
 import { findMentions, stemPattern } from './mentions'
-import { ruleExtractor } from './suggest'
+import { extractTiming, ruleExtractor } from './suggest'
 import { capitalize, normalizeText, splitSentences, truncate } from './text'
 
 beforeEach(() => useDeterministicIds(true))
@@ -199,5 +199,53 @@ describe('ruleExtractor', () => {
     const long = `${'Tarkista asiat '.repeat(20)}lopuksi.`
     const short = 'Tarkista kaikki asiat.'
     expect(run(short)[0].score).toBeGreaterThan(run(long)[0]?.score ?? -99)
+  })
+})
+
+describe('aikailmaisut, toistuvuus ja kipupisteet', () => {
+  const p = createProject()
+  const run = (text: string) => ruleExtractor.suggest(p, 's', text)
+
+  it('tunnistaa työajan ja odotusajan', () => {
+    expect(extractTiming('Esimies tarkistaa laskun noin 2 tunnissa').duration).toEqual({
+      typical: 120,
+    })
+    expect(extractTiming('Esimies tarkistaa laskun 2 tuntia').duration).toEqual({ typical: 120 })
+    expect(extractTiming('Talous käsittelee laskun kahden päivän kuluessa').waiting).toEqual({
+      typical: 960,
+    })
+    expect(extractTiming('Tulokset toimitetaan viikon kuluessa').waiting).toEqual({ typical: 2400 })
+    expect(extractTiming('Raportti tehdään 30 min').duration).toEqual({ typical: 30 })
+    expect(extractTiming('Käsittele lasku')).toEqual({})
+  })
+
+  it('tunnistaa toistuvuuden', () => {
+    expect(extractTiming('Talous ajaa raportin viikoittain').frequency).toBe('viikoittain')
+    expect(extractTiming('Tarkistus tehdään kerran kuussa').frequency).toBe('kerran kuussa')
+  })
+
+  it('liittää ongelmalauseen edelliseen vaiheeseen kipupisteeksi', () => {
+    const s = run(
+      'Esimies hyväksyy laskun. Hyväksyntä viivästyy usein, koska esimies on matkoilla. HR lähettää kutsun.',
+    )
+    const steps = s.filter((x) => x.kind === 'step')
+    expect(steps).toHaveLength(2)
+    expect(steps[0].pains).toEqual([
+      { text: 'Hyväksyntä viivästyy usein, koska esimies on matkoilla', severity: 3 },
+    ])
+    expect(steps[1].pains).toBeUndefined()
+  })
+
+  it('vaiheen omassa lauseessa oleva ongelma liittyy samaan vaiheeseen', () => {
+    const s = run('Talous tarkistaa laskun käsin, mikä on hidasta.')
+    expect(s[0].pains?.[0].severity).toBe(2)
+  })
+
+  it('ehdotukset siirtyvät pikasyötteen merkinnöiksi', async () => {
+    const { suggestionsToDsl } = await import('./suggestToText')
+    const s = run('Talous käsittelee laskun kahden päivän kuluessa. Käsittely viivästyy usein.')
+    const dsl = suggestionsToDsl(p, s, 's').text
+    expect(dsl).toContain('^2 pv')
+    expect(dsl).toContain('!3 Käsittely viivästyy usein')
   })
 })

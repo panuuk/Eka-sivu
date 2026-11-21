@@ -3,6 +3,7 @@ import { Canvas } from './canvas/Canvas'
 import { EntityManager } from './panels/EntityManager'
 import { ExportDialog } from './panels/ExportDialog'
 import { PresentView } from './panels/PresentView'
+import { AnalysisView } from './panels/AnalysisView'
 import { HelpDialog } from './panels/HelpDialog'
 import { ListView } from './panels/ListView'
 import { ProcessTree } from './panels/ProcessTree'
@@ -64,7 +65,15 @@ function App() {
             resetKey={view}
             fallback={(error, reset) => <ViewCrash error={error} reset={reset} />}
           >
-            {view === 'canvas' ? <Canvas /> : view === 'list' ? <ListView /> : <SourcesView />}
+            {view === 'canvas' ? (
+              <Canvas />
+            ) : view === 'list' ? (
+              <ListView />
+            ) : view === 'analysis' ? (
+              <AnalysisView />
+            ) : (
+              <SourcesView />
+            )}
           </ErrorBoundary>
         </main>
         {rightOpen && (

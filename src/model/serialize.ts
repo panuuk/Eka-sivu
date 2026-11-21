@@ -14,7 +14,10 @@ export interface ProjectFile {
  * Migraatiot: `MIGRATIONS[n]` päivittää skeemaversion n -> n+1. Lisää uusi funktio aina kun
  * tallennettava muoto muuttuu, ja kasvata SCHEMA_VERSIONia.
  */
-const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = {}
+const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = {
+  // v1 -> v2: tietotyön kentät (RACI, kesto, odotus, kipupisteet, tunnisteet) ovat valinnaisia, joten data säilyy sellaisenaan.
+  1: (raw) => raw,
+}
 
 export class ImportError extends Error {
   constructor(message: string) {

@@ -323,7 +323,7 @@ describe('serialisointi', () => {
     expect(() => parseProjectJson('ei json')).toThrow(ImportError)
     expect(() => parseProjectJson('{"foo":1}')).toThrow(/Prosessikartan/)
     const { p } = sample()
-    const text = projectToJson(p).replace('"schemaVersion": 1', '"schemaVersion": 99')
+    const text = projectToJson(p).replace('"schemaVersion": 2', '"schemaVersion": 99')
     expect(() => parseProjectJson(text)).toThrow(/uudemmasta/)
   })
 
@@ -401,5 +401,60 @@ describe('entityUsages', () => {
       ['B', ['syöte']],
     ])
     expect(entityUsages(p2, 'puuttuu')).toEqual([])
+  })
+})
+
+describe('RACI-komennot', () => {
+  it('kiertää tilat ja pitää suorittajan yksikäsitteisenä', async () => {
+    const { opsSetRaci, raciStateOf, nextRaciState } = await import('./commands')
+    let p = createProject()
+    const a = createEntity('role', 'A-rooli')
+    const b = createEntity('role', 'B-rooli')
+    const n = createNode(p.rootProcessId, { label: 'X' })
+    p = applyOperations(p, [
+      { type: 'addEntity', entity: a },
+      { type: 'addEntity', entity: b },
+      { type: 'addNode', node: n },
+    ])
+    const set = (role: string, state: Parameters<typeof opsSetRaci>[3]) => {
+      p = applyOperations(p, opsSetRaci(p, n.id, role, state))
+    }
+    set(a.id, 'R')
+    expect(raciStateOf(p, n.id, a.id)).toBe('R')
+    set(b.id, 'R') // uusi suorittaja syrjäyttää vanhan
+    expect(p.nodes[n.id].roleId).toBe(b.id)
+    expect(raciStateOf(p, n.id, a.id)).toBe('')
+    set(b.id, 'A') // R -> A: ei enää suorittaja
+    expect(p.nodes[n.id].roleId).toBeUndefined()
+    expect(raciStateOf(p, n.id, b.id)).toBe('A')
+    set(b.id, 'C')
+    expect(p.nodes[n.id].raci).toEqual({ consultedIds: [b.id] })
+    set(b.id, '')
+    expect(p.nodes[n.id].raci).toBeUndefined()
+    expect(nextRaciState('', true)).toBe('A') // toinen suorittaja: R ohitetaan
+    expect(['', 'R', 'A', 'C', 'I'].map((s) => nextRaciState(s as never))).toEqual([
+      'R',
+      'A',
+      'C',
+      'I',
+      '',
+    ])
+    expect(validateProject(p)).toEqual([])
+  })
+
+  it('roolin poisto siivoaa RACI-viitteet', () => {
+    let p = createProject()
+    const r = createEntity('role', 'R')
+    const n = createNode(p.rootProcessId, {
+      label: 'X',
+      raci: { informedIds: [r.id], consultedIds: [r.id] },
+    })
+    p = applyOperations(p, [
+      { type: 'addEntity', entity: r },
+      { type: 'addNode', node: n },
+    ])
+    p = applyOperations(p, [{ type: 'deleteEntity', id: r.id }])
+    expect(validateProject(p)).toEqual([])
+    expect(p.nodes[n.id].raci?.informedIds).toEqual([])
   })
 })

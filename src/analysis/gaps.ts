@@ -18,6 +18,7 @@ export type GapRule =
   | 'no-start'
   | 'no-end'
   | 'artifact-source'
+  | 'output-unused'
   | 'guess-unsourced'
   | 'source-conflict'
   | 'empty-subprocess'
@@ -112,6 +113,10 @@ export function findGaps(p: Project, index: GraphIndex = indexGraph(p)): Gap[] {
   const produced = new Set<string>()
   for (const n of Object.values(p.nodes)) for (const id of n.outputIds) produced.add(id)
   const askedArtifact = new Set<string>()
+  const askedOutput = new Set<string>()
+  const consumed = new Set<string>()
+  for (const n of Object.values(p.nodes)) for (const id of n.inputIds) consumed.add(id)
+  const nodeKind = new Map(Object.values(p.nodes).map((n) => [n.id, n.kind]))
 
   const order: string[] = []
   const processIds = Object.keys(p.processes)
@@ -268,6 +273,26 @@ export function findGaps(p: Project, index: GraphIndex = indexGraph(p)): Gap[] {
           severity: 'low',
           text: `“${n.label}” on arvaus ilman lähdettä. Vahvista se tai etsi lähde.`,
         })
+      }
+
+      // Tuotokset, joita mikään vaihe ei käytä syötteenä (tiedon kulku katkeaa)
+      for (const artifactId of n.outputIds) {
+        if (!consumed.has(artifactId) && !askedOutput.has(artifactId) && p.entities[artifactId]) {
+          // Prosessin lopputulos (vaihe johtaa suoraan loppuun tai on viimeinen) on perusteltu poikkeus.
+          const next = outgoing(n.id)
+          const leadsToEnd = next.length === 0 || next.every((e) => nodeKind.get(e.to) === 'end')
+          if (leadsToEnd) continue
+          askedOutput.add(artifactId)
+          push({
+            key: `output-unused:${artifactId}`,
+            rule: 'output-unused',
+            processId,
+            targetId: n.id,
+            entityId: artifactId,
+            severity: 'low',
+            text: `Kuka käyttää tuotosta “${p.entities[artifactId].name}”? Mikään vaihe ei tarvitse sitä syötteenä.`,
+          })
+        }
       }
 
       // Syötteet, joita mikään vaihe ei tuota

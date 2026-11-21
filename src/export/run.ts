@@ -78,6 +78,7 @@ export function renderOptions(
     expand: req.options.expand,
     onlyConfirmed: req.options.onlyConfirmed,
     direction: req.direction,
+    heat: req.options.heat,
     ...overrides,
   }
 }
@@ -88,6 +89,8 @@ export function svgOptions(req: ExportRequest, title: string): SvgOptions {
     showRoles: req.options.showRoles,
     showSystems: req.options.showSystems,
     showUncertainty: req.options.showUncertainty,
+    showMetrics: req.options.showMetrics,
+    heat: req.options.heat,
     title,
   }
 }

@@ -1,4 +1,5 @@
-import type { Project } from '../model/types'
+import { parseDuration } from '../model/duration'
+import type { DurationRange, PainSeverity, Project } from '../model/types'
 import { findMentions } from './mentions'
 import { capitalize, collapse, splitSentences, truncate, type Span } from './text'
 
@@ -20,6 +21,11 @@ export interface Suggestion {
   systemIds: string[]
   /** Ehdotus jatkaa edellistä päätöstä: kyllä- tai ei-haarana. */
   branch?: 'yes' | 'no'
+  /** Tekstistä tunnistettu työaika, odotusaika, toistuvuus ja kipupisteet. */
+  duration?: DurationRange
+  waiting?: DurationRange
+  frequency?: string
+  pains?: { text: string; severity: PainSeverity }[]
   score: number
   reasons: string[]
 }
@@ -207,8 +213,23 @@ interface Draft {
   branch?: 'yes' | 'no'
   /** Osalause perii roolin aiemmalta luonnokselta ("A tekee X ja tekee Y"). */
   inheritFrom?: number
+  pains?: { text: string; severity: PainSeverity }[]
   score: number
   reasons: string[]
+}
+
+const ACTION_G = new RegExp(ACTION_RE.source, 'giu')
+/** Substantiivit ("hyväksyntä", "tarkastus") eivät ole toimintaverbejä, vaikka alkaisivat verbin vartalolla. */
+const NOUN_ENDING = /(?:nti|ntä|ntö|minen|mis[\p{L}]*|us|ys|uus|yys|inta|ointi|ukset|ykset|ely)$/iu
+
+function hasActionVerb(text: string): boolean {
+  ACTION_G.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = ACTION_G.exec(text))) {
+    const word = /^[\p{L}]+/u.exec(text.slice(m.index))?.[0] ?? m[0]
+    if (!NOUN_ENDING.test(word)) return true
+  }
+  return false
 }
 
 function scoreSentence(
@@ -225,7 +246,7 @@ function scoreSentence(
   if (PASSIVE_RE.test(text)) {
     score += 2
     reasons.push('toimintaa kuvaava passiivi')
-  } else if (ACTION_RE.test(text)) {
+  } else if (hasActionVerb(text)) {
     score += 2
     reasons.push('toimintaverbi')
   }
@@ -253,6 +274,68 @@ export function leadingRoleMention(
     return lead === '' || isLeadFiller(lead)
   })
   return m?.entityId
+}
+
+// --- Aikailmaisut, toistuvuus ja kipupisteet ---
+
+const NUM_WORD =
+  '(?:yksi|yhden|kaksi|kahden|kolme|kolmen|neljä|neljän|viisi|viiden|kuusi|kuuden|seitsemän|kahdeksan|yhdeksän|kymmenen|puoli|puolen)'
+const DURATION_RE = new RegExp(
+  `(?<![\\p{L}\\d])(\\d+(?:[.,]\\d+)?(?:\\s*[-–]\\s*\\d+(?:[.,]\\d+)?)?|${NUM_WORD})\\s*(?:työ)?(min[\\p{L}]*|h|tun[\\p{L}]*|pv|päiv[\\p{L}]*|vk|viik[\\p{L}]*|kk|kuuka[\\p{L}]*|kuukau[\\p{L}]*)(?![\\p{L}])`,
+  'iu',
+)
+const BARE_DURATION_RE =
+  /(?<![\p{L}])(?:viikon|kuukauden|päivän|tunnin)\s+(?:kuluessa|kuluttua|sisällä|aikana)/iu
+/** Jonotus ja vastauksen odotus ovat odotusaikaa, muu kesto työaikaa. */
+const WAIT_RE =
+  /(?<![\p{L}])(?:odot[\p{L}]*|kuluessa|kuluttua|jonossa|viiveellä|vastauksen jälkeen|toimitusaika)/iu
+const FREQUENCY_RE =
+  /(?<![\p{L}])(päivittäin|viikoittain|kuukausittain|neljännesvuosittain|vuosittain|joka päivä|joka viikko|joka kuukausi|kerran (?:päivässä|viikossa|kuussa|vuodessa))(?![\p{L}])/iu
+const PAIN_RE =
+  /(?<![\p{L}])(?:viivästy[\p{L}]*|myöhässä|ongelm[\p{L}]*|hankala[\p{L}]*|hidas[\p{L}]*|virhealtis[\p{L}]*|pullonkaul[\p{L}]*|manuaalinen|manuaalisesti|käsin tehtävä[\p{L}]*|epäselv[\p{L}]*|työläs[\p{L}]*|toistuvasti|jumittu[\p{L}]*|kiireell[\p{L}]*|puutteellis[\p{L}]*)(?![\p{L}])/iu
+const SEVERE_RE =
+  /(?<![\p{L}])(?:usein|aina|jatkuvasti|toistuvasti|säännöllisesti|kriittis[\p{L}]*)(?![\p{L}])/iu
+
+export function extractTiming(text: string): {
+  duration?: DurationRange
+  waiting?: DurationRange
+  frequency?: string
+} {
+  const out: ReturnType<typeof extractTiming> = {}
+  const m = DURATION_RE.exec(text)
+  if (m) {
+    const u = m[2].toLocaleLowerCase('fi')
+    const unit = u.startsWith('min')
+      ? 'min'
+      : u.startsWith('tun') || u === 'h'
+        ? 'h'
+        : u.startsWith('päiv') || u === 'pv'
+          ? 'pv'
+          : u.startsWith('viik') || u === 'vk'
+            ? 'vk'
+            : 'kk'
+    const range = parseDuration(`${m[1].replace(/\s+/g, '')} ${unit}`)
+    if (range) {
+      // Odotussana lähellä (ennen tai jälkeen) tekee kestosta odotusaikaa
+      const near = text.slice(Math.max(0, m.index - 40), m.index + m[0].length + 24)
+      if (WAIT_RE.test(near)) out.waiting = range
+      else out.duration = range
+    }
+  } else if (BARE_DURATION_RE.test(text)) {
+    const b = BARE_DURATION_RE.exec(text)![0].split(/\s+/)[0]
+    const range = parseDuration(b)
+    if (range) out.waiting = range
+  }
+  const f = FREQUENCY_RE.exec(text)
+  if (f) out.frequency = f[1].toLocaleLowerCase('fi')
+  return out
+}
+
+/** Kipupiste lauseesta, jos siinä on ongelmaan viittaava sana. */
+export function extractPain(text: string): { text: string; severity: PainSeverity } | undefined {
+  if (!PAIN_RE.test(text)) return undefined
+  const severity: PainSeverity = SEVERE_RE.test(text) ? 3 : 2
+  return { text: truncate(capitalize(collapse(text).replace(/[.!?…:;,\s]+$/, '')), 90), severity }
 }
 
 /** Verbin alku sanan alussa: samat kuin ACTION_RE, mutta ankkuroitu positioon. */
@@ -410,8 +493,17 @@ export const ruleExtractor: Extractor = {
             score: sc.score,
             reasons: k === 0 ? reasons : [...sc.reasons, 'osalause'],
             inheritFrom: k > 0 ? firstIndex : undefined,
+            pains: (() => {
+              const pain = extractPain(partText)
+              return pain ? [pain] : undefined
+            })(),
           })
         }
+      } else {
+        // Ongelmaa kuvaava lause, joka ei ole vaihe, liitetään edeltävään vaiheeseen kipupisteeksi.
+        const pain = extractPain(sentence)
+        const prev = [...drafts].reverse().find((d) => d.kind === 'step')
+        if (pain && prev) prev.pains = [...(prev.pains ?? []), pain]
       }
       lastWasDecision = false
     }
@@ -480,6 +572,8 @@ export const ruleExtractor: Extractor = {
         roleId: role?.entityId,
         systemIds: systems,
         branch: d.branch,
+        ...(d.kind === 'step' ? extractTiming(d.text) : {}),
+        ...(d.pains?.length ? { pains: d.pains } : {}),
         score,
         reasons,
       } satisfies Suggestion

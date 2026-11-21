@@ -87,3 +87,13 @@ Mitä muutettiin:
 - Pitkä ketju avautuu alusta luettavalla zoomilla eikä koko kuvaan kutistettuna.
 
 Jätettiin tekemättä: solmujen käsin siirto uimaradoissa (vaatii oman raidoille sidotun asettelun, jää tunnetuksi rajoitukseksi). Palaan tähän, jos oikea käyttö osoittaa sen tarpeelliseksi.
+
+### Vaihe 10: Tietotyön rikkaampi malli ja analyysit (valmi)
+
+- **Malli** (skeema 2, vanhat projektit avautuvat sellaisenaan): vaiheelle työaika ja odotusaika (`DurationRange`: min, tyypillinen, max minuutteina; päivä = 8 h, viikko = 5 päivää), toistuvuus, RACI (rooli on suorittaja R, muut roolit `raci`-kentässä), kipupisteet (vakavuus 1–3 ja parannusidea) ja tunnisteet. Roolin poisto siivoaa viitteet.
+- **Syöttö.** Pikasyötteessä `=2 pv`, `^1-3 pv`, `%viikoittain`, `#tunniste`, `!3 Ongelma => Idea` ja `A@Rooli`/`C@Rooli`/`I@Rooli`; viety teksti ja takaisin tuotu teksti ovat samat (testattu), ja uudelleenlisäys on idempotentti. Ehdotusmoottori tunnistaa lähdetekstistä aikailmaisut (“kahden päivän kuluessa” on odotusaikaa), toistuvuuden ja ongelmalauseet (liitetään edelliseen vaiheeseen kipupisteeksi).
+- **Analyysit** (`metrics.ts`): luovutukset roolien välillä ja niihin liittyvä odotus, läpimenoaika (nopein polku minimiarvoilla, lyhin ja pisin polku tyypillisillä arvoilla, hitain polku maksimiarvoilla, kriittinen polku, alaprosessit rekursiivisesti), uudelleenkierrokset ja yhden kierroksen kesto, roolien kuormitus. Uusi aukkosääntö: tuotos, jota mikään vaihe ei käytä syötteenä.
+- **Näkymät.** Analyysi-näkymä (kortit, kriittinen polku, luovutustaulukko, kierrokset, kuormitus, muokattava RACI-matriisi, rooli × järjestelmä, kipupisteet). Lämpökartta kaaviossa (aika, kipupisteet, luovutukset) ja kestot ja kipupistemerkit vaiheissa.
+- **Viennit.** Esitys ja SVG/PNG/PDF: kestot, kipupistemerkit ja lämpökartta valittavissa. Prosessidokumentti: kesto- ja odotussarakkeet, mittarit, RACI-matriisi ja kipupisteliite (vain, jos tietoja on, joten vanhat projektit tuottavat saman dokumentin kuin ennen).
+
+Rajoitus: arviot ovat vain niin hyviä kuin annetut kestot. Päätösten haarojen todennäköisyyksiä ei mallinneta, joten läpimenoaika esitetään välinä eikä odotusarvona. Kestot ovat työaikaa, eivät kalenteriaikaa.

@@ -1,3 +1,4 @@
+import { formatRange } from '../model/duration'
 import type { Project, SourceRef } from '../model/types'
 import type { Suggestion } from './suggest'
 
@@ -18,6 +19,16 @@ function annotations(p: Pick<Project, 'entities'>, s: Suggestion): string {
     .map((id) => p.entities[id]?.name.replace(/[,;\]]/g, ' ').trim())
     .filter(Boolean)
   if (systems.length) parts.push(`[${systems.join(', ')}]`)
+  if (s.duration) parts.push(`=${formatRange(s.duration)}`)
+  if (s.waiting) parts.push(`^${formatRange(s.waiting)}`)
+  if (s.frequency) parts.push(/\s/.test(s.frequency) ? `%(${s.frequency})` : `%${s.frequency}`)
+  for (const pp of s.pains ?? []) {
+    const text = pp.text
+      .replace(/[@[\]<>~#%^=!]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (text) parts.push(`!${pp.severity} ${text}`)
+  }
   return parts.length ? ` ${parts.join(' ')}` : ''
 }
 

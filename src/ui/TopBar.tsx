@@ -261,6 +261,15 @@ export function TopBar() {
         >
           <Icon name="file" size={16} /> <span className="hide-sm">Lähteet</span>
         </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={view === 'analysis'}
+          className={view === 'analysis' ? 'is-on' : ''}
+          onClick={() => useUi.getState().setView('analysis')}
+        >
+          <Icon name="graph" size={16} /> <span className="hide-sm">Analyysi</span>
+        </button>
       </div>
 
       {view === 'canvas' && layoutMode !== 'lanes' && (

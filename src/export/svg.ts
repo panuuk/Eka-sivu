@@ -9,6 +9,10 @@ export interface SvgOptions {
   showSystems: boolean
   /** Varmuus näkyviin: arvaus katkoviivalla, vahvistettu vihreällä. Pois päältä kaikki on yhtenäistä. */
   showUncertainty: boolean
+  /** Kestot ja kipupisteet vaiheissa. */
+  showMetrics?: boolean
+  /** Lämpökartan tyyppi (värisävy). */
+  heat?: 'off' | 'time' | 'pain' | 'handoff'
   title?: string
   margin?: number
   /** Läpikäynti: korostettu vaihe ja jo käydyt; muut himmennetään. */
@@ -183,8 +187,16 @@ function renderNode(
         `<rect x="${n.x + 5}" y="${n.y + 5}" width="${n.w}" height="${n.h}" rx="12" fill="${c.surface}" stroke="${c.borderStrong}" stroke-width="1.4"/>`,
       )
     }
+    const heatFill =
+      n.heat !== undefined && opts.heat && opts.heat !== 'off' && !print
+        ? tint(
+            opts.heat === 'pain' ? '#c62828' : opts.heat === 'handoff' ? '#7e3fd0' : '#e04a2f',
+            c.surface,
+            opts.heat === 'handoff' ? 0.28 : 0.1 + n.heat * 0.45,
+          )
+        : c.surface
     out.push(
-      `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="12" fill="${c.surface}" stroke="${stroke}" stroke-width="${sw}"${dash}${glow}/>`,
+      `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="12" fill="${heatFill}" stroke="${stroke}" stroke-width="${sw}"${dash}${glow}/>`,
     )
     if (n.roleId && opts.showRoles && !print) {
       out.push(
@@ -195,6 +207,7 @@ function renderNode(
     const textW = n.w - 28
     const meta: string[] = []
     if (opts.showRoles && n.roleName) meta.push(n.roleName)
+    if (opts.showMetrics && n.timeText) meta.push(n.timeText)
     if (opts.showSystems && n.systems.length)
       meta.push(
         n.systems.slice(0, 2).join(', ') +
@@ -213,6 +226,13 @@ function renderNode(
       const line = fitText(meta.join(' · '), charsFor(textW, 11))
       out.push(`<text x="${tx}" y="${y + 1}" font-size="11" fill="${c.muted}">${esc(line)}</text>`)
     }
+  }
+  if (opts.showMetrics && n.pain && n.kind !== 'start' && n.kind !== 'end') {
+    const col = n.pain === 3 ? c.danger : n.pain === 2 ? '#c27a00' : c.borderStrong
+    out.push(
+      `<circle cx="${n.x + 2}" cy="${n.y + n.h - 2}" r="9" fill="${col}"/>`,
+      `<text x="${n.x + 2}" y="${n.y + n.h + 2}" font-size="12" font-weight="800" text-anchor="middle" fill="#fff">!</text>`,
+    )
   }
   out.push('</g>')
   return out.join('\n')

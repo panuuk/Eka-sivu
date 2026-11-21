@@ -16,6 +16,7 @@ import { ChipPicker } from '../ui/ChipPicker'
 import { Icon } from '../ui/Icon'
 import { Segmented, TextField } from './fields'
 import { ReadinessCard } from './QuestionsPanel'
+import { WorkSection } from './WorkFields'
 
 const KINDS: NodeKind[] = ['step', 'decision', 'subprocess', 'start', 'end']
 
@@ -116,6 +117,8 @@ function NodeInspector({ node }: { node: ProcessNode }) {
           />
         </>
       )}
+
+      {node.kind !== 'start' && node.kind !== 'end' && <WorkSection node={node} patch={patch} />}
 
       <TextField
         label="Kuvaus"

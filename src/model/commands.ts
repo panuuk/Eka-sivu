@@ -275,3 +275,66 @@ export function opsMergeEntities(p: Project, fromId: string, intoId: string): Op
 }
 
 export { descendantProcessIds }
+
+export type RaciState = 'R' | 'A' | 'C' | 'I' | ''
+
+/** Rooli vaiheen RACI-matriisissa: R (suorittaja), A, C, I tai tyhjä. */
+export function raciStateOf(p: Project, nodeId: string, roleId: string): RaciState {
+  const n = p.nodes[nodeId]
+  if (!n) return ''
+  if (n.roleId === roleId) return 'R'
+  if (n.raci?.accountableIds?.includes(roleId)) return 'A'
+  if (n.raci?.consultedIds?.includes(roleId)) return 'C'
+  if (n.raci?.informedIds?.includes(roleId)) return 'I'
+  return ''
+}
+
+/**
+ * Seuraava tila matriisisolua napsautettaessa: tyhjä -> R -> A -> C -> I -> tyhjä. Jos vaiheella on
+ * jo toinen suorittaja, R ohitetaan, jottei kiertäminen vahingossa vaihda suorittajaa.
+ */
+export const nextRaciState = (s: RaciState, otherPerformer = false): RaciState =>
+  ({ '': otherPerformer ? 'A' : 'R', R: 'A', A: 'C', C: 'I', I: '' })[s] as RaciState
+
+/**
+ * Asettaa roolin tilan vaiheessa. Rooli poistetaan ensin kaikista RACI-luokista. Suorittajaksi (R)
+ * asetettaessa edellinen suorittaja jää pois, koska vaiheella on yksi suorittaja.
+ */
+export function opsSetRaci(
+  p: Project,
+  nodeId: string,
+  roleId: string,
+  state: RaciState,
+): Operation[] {
+  const n = p.nodes[nodeId]
+  if (!n || p.entities[roleId]?.kind !== 'role') return []
+  const strip = (ids?: string[]) => (ids ?? []).filter((x) => x !== roleId)
+  const raci = {
+    accountableIds: strip(n.raci?.accountableIds),
+    consultedIds: strip(n.raci?.consultedIds),
+    informedIds: strip(n.raci?.informedIds),
+  }
+  const add = (key: keyof typeof raci) => void raci[key].push(roleId)
+  let primary = n.roleId === roleId ? undefined : n.roleId
+  if (state === 'R') primary = roleId
+  else if (state === 'A') add('accountableIds')
+  else if (state === 'C') add('consultedIds')
+  else if (state === 'I') add('informedIds')
+  const empty = !raci.accountableIds.length && !raci.consultedIds.length && !raci.informedIds.length
+  return [
+    {
+      type: 'updateNode',
+      id: nodeId,
+      patch: {
+        roleId: primary,
+        raci: empty
+          ? undefined
+          : {
+              accountableIds: raci.accountableIds.length ? raci.accountableIds : undefined,
+              consultedIds: raci.consultedIds.length ? raci.consultedIds : undefined,
+              informedIds: raci.informedIds.length ? raci.informedIds : undefined,
+            },
+      },
+    },
+  ]
+}

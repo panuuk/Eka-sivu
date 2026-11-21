@@ -6,16 +6,17 @@ Kaikki data pysyy omassa selaimessa. Mitään ei lähetetä palvelimelle, eikä 
 
 ## Ominaisuudet
 
-| Alue                   | Mitä tekee                                                                                                                                                                                                                                                                           |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Malli**              | Prosessi on rakenteinen graafi (vaiheet, päätökset, alaprosessit, roolit, järjestelmät, syötteet ja tuotokset). Kaavio, lista ja esitys piirretään siitä. Jokaisella vaiheella on varmuustaso (arvaus, todennäköinen, vahvistettu).                                                  |
-| **Kaavio**             | Automaattinen asettelu, jonka voi ylittää käsin. Kolme asettelutapaa: _Vapaa_, _Uimaradat_ (rooleittain riveillä) ja _Kokonaiskuva_ (kaikki alaprosessit auki). Kumoa ja tee uudelleen, pikanäppäimet.                                                                               |
-| **Pikasyöte** (Ctrl+K) | Kirjoita prosessi tekstinä (ks. syntaksi alla), katso esikatselu ja lisää malliin. Saman tekstin voi lisätä uudelleen ilman kaksoiskappaleita. Prosessin voi viedä takaisin tekstinä ja muokata.                                                                                     |
-| **Lähteet**            | Tuo Word-, PDF-, teksti- ja Markdown-tiedostoja tai kirjoita muistiinpanoja. Työkalu ehdottaa tekstistä vaiheita, päätöksiä, rooleja ja järjestelmiä (sääntöpohjaisesti, suomen taivutukset huomioiden). Jokainen poiminta muistaa lähdekohdan, ja siihen pääsee takaisin kaaviosta. |
-| **Tarkentuminen**      | Työkalu löytää mallin aukot (puuttuva rooli, umpikuja, päätös ilman haaraa, arvaus ilman lähdettä, lähteen ja mallin ristiriita ym.) ja esittää ne kysymyksinä. Vastaus korjaa mallin. Valmiusaste näkyy koko ajan.                                                                  |
-| **Laajat prosessit**   | Hierarkia (alaprosessit), haku ja suodattimet, uimaradat, kokonaiskuva, ristiviittaukset (missä rooli tai järjestelmä on käytössä). Sujuva yli 500 vaiheen malleilla.                                                                                                                |
-| **Tallennus**          | Automaattitallennus selaimeen, automaattiset varmuuskopiot, tallennus suoraan tiedostoon (Chrome, Edge), poistetun projektin palautus ja muistutus tiedostokopiosta. Toimii myös ilman verkkoa (asennettava PWA).                                                                    |
-| **Esittäminen**        | _Esitystila_ (siisti koko ruudun näkymä, läpikäynti vaihe vaiheelta) sekä viennit: SVG, PNG, PDF, prosessidokumentti, itsenäinen HTML, Mermaid ja BPMN 2.0.                                                                                                                          |
+| Alue                   | Mitä tekee                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Malli**              | Prosessi on rakenteinen graafi (vaiheet, päätökset, alaprosessit, roolit, järjestelmät, syötteet ja tuotokset). Kaavio, lista ja esitys piirretään siitä. Jokaisella vaiheella on varmuustaso (arvaus, todennäköinen, vahvistettu).                                                                                                                                                               |
+| **Kaavio**             | Automaattinen asettelu, jonka voi ylittää käsin. Kolme asettelutapaa: _Vapaa_, _Uimaradat_ (rooleittain riveillä) ja _Kokonaiskuva_ (kaikki alaprosessit auki). Kumoa ja tee uudelleen, pikanäppäimet.                                                                                                                                                                                            |
+| **Pikasyöte** (Ctrl+K) | Kirjoita prosessi tekstinä (ks. syntaksi alla), katso esikatselu ja lisää malliin. Saman tekstin voi lisätä uudelleen ilman kaksoiskappaleita. Prosessin voi viedä takaisin tekstinä ja muokata.                                                                                                                                                                                                  |
+| **Lähteet**            | Tuo Word-, PDF-, teksti- ja Markdown-tiedostoja tai kirjoita muistiinpanoja. Työkalu ehdottaa tekstistä vaiheita, päätöksiä, rooleja ja järjestelmiä (sääntöpohjaisesti, suomen taivutukset huomioiden). Jokainen poiminta muistaa lähdekohdan, ja siihen pääsee takaisin kaaviosta.                                                                                                              |
+| **Tarkentuminen**      | Työkalu löytää mallin aukot (puuttuva rooli, umpikuja, päätös ilman haaraa, arvaus ilman lähdettä, lähteen ja mallin ristiriita ym.) ja esittää ne kysymyksinä. Vastaus korjaa mallin. Valmiusaste näkyy koko ajan.                                                                                                                                                                               |
+| **Laajat prosessit**   | Hierarkia (alaprosessit), haku ja suodattimet, uimaradat, kokonaiskuva, ristiviittaukset (missä rooli tai järjestelmä on käytössä). Sujuva yli 500 vaiheen malleilla.                                                                                                                                                                                                                             |
+| **Tallennus**          | Automaattitallennus selaimeen, automaattiset varmuuskopiot, tallennus suoraan tiedostoon (Chrome, Edge), poistetun projektin palautus ja muistutus tiedostokopiosta. Toimii myös ilman verkkoa (asennettava PWA).                                                                                                                                                                                 |
+| **Tietotyö**           | Vaiheille työaika ja odotusaika (väli), toistuvuus, RACI, kipupisteet parannusideoineen ja tunnisteet. _Analyysi_-näkymä näyttää läpimenoajan (nopein, tyypillinen, hitain), luovutukset roolien välillä, uudelleenkierrokset, roolien kuormituksen, RACI- ja rooli × järjestelmä -matriisit sekä kipupisteet. Lämpökartta (aika, kipupisteet, luovutukset) kaaviossa, esityksessä ja vienneissä. |
+| **Esittäminen**        | _Esitystila_ (siisti koko ruudun näkymä, läpikäynti vaihe vaiheelta) sekä viennit: SVG, PNG, PDF, prosessidokumentti, itsenäinen HTML, Mermaid ja BPMN 2.0.                                                                                                                                                                                                                                       |
 
 ## Aloitus
 
@@ -43,19 +44,23 @@ Vaatimukset: Node.js 20.19+ tai 22.12+.
   - Lähetä paketti
 ```
 
-| Merkintä                          | Merkitys                                          |
-| --------------------------------- | ------------------------------------------------- |
-| `- Vaihe`                         | Vaihe (myös `*`, `1.`, `1)`)                      |
-| `@Rooli`, `@(Monisanainen rooli)` | Vastuurooli                                       |
-| `[CRM, ERP]`                      | Järjestelmät                                      |
-| `< Syöte`, `> Tuotos`             | Syötteet ja tuotokset                             |
-| `~arvaus`, `~vahvistettu`         | Varmuus (oletus: todennäköinen)                   |
-| `? Kysymys`                       | Päätös, haarat sisennettynä `kyllä: …`            |
-| `jatka`, `loppu`, `-> Vaihe`      | Haara jatkaa, päättyy tai palaa vaiheeseen        |
-| `+ Alaprosessi`                   | Alaprosessi, sisältö sisennettynä                 |
-| `alku`, `loppu`, `alku: Nimi`     | Alku- ja loppupiste (luodaan itse, jos puuttuvat) |
-| `---`                             | Erotin: seuraava ketju ei jatka edellistä         |
-| `// kommentti`                    | Rivi ohitetaan                                    |
+| Merkintä                          | Merkitys                                                      |
+| --------------------------------- | ------------------------------------------------------------- |
+| `- Vaihe`                         | Vaihe (myös `*`, `1.`, `1)`)                                  |
+| `@Rooli`, `@(Monisanainen rooli)` | Vastuurooli                                                   |
+| `[CRM, ERP]`                      | Järjestelmät                                                  |
+| `< Syöte`, `> Tuotos`             | Syötteet ja tuotokset                                         |
+| `~arvaus`, `~vahvistettu`         | Varmuus (oletus: todennäköinen)                               |
+| `? Kysymys`                       | Päätös, haarat sisennettynä `kyllä: …`                        |
+| `jatka`, `loppu`, `-> Vaihe`      | Haara jatkaa, päättyy tai palaa vaiheeseen                    |
+| `+ Alaprosessi`                   | Alaprosessi, sisältö sisennettynä                             |
+| `alku`, `loppu`, `alku: Nimi`     | Alku- ja loppupiste (luodaan itse, jos puuttuvat)             |
+| `=2 pv`, `^1-3 pv`                | Työaika ja odotusaika (min, h, pv, vk; väli tai min-tyyp-max) |
+| `%viikoittain`, `#tunniste`       | Toistuvuus ja tunniste                                        |
+| `!3 Ongelma => Idea`              | Kipupiste (vakavuus 1–3) ja parannusidea                      |
+| `A@Rooli`, `C@Rooli`, `I@Rooli`   | RACI (`@Rooli` on suorittaja eli R)                           |
+| `---`                             | Erotin: seuraava ketju ei jatka edellistä                     |
+| `// kommentti`                    | Rivi ohitetaan                                                |
 
 Samannimiset vaiheet tunnistetaan, joten tekstiä voi lisätä uudelleen tai täydentää vaiheiden tietoja ilman että syntyy kaksoiskappaleita.
 

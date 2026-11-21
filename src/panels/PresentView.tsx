@@ -56,7 +56,7 @@ export function PresentView() {
     return () => {
       cancelled = true
     }
-  }, [project, processId, options.expand, options.onlyConfirmed, direction, fitFor])
+  }, [project, processId, options.expand, options.onlyConfirmed, options.heat, direction, fitFor])
 
   const steps = useMemo(
     () =>

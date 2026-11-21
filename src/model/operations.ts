@@ -111,12 +111,23 @@ function stripEntityRefs(n: ProcessNode, entityId: string): ProcessNode {
     n.roleId !== entityId &&
     !n.systemIds.includes(entityId) &&
     !n.inputIds.includes(entityId) &&
-    !n.outputIds.includes(entityId)
+    !n.outputIds.includes(entityId) &&
+    !n.raci?.accountableIds?.includes(entityId) &&
+    !n.raci?.consultedIds?.includes(entityId) &&
+    !n.raci?.informedIds?.includes(entityId)
   ) {
     return n
   }
+  const raci = n.raci
+    ? {
+        accountableIds: n.raci.accountableIds?.filter((x) => x !== entityId),
+        consultedIds: n.raci.consultedIds?.filter((x) => x !== entityId),
+        informedIds: n.raci.informedIds?.filter((x) => x !== entityId),
+      }
+    : undefined
   return {
     ...n,
+    raci,
     roleId: n.roleId === entityId ? undefined : n.roleId,
     systemIds: n.systemIds.filter((x) => x !== entityId),
     inputIds: n.inputIds.filter((x) => x !== entityId),

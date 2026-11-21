@@ -30,7 +30,7 @@ import {
   startProcessSkeleton,
 } from '../store/actions'
 import { useStore } from '../store/store'
-import { useUi, type LayoutMode } from '../store/ui'
+import { useUi, type Heatmap, type LayoutMode } from '../store/ui'
 import { Icon } from '../ui/Icon'
 import { LaneView } from './LaneView'
 import { ProcessGroupView } from './ProcessGroupView'
@@ -62,6 +62,7 @@ function CanvasInner() {
   const processId = useStore((s) => s.currentProcessId)
   const selection = useStore((s) => s.selection)
   const clipSize = useUi((s) => s.clipSize)
+  const heatmap = useUi((s) => s.heatmap)
   const projectIsEmpty = useStore(
     (s) =>
       !!s.project &&
@@ -341,6 +342,19 @@ function CanvasInner() {
           </button>
         ))}
       </div>
+      <label className="canvas__heat">
+        Väritys
+        <select
+          value={heatmap}
+          onChange={(e) => useUi.getState().setHeatmap(e.target.value as Heatmap)}
+          aria-label="Väritys"
+        >
+          <option value="off">Ei väritystä</option>
+          <option value="time">Aika (työ ja odotus)</option>
+          <option value="pain">Kipupisteet</option>
+          <option value="handoff">Luovutukset</option>
+        </select>
+      </label>
       {MODE_HINT[mode] && <p className="canvas__hint">{MODE_HINT[mode]}</p>}
 
       {empty && (

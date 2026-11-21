@@ -2,10 +2,12 @@ import { create } from 'zustand'
 import { EMPTY_FILTER, type Filter } from '../analysis/search'
 import { DEFAULT_THEME, sanitizeTheme, type Theme } from '../export/theme'
 
-export type ViewMode = 'canvas' | 'list' | 'sources'
+export type ViewMode = 'canvas' | 'list' | 'sources' | 'analysis'
 export type Direction = 'DOWN' | 'RIGHT'
 /** Kaavion asettelutapa: vapaa (muokattava), uimaradat (rooleittain) tai kokonaiskuva (alaprosessit auki). */
 export type LayoutMode = 'free' | 'lanes' | 'overview'
+/** Lämpökartta kaavion päällä: aika, kipupisteet tai luovutukset. */
+export type Heatmap = 'off' | 'time' | 'pain' | 'handoff'
 
 export interface PresentOptions {
   /** Avaa alaprosessit samaan kuvaan. */
@@ -16,6 +18,10 @@ export interface PresentOptions {
   showSystems: boolean
   /** Varmuus näkyviin (arvaus katkoviivalla). Esityksessä oletuksena pois. */
   showUncertainty: boolean
+  /** Kestot ja kipupisteet vaiheissa. */
+  showMetrics: boolean
+  /** Lämpökartta esityksessä ja viennissä. */
+  heat: Heatmap
 }
 
 export const DEFAULT_PRESENT: PresentOptions = {
@@ -24,6 +30,8 @@ export const DEFAULT_PRESENT: PresentOptions = {
   showRoles: true,
   showSystems: true,
   showUncertainty: false,
+  showMetrics: false,
+  heat: 'off',
 }
 
 interface Persisted {
@@ -32,6 +40,7 @@ interface Persisted {
   view: ViewMode
   direction: Direction
   layoutMode: LayoutMode
+  heatmap: Heatmap
   leftOpen: boolean
   rightOpen: boolean
 }
@@ -47,6 +56,7 @@ function load(): Persisted {
     view: 'canvas',
     direction: 'DOWN',
     layoutMode: 'free',
+    heatmap: 'off',
     leftOpen: !small,
     rightOpen: !small,
   }
@@ -161,6 +171,7 @@ interface UiState extends Persisted {
   setView: (v: ViewMode) => void
   setDirection: (d: Direction) => void
   setLayoutMode: (m: LayoutMode) => void
+  setHeatmap: (h: Heatmap) => void
   toggleLeft: () => void
   toggleRight: () => void
   setRightOpen: (open: boolean) => void
@@ -177,8 +188,8 @@ interface UiState extends Persisted {
 
 export const useUi = create<UiState>((set, get) => {
   const save = () => {
-    const { theme, present, view, direction, layoutMode, leftOpen, rightOpen } = get()
-    persist({ theme, present, view, direction, layoutMode, leftOpen, rightOpen })
+    const { theme, present, view, direction, layoutMode, heatmap, leftOpen, rightOpen } = get()
+    persist({ theme, present, view, direction, layoutMode, heatmap, leftOpen, rightOpen })
   }
   return {
     ...load(),
@@ -282,6 +293,10 @@ export const useUi = create<UiState>((set, get) => {
     },
     setLayoutMode: (layoutMode) => {
       set({ layoutMode })
+      save()
+    },
+    setHeatmap: (heatmap) => {
+      set({ heatmap })
       save()
     },
     toggleLeft: () => {
