@@ -11,12 +11,13 @@ const cleanLabel = (s: string) =>
 
 function annotations(p: Pick<Project, 'entities'>, s: Suggestion): string {
   const parts: string[] = []
-  if (s.roleId && p.entities[s.roleId]) {
-    const name = p.entities[s.roleId].name.replace(/[()]/g, '').trim()
-    parts.push(/[\s@[\]<>~,;"]/.test(name) ? `@(${name})` : `@${name}`)
+  const roleName = s.roleId && p.entities[s.roleId] ? p.entities[s.roleId].name : s.roleName
+  if (roleName) {
+    const name = roleName.replace(/[()]/g, '').replace(/\s+/g, ' ').trim()
+    if (name) parts.push(/[\s@[\]<>~,;"]/.test(name) ? `@(${name})` : `@${name}`)
   }
-  const systems = s.systemIds
-    .map((id) => p.entities[id]?.name.replace(/[,;\]]/g, ' ').trim())
+  const systems = [...s.systemIds.map((id) => p.entities[id]?.name), ...(s.systemNames ?? [])]
+    .map((n) => n?.replace(/[,;\]]/g, ' ').trim())
     .filter(Boolean)
   if (systems.length) parts.push(`[${systems.join(', ')}]`)
   if (s.duration) parts.push(`=${formatRange(s.duration)}`)

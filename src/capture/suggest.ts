@@ -19,6 +19,9 @@ export interface Suggestion {
   label: string
   roleId?: string
   systemIds: string[]
+  /** Rooli ja järjestelmät nimenä, kun ne eivät vielä ole projektissa (kielimallin ehdotukset). */
+  roleName?: string
+  systemNames?: string[]
   /** Ehdotus jatkaa edellistä päätöstä: kyllä- tai ei-haarana. */
   branch?: 'yes' | 'no'
   /** Tekstistä tunnistettu työaika, odotusaika, toistuvuus ja kipupisteet. */
@@ -159,6 +162,34 @@ const ACTION_STEMS = [
   'sopivat',
   'kutsu',
   'ilmoitta',
+  'kirjoit',
+  'esitte',
+  'suorit',
+  'havait',
+  'pysäyt',
+  'vapaut',
+  'sulkee',
+  'sulke',
+  'eskaloi',
+  'ehdot',
+  'opast',
+  'tiedott',
+  'kuvaa',
+  'luokitt',
+  'ajoit',
+  'kokoa',
+  'kokoo',
+  'määrit',
+  'nimeä',
+  'nimeää',
+  'käynnist',
+  'hylät',
+  'eristä',
+  'eristet',
+  'tarjo',
+  'korja',
+  'kuittaa',
+  'vahvist',
 ]
 /** Lyhyet verbit tunnistetaan vain kokonaisina sanoina (esim. "luo" ei saa osua sanaan "luottoraja"). */
 const SHORT_VERBS = [

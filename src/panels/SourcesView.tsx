@@ -5,6 +5,8 @@ import { FileImportError, importFile, SUPPORTED_EXTENSIONS } from '../capture/im
 import { refsOfSource } from '../capture/refs'
 import type { Mark } from '../capture/segments'
 import { discoverEntities, type Candidate } from '../capture/discover'
+import { LlmPanel } from './LlmPanel'
+import { useLlm } from '../store/llm'
 import { ensureEntity } from '../model/commands'
 import type { Operation } from '../model/operations'
 import { ruleExtractor, type Suggestion } from '../capture/suggest'
@@ -223,9 +225,19 @@ function SourceWorkspace({ source, sources }: { source: Source; sources: Source[
   // Tunnistus ja ehdotukset riippuvat vain entiteeteistä, ei koko projektista.
   const entityScope = useMemo(() => ({ entities: project.entities }), [project.entities])
   const mentions = useMemo(() => findMentions(entityScope, source.text), [entityScope, source.text])
-  const allSuggestions = useMemo(
+  const ruleSuggestions = useMemo(
     () => ruleExtractor.suggest(entityScope, source.id, source.text),
     [entityScope, source.text, source.id],
+  )
+  const llmResult = useLlm((s) => s.results[source.id])
+  const llmMode = useLlm((s) => s.mode[source.id] ?? 'rules')
+  // Kielimallin tulos on voimassa vain, kun lähdeteksti ei ole muuttunut ajon jälkeen
+  const allSuggestions = useMemo(
+    () =>
+      llmMode === 'llm' && llmResult && llmResult.textLength === source.text.length
+        ? llmResult.suggestions
+        : ruleSuggestions,
+    [llmMode, llmResult, ruleSuggestions, source.text.length],
   )
   const candidates = useMemo(
     () => discoverEntities(entityScope, source.text),
@@ -583,6 +595,7 @@ function SourceWorkspace({ source, sources }: { source: Source; sources: Source[
 
           {tab === 'suggestions' && (
             <div className="side-section">
+              <LlmPanel source={source} />
               {candidates.length > 0 && <CandidatePanel candidates={candidates} />}
               <div className="side-actions side-actions--row">
                 <button

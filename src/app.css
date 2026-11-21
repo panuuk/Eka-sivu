@@ -3051,3 +3051,37 @@ button.cell:hover {
   display: grid;
   gap: 0.25rem;
 }
+
+/* Kielimalli */
+.llm {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.7rem;
+  margin-bottom: 0.75rem;
+  background: var(--surface);
+}
+.llm > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.llm__body {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+.llm__row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.llm__model {
+  flex: 1;
+  min-width: 10rem;
+}
+.atable__sum th,
+.atable__sum td {
+  font-weight: 700;
+  border-top: 2px solid var(--border-strong);
+}

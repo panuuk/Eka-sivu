@@ -48,9 +48,13 @@ describe('discoverEntities', () => {
     expect(roles).toContain('Esimies')
   })
 
-  it('yksittäinen subjekti ilman roolisanaa ei riitä, toistuva riittää', () => {
+  it('yksittäinen subjekti ilman toimijan tai yksikön piirrettä ei riitä, toistuva riittää', () => {
     const once = names(discoverEntities(p, 'Kassa tarkistaa maksun.'), 'role')
     expect(once).not.toContain('Kassa')
+    // toimijan näköinen yksittäinen subjekti ehdotetaan, mutta valitsemattomana
+    const agent = discoverEntities(p, 'Vartija avaa oven.').find((c) => c.name === 'Vartija')
+    expect(agent).toBeDefined()
+    expect(agent!.likely).toBe(false)
     const twice = names(
       discoverEntities(p, 'Kassa tarkistaa maksun. Kassa kuittaa maksun.'),
       'role',

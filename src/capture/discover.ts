@@ -35,8 +35,24 @@ const ROLE_WORDS: [stem: string, base: string][] = [
   ['kirjanpitäj', 'kirjanpitäjä'],
   ['harjoittelij', 'harjoittelija'],
   ['pääkäyttäj', 'pääkäyttäjä'],
+  ['käyttäj', 'käyttäjä'],
+  ['työntekij', 'työntekijä'],
+  ['operaattor', 'operaattori'],
+  ['insinöör', 'insinööri'],
+  ['päivystäj', 'päivystäjä'],
+  ['perehdyttäj', 'perehdyttäjä'],
+  ['tarvitsij', 'tarvitsija'],
+  ['lautakun', 'lautakunta'],
+  ['johtoryhm', 'johtoryhmä'],
+  ['myyj', 'myyjä'],
+  ['hakij', 'hakija'],
 ]
 /** Sanat, jotka kelpaavat roolin nimeksi vain subjektina (liian yleisiä muuten). */
+/** Toimijan päätteitä: -ja/-jä (käyttäjä), -ri (operaattori), -ööri, -ori. */
+const AGENT_SUFFIX = /(?:ja|jä|ri|ööri|ori|ikko|nen)$/iu
+/** Osastojen ja toimintojen nimiä: "palvelupiste", "kunnossapito", "logistiikka", "talous". */
+const UNIT_SUFFIX =
+  /(?:palvelu|piste|pito|ikka|isto|osasto|yksikkö|tiimi|ryhmä|tuki|hallinto|talous|myynti|tuotanto|laatu|toimisto|keskus)$/iu
 const SUBJECT_SUFFIX = /(?:tuki|osasto|tiimi|yksikkö|palvelu|hallinto|ryhmä|toimisto)$/iu
 
 const SYSTEM_WORDS: [stem: string, base: string][] = [
@@ -74,15 +90,24 @@ interface Tally {
   name: string
   count: number
   strong: boolean
+  /** Ei varma, mutta toimijan tai yksikön näköinen: ehdotetaan valitsemattomana. */
+  plausible: boolean
 }
 
-function add(map: Map<string, Tally>, kind: Candidate['kind'], name: string, strong: boolean) {
+function add(
+  map: Map<string, Tally>,
+  kind: Candidate['kind'],
+  name: string,
+  strong: boolean,
+  plausible = false,
+) {
   const key = `${kind}:${name.toLocaleLowerCase('fi')}`
   const cur = map.get(key)
   if (cur) {
     cur.count++
     cur.strong ||= strong
-  } else map.set(key, { kind, name, count: 1, strong })
+    cur.plausible ||= plausible
+  } else map.set(key, { kind, name, count: 1, strong, plausible })
 }
 
 export function discoverEntities(project: Pick<Project, 'entities'>, text: string): Candidate[] {
@@ -116,7 +141,14 @@ export function discoverEntities(project: Pick<Project, 'entities'>, text: strin
     if (words.some((w) => NOT_ROLE.has(w.toLocaleLowerCase('fi')))) continue
     // Subjektin on päätyttävä substantiiviin: ei verbimuotoa tai pronominia
     if (words.some((w) => /^(?:jos|kun|että|mikäli|koska)$/i.test(w))) continue
-    add(tallies, 'role', capitalize(subject), SUBJECT_SUFFIX.test(subject))
+    const last = words[words.length - 1]
+    add(
+      tallies,
+      'role',
+      capitalize(subject),
+      SUBJECT_SUFFIX.test(subject),
+      AGENT_SUFFIX.test(last) || UNIT_SUFFIX.test(last),
+    )
   }
 
   // 3. Järjestelmät
@@ -136,7 +168,7 @@ export function discoverEntities(project: Pick<Project, 'entities'>, text: strin
     if (findMentions(project, t.name, [t.kind]).length > 0) continue
     // Subjektiehdokas ilman roolisanaa vaatii toistoa; roolisana riittää yhdestäkin maininnasta
     const likely = t.strong || t.count >= 3
-    if (!t.strong && t.count < 2) continue
+    if (!t.strong && t.count < 2 && !t.plausible) continue
     out.push({ kind: t.kind, name: t.name, count: t.count, likely })
   }
   // Roolin nimi voi sisältyä toiseen ("Esimies" ja "Esimies tiimi"): pidä lyhyin yksilöivä, poista duplikaatit
