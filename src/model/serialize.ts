@@ -182,6 +182,16 @@ function normalizeProject(raw: Record<string, unknown>): Project {
     }
     p.versions = Object.keys(ok).length ? ok : undefined
   }
+  for (const key of ['stamps', 'tombstones'] as const) {
+    const raw = p[key] as unknown
+    if (raw === undefined) continue
+    const ok: Record<string, number> = {}
+    if (raw && typeof raw === 'object' && !Array.isArray(raw))
+      for (const [id, t] of Object.entries(raw as Record<string, unknown>))
+        if (typeof t === 'number' && Number.isFinite(t)) ok[id] = t
+    if (Object.keys(ok).length) p[key] = ok
+    else delete p[key]
+  }
   const issues = validateProject(p)
   if (issues.length) {
     throw new ImportError(

@@ -20,6 +20,8 @@ export interface DocumentOptions {
   questions?: Gap[]
   /** Klikkaus kaaviossa korostaa taulukon rivin. Itsenäiseen HTML-tiedostoon. */
   interactive: boolean
+  /** Palautetila (vaatii interaktiivisen): lukija voi kommentoida vaiheita ja vastata avoimiin kysymyksiin. */
+  review?: boolean
   generatedAt?: Date
   /** Muutosluettelo lähtötilaan verrattuna. */
   comparison?: { comparison: Comparison; baseName: string }
@@ -36,6 +38,14 @@ const INTERACTIVE_CSS = `
 .pk-panel dd { margin: 0; }
 #pk-close { position: absolute; top: .5rem; right: .5rem; }
 svg g[data-id] { cursor: pointer; }
+.pk-review { margin-top: .75rem; padding-top: .5rem; border-top: 1px solid var(--border); display: grid; gap: .4rem; }
+.pk-review textarea, .pk-fb textarea { width: 100%; box-sizing: border-box; font: inherit; padding: .4rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+.pk-fb { position: fixed; left: 1rem; bottom: 1rem; width: min(30rem, calc(100vw - 2rem)); max-height: 75vh; overflow: auto; padding: 1rem; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 30px rgb(0 0 0 / 20%); z-index: 11; }
+.pk-fb h3 { margin: 0 0 .5rem; }
+.pk-fb ul { margin: 0 0 .75rem; padding-left: 1.1rem; }
+.pk-fb li { margin-bottom: .4rem; }
+.pk-fb .pk-q { margin-bottom: .75rem; }
+.pk-fb button, .pk-review button { font: inherit; padding: .25rem .6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface2); color: var(--text); cursor: pointer; }
 @media print { .pk-toolbar, .pk-panel { display: none !important; } }
 `
 
@@ -312,13 +322,101 @@ ${edgeRows ? `<h4>Yhteydet</h4><ul>${edgeRows}</ul>` : ''}
     .replace(/\u2028/g, '\\u2028')
     .replace(/\u2029/g, '\\u2029')
 
+  const review = !!opts.interactive && !!opts.review
+  // Palautetilan tiedot: hanke ja avoimet kysymykset (vain tämän dokumentin prosesseista)
+  const reviewJson = review
+    ? JSON.stringify({
+        projectId: p.id,
+        projectName: p.name,
+        questions: (opts.questions ?? [])
+          .filter((g) => processes.some((x) => x.id === g.processId))
+          .slice(0, 60)
+          .map((g) => ({
+            key: g.key,
+            text: g.text,
+            nodeId: g.targetId && p.nodes[g.targetId] ? g.targetId : undefined,
+            nodeLabel: g.targetId ? p.nodes[g.targetId]?.label : undefined,
+          })),
+      })
+        .replace(/</g, '\\u003c')
+        .replace(/>/g, '\\u003e')
+        .replace(/&/g, '\\u0026')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029')
+    : ''
   const toolbar = opts.interactive
-    ? `<div class="pk-toolbar" role="search"><label>Hae vaiheita <input id="pk-search" type="search" placeholder="Nimi, rooli, järjestelmä…" autocomplete="off"></label><span id="pk-count" class="muted" role="status"></span><button type="button" id="pk-back" hidden>← Takaisin</button></div>`
+    ? `<div class="pk-toolbar" role="search"><label>Hae vaiheita <input id="pk-search" type="search" placeholder="Nimi, rooli, järjestelmä…" autocomplete="off"></label><span id="pk-count" class="muted" role="status"></span><button type="button" id="pk-back" hidden>← Takaisin</button>${review ? '<label>Nimesi <input id="pk-reviewer" type="text" autocomplete="name" placeholder="Kuka kommentoi?"></label><button type="button" id="pk-fb-open">Palaute (<span id="pk-fb-count">0</span>)</button>' : ''}</div>`
     : ''
   const panel = opts.interactive
-    ? `<aside id="pk-panel" class="pk-panel" hidden aria-live="polite"><button type="button" id="pk-close" aria-label="Sulje tiedot">×</button><h3 id="pk-title"></h3><dl id="pk-details"></dl><button type="button" id="pk-open" hidden>Avaa alaprosessi</button></aside>`
+    ? `<aside id="pk-panel" class="pk-panel" hidden aria-live="polite"><button type="button" id="pk-close" aria-label="Sulje tiedot">×</button><h3 id="pk-title"></h3><dl id="pk-details"></dl><button type="button" id="pk-open" hidden>Avaa alaprosessi</button>${review ? '<div class="pk-review"><label for="pk-comment">Kommentti tähän vaiheeseen</label><textarea id="pk-comment" rows="3"></textarea><button type="button" id="pk-comment-add">Lisää kommentti</button></div>' : ''}</aside>${review ? '<aside id="pk-fb" class="pk-fb" hidden aria-label="Palaute"><button type="button" id="pk-fb-close" aria-label="Sulje palaute" style="float:right">×</button><h3>Palaute</h3><h4>Kommentit</h4><ul id="pk-fb-comments"></ul><p id="pk-fb-none" class="muted">Ei kommentteja vielä. Valitse vaihe kaaviosta ja kirjoita kommentti.</p><h4>Avoimet kysymykset</h4><div id="pk-fb-questions"></div><button type="button" id="pk-fb-save">Tallenna palaute tiedostoksi</button><p class="muted">Lähetä tallennettu tiedosto prosessin laatijalle.</p></aside>' : ''}`
     : ''
 
+  const reviewScript = review
+    ? `<script type="application/json" id="pk-review-data">${reviewJson}</script>
+<script>
+(function () {
+  var meta = JSON.parse(document.getElementById('pk-review-data').textContent)
+  var data = JSON.parse(document.getElementById('pk-data').textContent)
+  var comments = []
+  var answers = {}
+  var current = null
+  var box = document.getElementById('pk-fb')
+  var list = document.getElementById('pk-fb-comments')
+  var none = document.getElementById('pk-fb-none')
+  var qbox = document.getElementById('pk-fb-questions')
+  var countEl = document.getElementById('pk-fb-count')
+  var comment = document.getElementById('pk-comment')
+  var reviewer = document.getElementById('pk-reviewer')
+
+  document.addEventListener('click', function (e) {
+    var g = e.target.closest ? e.target.closest('svg [data-id]') : null
+    if (g && data[g.getAttribute('data-id')]) current = g.getAttribute('data-id')
+  })
+  function nCount() { return comments.length + Object.keys(answers).filter(function (k) { return answers[k] }).length }
+  function renderComments() {
+    list.textContent = ''
+    comments.forEach(function (c, i) {
+      var li = document.createElement('li')
+      var b = document.createElement('b'); b.textContent = c.nodeLabel + ': '
+      li.appendChild(b); li.appendChild(document.createTextNode(c.text + ' '))
+      var rm = document.createElement('button'); rm.type = 'button'; rm.textContent = 'Poista'
+      rm.addEventListener('click', function () { comments.splice(i, 1); renderComments() })
+      li.appendChild(rm); list.appendChild(li)
+    })
+    none.hidden = comments.length > 0
+    countEl.textContent = String(nCount())
+  }
+  meta.questions.forEach(function (q) {
+    var d = document.createElement('div'); d.className = 'pk-q'
+    var l = document.createElement('label'); l.textContent = (q.nodeLabel ? q.nodeLabel + ': ' : '') + q.text
+    var t = document.createElement('textarea'); t.rows = 2; t.setAttribute('aria-label', 'Vastaus: ' + q.text)
+    t.addEventListener('input', function () { answers[q.key] = t.value.trim(); countEl.textContent = String(nCount()) })
+    l.appendChild(document.createElement('br')); d.appendChild(l); d.appendChild(t); qbox.appendChild(d)
+  })
+  if (!meta.questions.length) qbox.textContent = 'Ei avoimia kysymyksiä.'
+  document.getElementById('pk-comment-add').addEventListener('click', function () {
+    var text = comment.value.trim()
+    if (!current || !text) return
+    comments.push({ nodeId: current, nodeLabel: data[current].label, text: text })
+    comment.value = ''
+    renderComments()
+  })
+  document.getElementById('pk-fb-open').addEventListener('click', function () { box.hidden = !box.hidden })
+  document.getElementById('pk-fb-close').addEventListener('click', function () { box.hidden = true })
+  document.getElementById('pk-fb-save').addEventListener('click', function () {
+    var items = comments.map(function (c, i) { return { id: 'c' + i, type: 'comment', nodeId: c.nodeId, nodeLabel: c.nodeLabel, text: c.text } })
+    meta.questions.forEach(function (q) {
+      if (answers[q.key]) items.push({ id: 'a' + q.key, type: 'answer', questionKey: q.key, questionText: q.text, nodeId: q.nodeId, nodeLabel: q.nodeLabel, text: answers[q.key] })
+    })
+    var out = { app: 'prosessikartta-palaute', version: 1, projectId: meta.projectId, projectName: meta.projectName, reviewer: (reviewer.value || '').trim(), createdAt: Date.now(), items: items }
+    var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' })
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'palaute.prosessikartta-palaute.json'
+    document.body.appendChild(a); a.click(); a.remove()
+  })
+  renderComments()
+})()
+</script>`
+    : ''
   const script = opts.interactive
     ? `<script type="application/json" id="pk-data">${dataJson}</script>
 <script>
@@ -412,7 +510,7 @@ ${edgeRows ? `<h4>Yhteydet</h4><ul>${edgeRows}</ul>` : ''}
     count.textContent = q ? hits + ' osumaa' : ''
   })
 })()
-</script>`
+</script>${reviewScript}`
     : ''
 
   return `<!doctype html>

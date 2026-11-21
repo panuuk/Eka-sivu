@@ -146,6 +146,10 @@ export function TopBar() {
       onSelect: () => useUi.getState().setVersionsOpen(true),
     },
     {
+      label: 'Jaa ja yhdistä…',
+      onSelect: () => useUi.getState().setSyncOpen(true),
+    },
+    {
       label: 'Tallennus ja varmuuskopiot…',
       onSelect: () => useUi.getState().setStorageOpen(true),
     },

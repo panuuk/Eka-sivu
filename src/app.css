@@ -3349,3 +3349,17 @@ button.cell:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* Jaa ja yhdistä */
+.sync__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+.sync__table th,
+.sync__table td {
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}

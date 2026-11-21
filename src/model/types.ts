@@ -209,6 +209,10 @@ export interface Project {
   scenarios?: Record<string, Scenario>
   /** Tallennetut näkymät esityksen järjestyksessä. */
   views?: SavedView[]
+  /** Viimeisin muokkausaika tietueen tunnisteen mukaan (laitteiden välistä yhdistämistä varten). */
+  stamps?: Record<string, number>
+  /** Poistettujen tietueiden poistoaika tunnisteen mukaan. */
+  tombstones?: Record<string, number>
 }
 
 export const SCHEMA_VERSION = 5
