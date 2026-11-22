@@ -15,7 +15,7 @@ import { useUi } from '../store/ui'
 import { ChipPicker } from '../ui/ChipPicker'
 import { Icon } from '../ui/Icon'
 import { Segmented, TextField } from './fields'
-import { ReadinessCard } from './QuestionsPanel'
+import { cardHasContent, ProcessCardFields } from './ProcessCardFields'
 import { WorkSection } from './WorkFields'
 
 const KINDS: NodeKind[] = ['step', 'decision', 'subprocess', 'start', 'end']
@@ -180,7 +180,11 @@ function NodeInspector({ node }: { node: ProcessNode }) {
             <Icon name="unlock" size={16} /> Vapauta sijainti
           </button>
         )}
-        <button type="button" className="btn-danger-ghost" onClick={() => void deleteSelection()}>
+        <button
+          type="button"
+          className="btn-danger-ghost"
+          onClick={() => void deleteSelection({ confirm: true })}
+        >
           <Icon name="trash" size={16} /> Poista
         </button>
       </div>
@@ -212,7 +216,11 @@ function EdgeInspector({ edgeId }: { edgeId: string }) {
         }
       />
       <div className="inspector__actions">
-        <button type="button" className="btn-danger-ghost" onClick={() => void deleteSelection()}>
+        <button
+          type="button"
+          className="btn-danger-ghost"
+          onClick={() => void deleteSelection({ confirm: true })}
+        >
           <Icon name="trash" size={16} /> Poista yhteys
         </button>
       </div>
@@ -250,7 +258,12 @@ function ProcessInspector() {
           )
         }
       />
-      <ReadinessCard processId={processId} />
+      <details className="work" open={cardHasContent(proc)} data-testid="card-section">
+        <summary>Prosessikortti: tarkoitus, omistaja ja rajat</summary>
+        <div className="work__body">
+          <ProcessCardFields proc={proc} />
+        </div>
+      </details>
       <dl className="stats">
         <div>
           <dt>Vaiheita</dt>
@@ -350,7 +363,11 @@ export function Inspector() {
           <button type="button" onClick={groupSelection} disabled={selection.nodeIds.length < 2}>
             <Icon name="group" size={16} /> Ryhmitä alaprosessiksi
           </button>
-          <button type="button" className="btn-danger-ghost" onClick={() => void deleteSelection()}>
+          <button
+            type="button"
+            className="btn-danger-ghost"
+            onClick={() => void deleteSelection({ confirm: true })}
+          >
             <Icon name="trash" size={16} /> Poista valitut
           </button>
         </div>

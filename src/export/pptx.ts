@@ -23,7 +23,7 @@ function blobToBase64(blob: Blob): Promise<string> {
 }
 
 /** Sovittaa kuvan laatikkoon suhteen säilyttäen ja keskittäen. */
-export function fitBox(
+function fitBox(
   imgW: number,
   imgH: number,
   box: { x: number; y: number; w: number; h: number },
@@ -34,7 +34,7 @@ export function fitBox(
   return { x: box.x + (box.w - w) / 2, y: box.y + (box.h - h) / 2, w, h }
 }
 
-export interface PptxMeta {
+interface PptxMeta {
   title: string
   theme: Theme
   /** SVG -> PNG -rasteroija (selaimessa `svgToPng`). */

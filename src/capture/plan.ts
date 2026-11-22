@@ -44,7 +44,7 @@ export interface PlanOptions {
   keepIds?: ReadonlySet<string>
 }
 
-export interface Removal {
+interface Removal {
   id: string
   label: string
   kind: NodeKind
@@ -52,13 +52,13 @@ export interface Removal {
 
 export type EffectStatus = 'new' | 'matched' | 'updated' | 'branch' | 'link' | 'note' | 'renamed'
 
-export interface LineEffect {
+interface LineEffect {
   line: number
   status: EffectStatus
   text: string
 }
 
-export interface PlanResult {
+interface PlanResult {
   ops: Operation[]
   after: Project
   parse: ParseResult

@@ -17,7 +17,7 @@ function dedent(lines: string[]): string[] {
   return min > 0 ? lines.map((l) => l.slice(Math.min(min, /^ */.exec(l)![0].length))) : lines
 }
 
-export interface CleanedResponse {
+interface CleanedResponse {
   text: string
   changed: boolean
   /** Siivous poisti johdannon, loppuselityksen tai koodilohkon (ei vain lihavointeja). */

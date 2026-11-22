@@ -80,13 +80,13 @@ export async function listModels(
 
 // --- Tekstin pilkkominen ---
 
-export interface Chunk {
+interface Chunk {
   start: number
   end: number
   text: string
 }
 
-export const CHUNK_CHARS = 2500
+const CHUNK_CHARS = 2500
 
 /** Jakaa tekstin kappaleiden rajoilta enintään `max` merkin paloihin. Palojen sijainnit säilyvät. */
 export function chunkText(text: string, max = CHUNK_CHARS): Chunk[] {
@@ -116,7 +116,7 @@ export function chunkText(text: string, max = CHUNK_CHARS): Chunk[] {
 
 // --- Vastauksen jäsennys ---
 
-export interface RawStep {
+interface RawStep {
   kind?: string
   label?: string
   quote?: string
@@ -127,7 +127,7 @@ export interface RawStep {
   wait?: string
 }
 
-export const STEP_SCHEMA = {
+const STEP_SCHEMA = {
   type: 'object',
   properties: {
     steps: {
@@ -153,7 +153,7 @@ export const STEP_SCHEMA = {
   additionalProperties: false,
 } as const
 
-export const SYSTEM_PROMPT = `Olet prosessianalyytikko. Poimi annetusta suomenkielisestä tekstistä prosessin vaiheet ja päätökset siinä järjestyksessä kuin ne tekstissä esiintyvät. Vastaa vain JSON-muodossa.
+const SYSTEM_PROMPT = `Olet prosessianalyytikko. Poimi annetusta suomenkielisestä tekstistä prosessin vaiheet ja päätökset siinä järjestyksessä kuin ne tekstissä esiintyvät. Vastaa vain JSON-muodossa.
 
 Säännöt:
 - "label": lyhyt vaiheen nimi (esim. "Tarkista lasku"). Päätöksen nimi on kysymys (esim. "Ylittyykö raja?").
@@ -243,7 +243,7 @@ function durationOf(s: string | undefined): DurationRange | undefined {
 }
 
 /** Muuntaa mallin vastauksen ehdotuksiksi: sijainnit etsitään tekstistä, entiteetit yhdistetään nimillä. */
-export function stepsToSuggestions(
+function stepsToSuggestions(
   project: Pick<Project, 'entities'>,
   sourceId: string,
   fullText: string,
@@ -303,7 +303,7 @@ export function stepsToSuggestions(
 }
 
 /** Poistaa päällekkäiset ehdotukset (palojen rajat): samaa kohtaa ei ehdoteta kahdesti. */
-export function dedupe(list: Suggestion[]): Suggestion[] {
+function dedupe(list: Suggestion[]): Suggestion[] {
   const sorted = [...list].sort((a, b) => a.start - b.start || a.end - b.end)
   const out: Suggestion[] = []
   for (const s of sorted) {
@@ -321,12 +321,12 @@ export function dedupe(list: Suggestion[]): Suggestion[] {
 
 // --- Poimija ---
 
-export interface LlmRunOptions {
+interface LlmRunOptions {
   onProgress?: (done: number, total: number) => void
   signal?: AbortSignal
 }
 
-export interface LlmResult {
+interface LlmResult {
   suggestions: Suggestion[]
   rejected: number
   chunks: number

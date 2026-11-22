@@ -1,7 +1,7 @@
 import type { Project, Question } from '../model/types'
 import { findGaps, indexGraph, type Gap } from './gaps'
 
-export interface Readiness {
+interface Readiness {
   /** 0–100 */
   percent: number
   /** Vaiheita ja päätöksiä (ilman alku- ja loppupisteitä). */

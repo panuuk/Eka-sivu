@@ -34,6 +34,10 @@ const PATHS: Record<string, string> = {
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   sliders: 'M4 7h9M17 7h3M4 17h3M11 17h9M13 4v6M7 14v6',
   edit: 'M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4',
+  chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
+  loop: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3',
+  hourglass: 'M6 3h12M6 21h12M7 3v4l5 5-5 5v4M17 3v4l-5 5 5 5v4',
 }
 
 export type IconName = keyof typeof PATHS

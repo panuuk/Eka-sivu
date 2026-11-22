@@ -48,7 +48,15 @@ function BackupRow({ b, current }: { b: BackupMeta; current: boolean }) {
           className="icon-btn"
           aria-label="Poista varmuuskopio"
           disabled={busy}
-          onClick={() => void useStorage.getState().removeBackup(b.id)}
+          onClick={async () => {
+            const ok = await useUi.getState().ask({
+              title: 'Poistetaanko varmuuskopio?',
+              message: `Kopio ${formatDateTime(b.createdAt)} poistetaan pysyvästi. Tätä ei voi kumota.`,
+              confirmLabel: 'Poista',
+              danger: true,
+            })
+            if (ok) await useStorage.getState().removeBackup(b.id)
+          }}
         >
           <Icon name="trash" size={16} />
         </button>

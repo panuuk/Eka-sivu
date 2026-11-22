@@ -2,7 +2,7 @@ import type { Extractor, Suggestion } from '../suggest'
 import { createProject } from '../../model/factory'
 import type { EvalDoc } from './corpus'
 
-export interface DocResult {
+interface DocResult {
   id: string
   title: string
   suggestions: number
@@ -29,7 +29,7 @@ const hay = (s: Suggestion) => `${s.label} ${s.quote}`.toLowerCase()
 const f1 = (p: number, r: number) => (p + r === 0 ? 0 : (2 * p * r) / (p + r))
 
 /** Vertaa ehdotuksia odotettuihin vaiheisiin: odotettu löytyy, kun jokin ehdotus sisältää kaikki sen avaimet. */
-export function scoreDoc(doc: EvalDoc, sugg: Suggestion[]): DocResult {
+function scoreDoc(doc: EvalDoc, sugg: Suggestion[]): DocResult {
   const found = doc.gold.map((g) => ({
     g,
     hit: sugg.find((s) => g.keys.every((k) => hay(s).includes(k))),

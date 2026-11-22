@@ -59,8 +59,8 @@ export const REASON_LABELS: Record<BackupMeta['reason'], string> = {
   deleted: 'Poistetun projektin viimeinen tila',
 }
 
-export const REMINDER_AFTER_MS = 7 * DAY_MS
-export const REMINDER_MIN_NODES = 5
+const REMINDER_AFTER_MS = 7 * DAY_MS
+const REMINDER_MIN_NODES = 5
 
 /**
  * Muistutetaan tiedostovarmuuskopiosta, kun projektissa on työtä, sitä on muutettu viimeisen

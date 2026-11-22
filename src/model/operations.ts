@@ -183,7 +183,7 @@ function stripEntityRefs(n: ProcessNode, entityId: string): ProcessNode {
 }
 
 /** Korvaa prosessin rakenteen tilannekuvalla ja siivoaa viitteet, jotka eivät enää päde. */
-export function restoreSnapshot(p: Project, snap: ProjectSnapshot): Project {
+function restoreSnapshot(p: Project, snap: ProjectSnapshot): Project {
   const nodes: Record<string, ProcessNode> = {}
   for (const n of Object.values(snap.nodes)) {
     // Lähde on voitu poistaa version ottamisen jälkeen

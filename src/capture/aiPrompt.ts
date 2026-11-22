@@ -80,12 +80,12 @@ export interface AiTemplate {
  * Nykyinen prosessi tekstinä. Teksti sisältää kaiken, mitä käyttäjä kopioi tekoälylle (nimet, roolit,
  * järjestelmät, kuvaukset), joten se näytetään käyttäjälle ennen kopiointia.
  */
-export function currentProcessText(project: Project, processId: string): string {
+function currentProcessText(project: Project, processId: string): string {
   return processToText(project, processId, { title: true })
 }
 
 /** Arvioi nykyinen prosessi: tekoäly palauttaa koko prosessin parannettuna, ja muutokset näkyvät erona ennen lisäämistä. */
-export function buildReviewPrompt(project: Project, processId: string, open: Gap[]): string {
+function buildReviewPrompt(project: Project, processId: string, open: Gap[]): string {
   const questions = open
     .filter((g) => g.processId === processId)
     .slice(0, 25)
@@ -116,7 +116,7 @@ ${currentProcessText(project, processId)}
 }
 
 /** Haastattelukysymykset avoimista kysymyksistä. Vastaus on tekstiä, jota ei liitetä takaisin. */
-export function buildInterviewPrompt(project: Project, processId: string, open: Gap[]): string {
+function buildInterviewPrompt(project: Project, processId: string, open: Gap[]): string {
   const proc = project.processes[processId]
   const gaps = open
     .filter((g) => g.processId === processId)
@@ -144,7 +144,7 @@ ${currentProcessText(project, processId)}
 }
 
 /** Esityksen kuvausteksti prosessista. */
-export function buildPresentationPrompt(project: Project, processId: string): string {
+function buildPresentationPrompt(project: Project, processId: string): string {
   return `Kirjoita alla olevasta prosessista lyhyt esittelyteksti suomeksi, jota voi käyttää esityksen puheena tai dian muistiinpanoina.
 
 Rakenne:

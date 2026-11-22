@@ -98,17 +98,3 @@ export function diffProjects(before: Project, after: Project): ProjectDiff {
   }
   return d
 }
-
-export function isEmptyDiff(d: ProjectDiff): boolean {
-  return (
-    d.newNodes.length === 0 &&
-    d.changedNodes.length === 0 &&
-    d.newEdges.length === 0 &&
-    d.removedEdges.length === 0 &&
-    d.removedNodes.length === 0 &&
-    d.newEntities.length === 0 &&
-    d.newProcesses.length === 0 &&
-    d.cardChanges === 0 &&
-    d.entityNotes === 0
-  )
-}

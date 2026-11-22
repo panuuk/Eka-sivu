@@ -31,7 +31,7 @@ interface BackupDataRow {
 }
 
 /** Projektiin yhdistetty levytiedosto (File System Access API). */
-export interface FileLinkRow {
+interface FileLinkRow {
   projectId: string
   handle: unknown
   fileName: string

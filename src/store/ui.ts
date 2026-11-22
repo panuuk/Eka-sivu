@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { EMPTY_FILTER, type Filter } from '../analysis/search'
 import { DEFAULT_THEME, sanitizeTheme, type Theme } from '../export/theme'
 
-export type ViewMode = 'canvas' | 'list' | 'sources' | 'analysis' | 'compare'
+type ViewMode = 'canvas' | 'list' | 'sources' | 'analysis' | 'compare'
 export type Direction = 'DOWN' | 'RIGHT'
 /** Kaavion asettelutapa: vapaa (muokattava), uimaradat (rooleittain) tai kokonaiskuva (alaprosessit auki). */
 export type LayoutMode = 'free' | 'lanes' | 'overview'
@@ -26,7 +26,7 @@ export interface PresentOptions {
   changes: boolean
 }
 
-export const DEFAULT_PRESENT: PresentOptions = {
+const DEFAULT_PRESENT: PresentOptions = {
   expand: false,
   onlyConfirmed: false,
   showRoles: true,
@@ -86,7 +86,7 @@ function persist(s: Persisted) {
   }
 }
 
-export interface ConfirmRequest {
+interface ConfirmRequest {
   title: string
   message: string
   confirmLabel: string
@@ -94,7 +94,7 @@ export interface ConfirmRequest {
   resolve: (ok: boolean) => void
 }
 
-export interface PromptRequest {
+interface PromptRequest {
   title: string
   label: string
   initial: string
@@ -124,8 +124,6 @@ interface UiState extends Persisted {
   setVersionsOpen: (open: boolean) => void
   syncOpen: boolean
   setSyncOpen: (open: boolean) => void
-  cardOpen: boolean
-  setCardOpen: (open: boolean) => void
   /** Vertailun lähtötila (version tunniste) ja kohde (version tunniste tai 'current'). */
   compareBaseId: string | null
   compareTargetId: string
@@ -252,8 +250,6 @@ export const useUi = create<UiState>((set, get) => {
     setVersionsOpen: (versionsOpen) => set({ versionsOpen }),
     syncOpen: false,
     setSyncOpen: (syncOpen) => set({ syncOpen }),
-    cardOpen: false,
-    setCardOpen: (cardOpen) => set({ cardOpen }),
     compareBaseId: null,
     compareTargetId: 'current',
     setCompare: (compareBaseId, compareTargetId = 'current') =>

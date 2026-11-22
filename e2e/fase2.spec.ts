@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { downloadJson } from './helpers'
 
 async function fresh(page: Page) {
   await page.goto('/')
@@ -93,11 +94,7 @@ test('projektin vienti ja tuonti', async ({ page }) => {
   await page.getByRole('button', { name: 'Lisää yksi vaihe' }).click()
   await page.keyboard.type('Vientitesti')
   await page.keyboard.press('Enter')
-  await page.getByRole('button', { name: 'Projektit' }).click()
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('menuitem', { name: 'Vie projekti (JSON)' }).click(),
-  ])
+  const [download] = await Promise.all([page.waitForEvent('download'), downloadJson(page)])
   const path = await download.path()
   expect(download.suggestedFilename()).toMatch(/\.prosessikartta\.json$/)
   await page.getByTestId('import-input').setInputFiles(path)

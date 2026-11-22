@@ -3,10 +3,10 @@
  * tulostetaan peräkkäin ja jotka voi liittää yhteen isoksi seinäkaavioksi.
  */
 
-export type Paper = 'fit' | 'A4' | 'A3'
-export type Orientation = 'landscape' | 'portrait'
+type Paper = 'fit' | 'A4' | 'A3'
+type Orientation = 'landscape' | 'portrait'
 /** `width`: kuvan leveys sovitetaan yhteen sivuun (vain korkeus jakautuu). `actual`: 100 %. */
-export type ScaleMode = 'width' | 'actual'
+type ScaleMode = 'width' | 'actual'
 
 export interface TileOptions {
   paper: Paper
@@ -21,7 +21,7 @@ export const DEFAULT_TILE_OPTIONS: TileOptions = {
 }
 
 const MM = 96 / 25.4 // CSS-pikseliä millimetrissä
-export const PAGE_MARGIN_MM = 10
+const PAGE_MARGIN_MM = 10
 
 const PAPER_MM: Record<'A4' | 'A3', [number, number]> = { A4: [210, 297], A3: [297, 420] }
 
@@ -36,7 +36,7 @@ export function printableArea(paper: 'A4' | 'A3', orientation: Orientation) {
   }
 }
 
-export interface TilePlan {
+interface TilePlan {
   /** Kuvan koko tulosteessa. */
   scale: number
   scaledWidth: number

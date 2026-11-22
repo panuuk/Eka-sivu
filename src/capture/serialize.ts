@@ -60,7 +60,7 @@ function annotationText(p: Project, n: ProcessNode, io: boolean): string {
   return parts.length ? ` ${parts.join(' ')}` : ''
 }
 
-export interface SerializeOptions {
+interface SerializeOptions {
   /** Lisää ensimmäiselle riville otsikon `# Nimi`. */
   title?: boolean
 }

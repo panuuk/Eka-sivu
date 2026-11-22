@@ -7,11 +7,11 @@ import type { Project, Question } from './types'
  * avoimiin kysymyksiin, ja tiedosto tallennetaan palautteena, joka tuodaan takaisin sovellukseen.
  */
 
-export const FEEDBACK_APP_ID = 'prosessikartta-palaute'
+const FEEDBACK_APP_ID = 'prosessikartta-palaute'
 const MAX_ITEMS = 500
 const MAX_TEXT = 4000
 
-export interface FeedbackItem {
+interface FeedbackItem {
   id: string
   type: 'comment' | 'answer'
   nodeId?: string
@@ -78,7 +78,7 @@ export function parseFeedback(text: string): Feedback {
 const keyOf = (fb: Feedback, item: FeedbackItem) => `fb:${fb.createdAt}:${fb.reviewer}:${item.id}`
 
 /** Palauteriveistä tulee omia kysymyksiä (avoimia), joihin laatija vastaa tai jotka hän hylkää. Tuonti on idempotentti. */
-export function feedbackQuestions(
+function feedbackQuestions(
   project: Project,
   fb: Feedback,
   accepted: ReadonlySet<string>,

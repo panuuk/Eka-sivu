@@ -55,7 +55,7 @@ const sameEdge = (a: Edge, b: Edge) =>
 const MARKER = { type: MarkerType.ArrowClosed, width: 18, height: 18 } as const
 const NO_LAYOUT: LayoutResult = { positions: new Map(), routes: new Map() }
 
-export interface CanvasModel {
+interface CanvasModel {
   nodes: Node[]
   edges: Edge[]
   /** Asettelu vastaa nykyistä rakennetta (vapaa ja kokonaiskuva lasketaan asynkronisesti). */

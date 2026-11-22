@@ -1,7 +1,7 @@
 import { flowOrder } from '../model/flow'
 import type { ProcessNode, Project } from '../model/types'
 
-export interface WalkStep {
+interface WalkStep {
   node: ProcessNode
   /** Seuraavat vaiheet haaran nimen kanssa (vain esityksessä näkyvät vaiheet). */
   next: { id: string; label?: string }[]

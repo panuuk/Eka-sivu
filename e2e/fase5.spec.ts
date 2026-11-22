@@ -127,11 +127,11 @@ test('omat kysymykset: lisäys, vastaus ja poisto', async ({ page }) => {
   await expect(page.locator('.gap--custom')).toHaveCount(0)
 })
 
-test('valmiusaste näkyy prosessipuussa ja prosessin tiedoissa', async ({ page }) => {
+test('valmiusaste näkyy prosessipuussa ja kysymysvälilehdellä', async ({ page }) => {
   await loadSample(page)
   await expect(page.locator('.tree__chip').first()).toContainText('%')
   await page.keyboard.press('Escape')
-  await page.getByRole('tab', { name: 'Ominaisuudet' }).click()
+  await page.getByTestId('questions-tab').click()
   await expect(page.getByTestId('readiness')).toContainText('avointa kysymystä')
   await expect(page.getByRole('progressbar', { name: 'Prosessin valmiusaste' })).toBeVisible()
 })

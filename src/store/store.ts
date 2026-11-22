@@ -23,17 +23,17 @@ const SAVE_DEBOUNCE_MS = 400
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
-export interface DispatchOptions {
+interface DispatchOptions {
   /** Peräkkäiset operaatiot samalla avaimella (esim. tekstin kirjoitus) yhdistyvät yhdeksi kumoamisaskeleeksi. */
   coalesceKey?: string
 }
 
-export interface Selection {
+interface Selection {
   nodeIds: string[]
   edgeIds: string[]
 }
 
-export interface AppState {
+interface AppState {
   ready: boolean
   project: Project | null
   projects: ProjectSummary[]

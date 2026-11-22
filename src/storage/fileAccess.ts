@@ -6,7 +6,7 @@
 type Mode = { mode: 'readwrite' }
 type PermissionState = 'granted' | 'denied' | 'prompt'
 
-export interface WritableStream {
+interface WritableStream {
   write(data: string): Promise<void>
   close(): Promise<void>
   abort?(): Promise<void>
@@ -39,7 +39,7 @@ export function fileAccessSupported(): boolean {
 }
 
 /** Käyttäjän peruutus ei ole virhe. */
-export function isAbort(e: unknown): boolean {
+function isAbort(e: unknown): boolean {
   return e instanceof DOMException && e.name === 'AbortError'
 }
 

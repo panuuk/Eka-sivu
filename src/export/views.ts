@@ -22,7 +22,7 @@ export function requestForView(req: ExportRequest, view: SavedView): ExportReque
 }
 
 /** Näkymän polku, jos se viittaa skenaarioon, joka on olemassa. */
-export function pathForView(project: Project, view: SavedView): ScenarioPath | undefined {
+function pathForView(project: Project, view: SavedView): ScenarioPath | undefined {
   const sc = view.scenarioId ? project.scenarios?.[view.scenarioId] : undefined
   return sc && project.processes[sc.processId]
     ? scenarioPath(project, sc.processId, sc.choices)
@@ -51,7 +51,7 @@ export function cropFor(graph: RenderGraph, nodeIds: readonly string[] | undefin
   }
 }
 
-export interface RenderedView {
+interface RenderedView {
   svg: string
   graph: RenderGraph
   path?: ScenarioPath

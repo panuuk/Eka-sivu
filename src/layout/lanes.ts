@@ -23,7 +23,7 @@ export interface Lane {
   height: number
 }
 
-export interface LaneLayout {
+interface LaneLayout {
   lanes: Lane[]
   positions: Map<string, Point>
   /** Kerros, johon kukin solmu kuuluu (0 = ensimmäinen). */

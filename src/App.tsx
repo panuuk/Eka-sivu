@@ -15,6 +15,7 @@ import { TopBar } from './ui/TopBar'
 import { useShortcuts } from './ui/useShortcuts'
 import { useNarrow } from './ui/useMedia'
 import './app.css'
+import './theme.css'
 
 const EntityManager = lazy(() =>
   import('./panels/EntityManager').then((m) => ({ default: m.EntityManager })),
@@ -33,9 +34,6 @@ const SavedViewsDialog = lazy(() =>
 )
 const SyncDialog = lazy(() =>
   import('./panels/SyncDialog').then((m) => ({ default: m.SyncDialog })),
-)
-const ProcessCardDialog = lazy(() =>
-  import('./panels/ProcessCardDialog').then((m) => ({ default: m.ProcessCardDialog })),
 )
 const VersionsDialog = lazy(() =>
   import('./panels/VersionsDialog').then((m) => ({ default: m.VersionsDialog })),
@@ -73,7 +71,8 @@ function App() {
   const ready = useStore((s) => s.ready)
   const view = useUi((s) => s.view)
   const leftOpen = useUi((s) => s.leftOpen)
-  const rightOpen = useUi((s) => s.rightOpen)
+  // Ominaisuus- ja kysymyspaneeli kuuluu vain kaavioon ja listaan; muissa näkymissä se veisi tilaa turhaan.
+  const rightOpen = useUi((s) => s.rightOpen) && (view === 'canvas' || view === 'list')
   const presenting = useUi((s) => s.presenting)
   const exportOpen = useUi((s) => s.exportOpen)
   const savedViewsOpen = useUi((s) => s.savedViewsOpen)
@@ -82,7 +81,6 @@ function App() {
   const helpOpen = useUi((s) => s.helpOpen)
   const replaceOpen = useUi((s) => s.replaceOpen)
   const versionsOpen = useUi((s) => s.versionsOpen)
-  const cardOpen = useUi((s) => s.cardOpen)
   const syncOpen = useUi((s) => s.syncOpen)
   const storageOpen = useUi((s) => s.storageOpen)
   const entityManagerOpen = useUi((s) => s.entityManagerOpen)
@@ -187,9 +185,6 @@ function App() {
       </OnFirstOpen>
       <OnFirstOpen open={syncOpen}>
         <SyncDialog />
-      </OnFirstOpen>
-      <OnFirstOpen open={cardOpen}>
-        <ProcessCardDialog />
       </OnFirstOpen>
       <OnFirstOpen open={versionsOpen}>
         <VersionsDialog />

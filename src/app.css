@@ -3333,21 +3333,14 @@ button.cell:hover {
   color: var(--accent);
 }
 
-/* Prosessikortti */
-.card__grid {
+/* Prosessikortti prosessin ominaisuuksissa */
+.card__fields {
   display: grid;
-  gap: 0.6rem 1rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin: 0.75rem 0;
+  gap: 0.6rem;
 }
-.card__grid .field input,
-.card__grid .field textarea {
+.card__fields textarea,
+.card__fields input {
   width: 100%;
-}
-@media (max-width: 700px) {
-  .card__grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Jaa ja yhdistä */

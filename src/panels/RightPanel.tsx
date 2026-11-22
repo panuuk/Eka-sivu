@@ -9,7 +9,9 @@ export function RightPanel() {
   const tab = useUi((s) => s.rightTab)
   const analysis = useAnalysis()
   const processId = useStore((s) => s.currentProcessId)
-  const count = analysis.open.filter((g) => g.processId === processId).length
+  const count =
+    analysis.open.filter((g) => g.processId === processId).length +
+    analysis.custom.filter((q) => q.status === 'open' && q.processId === processId).length
 
   return (
     <div className="rightpanel">

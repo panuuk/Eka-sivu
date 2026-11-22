@@ -1,8 +1,6 @@
 const dateTime = new Intl.DateTimeFormat('fi-FI', { dateStyle: 'short', timeStyle: 'short' })
-const timeOnly = new Intl.DateTimeFormat('fi-FI', { timeStyle: 'short' })
 
 export const formatDateTime = (ts: number) => dateTime.format(ts)
-export const formatTime = (ts: number) => timeOnly.format(ts)
 
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} t`

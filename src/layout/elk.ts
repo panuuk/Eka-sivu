@@ -2,17 +2,17 @@ import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk-api'
 import type { Direction } from '../store/ui'
 import type { Point } from '../model/types'
 
-export interface LayoutNode {
+interface LayoutNode {
   id: string
   width: number
   height: number
 }
-export interface LayoutEdge {
+interface LayoutEdge {
   id: string
   from: string
   to: string
 }
-export interface LayoutInput {
+interface LayoutInput {
   nodes: LayoutNode[]
   edges: LayoutEdge[]
   direction: Direction

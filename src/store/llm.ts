@@ -29,7 +29,7 @@ function loadConfig(): LlmConfig {
   }
 }
 
-export interface LlmSourceResult {
+interface LlmSourceResult {
   suggestions: Suggestion[]
   /** Lähdetekstin pituus ajohetkellä: jos teksti muuttuu, tulos vanhenee. */
   textLength: number
@@ -39,7 +39,7 @@ export interface LlmSourceResult {
   ms: number
 }
 
-export interface Benchmark {
+interface Benchmark {
   rules: EvalSummary
   llm: EvalSummary
   model: string

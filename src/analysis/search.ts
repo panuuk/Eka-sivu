@@ -27,7 +27,7 @@ function haystack(p: Project, n: ProcessNode): string {
   return normalizeName(parts.join(' \n '))
 }
 
-export interface SearchHit {
+interface SearchHit {
   node: ProcessNode
   /** Mistä kentästä osuma löytyi (nimi, kuvaus, rooli...) */
   where: string[]

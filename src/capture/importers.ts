@@ -1,9 +1,9 @@
 import { normalizeText } from './text'
 
 export const MAX_FILE_BYTES = 25 * 1024 * 1024
-export const MAX_TEXT_CHARS = 2_000_000
+const MAX_TEXT_CHARS = 2_000_000
 
-export interface ImportedDocument {
+interface ImportedDocument {
   title: string
   text: string
   fileName: string
@@ -19,7 +19,7 @@ export class FileImportError extends Error {
   }
 }
 
-export interface ImportOptions {
+interface ImportOptions {
   /**
    * Kutsutaan, kun PDF:n sivuilta puuttuu teksti ja tunnistus olisi mahdollinen. Palauttaa true, jos
    * tunnistus tehdään. Ilman tätä tekstitöntä PDF:ää ei yritetä tunnistaa.
@@ -32,7 +32,7 @@ export interface ImportOptions {
 const baseName = (name: string) => name.replace(/\.[^.]+$/, '')
 const extOf = (name: string) => (/\.([^.]+)$/.exec(name)?.[1] ?? '').toLowerCase()
 
-export const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'bmp']
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'bmp']
 export const SUPPORTED_EXTENSIONS = [
   'txt',
   'md',
@@ -221,7 +221,7 @@ export function joinPdfItems(items: PdfItem[]): string {
 }
 
 /** Sivu katsotaan tekstittömäksi (kuvapohjaiseksi), jos siinä on alle tämän verran kirjaimia. */
-export const MIN_PAGE_CHARS = 25
+const MIN_PAGE_CHARS = 25
 
 async function readPdf(data: ArrayBuffer, options: ImportOptions = {}): Promise<string> {
   try {

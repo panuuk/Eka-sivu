@@ -35,7 +35,7 @@ export interface PainPoint {
 }
 
 /** RACI: rooli (`roleId`) on vastuullinen suorittaja (R). Muut roolit tallennetaan tähän. */
-export interface Raci {
+interface Raci {
   accountableIds?: string[]
   consultedIds?: string[]
   informedIds?: string[]
@@ -123,7 +123,7 @@ export interface Source {
   fileName?: string
 }
 
-export type QuestionStatus = 'open' | 'answered' | 'dismissed'
+type QuestionStatus = 'open' | 'answered' | 'dismissed'
 
 export interface Question {
   id: string
@@ -139,7 +139,7 @@ export interface Question {
   key: string
 }
 
-export type HeatKind = 'off' | 'time' | 'pain' | 'handoff'
+type HeatKind = 'off' | 'time' | 'pain' | 'handoff'
 
 /**
  * Skenaariopolku: valinnat päätöksissä ("luottoraja ylittyy"). Polku kulkee alusta loppuun

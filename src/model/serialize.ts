@@ -8,9 +8,9 @@ import {
 } from './types'
 import { validateProject } from './validate'
 
-export const FILE_APP_ID = 'prosessikartta'
+const FILE_APP_ID = 'prosessikartta'
 
-export interface ProjectFile {
+interface ProjectFile {
   app: typeof FILE_APP_ID
   schemaVersion: number
   exportedAt: number
@@ -201,7 +201,7 @@ function normalizeProject(raw: Record<string, unknown>): Project {
   return p
 }
 
-export function exportProjectFile(p: Project): ProjectFile {
+function exportProjectFile(p: Project): ProjectFile {
   return { app: FILE_APP_ID, schemaVersion: SCHEMA_VERSION, exportedAt: Date.now(), project: p }
 }
 

@@ -9,9 +9,9 @@ import { analyzeMetrics } from './metrics'
  * yhdistetään nimen ja tyypin perusteella, jos käyttäjä on luonut saman vaiheen uudelleen.
  */
 
-export type ChangeKind = 'added' | 'removed' | 'changed'
+type ChangeKind = 'added' | 'removed' | 'changed'
 
-export interface FieldChange {
+interface FieldChange {
   field: string
   label: string
   before: string
@@ -31,7 +31,7 @@ export interface NodeChange {
   matchedByLabel?: boolean
 }
 
-export interface EdgeChange {
+interface EdgeChange {
   kind: ChangeKind
   fromLabel: string
   toLabel: string
@@ -39,13 +39,13 @@ export interface EdgeChange {
   after?: string
 }
 
-export interface ProcessChange {
+interface ProcessChange {
   kind: ChangeKind
   name: string
   before?: string
 }
 
-export interface MetricsSnapshot {
+interface MetricsSnapshot {
   steps: number
   decisions: number
   handoffs: number

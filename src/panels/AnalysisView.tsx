@@ -8,7 +8,7 @@ import { entitiesOfKind, processTree } from '../model/selectors'
 import type { Project } from '../model/types'
 import { goToNode } from '../store/actions'
 import { useStore } from '../store/store'
-import { Icon } from '../ui/Icon'
+import { Icon, type IconName } from '../ui/Icon'
 
 type Scope = 'process' | 'project'
 
@@ -19,14 +19,23 @@ function Card({
   value,
   hint,
   testid,
+  icon,
+  tone,
 }: {
   title: string
   value: string
   hint?: string
   testid?: string
+  icon?: IconName
+  tone?: 'ok' | 'warn' | 'violet' | 'danger'
 }) {
   return (
-    <div className="acard" data-testid={testid}>
+    <div className={`acard${tone ? ` acard--${tone}` : ''}`} data-testid={testid}>
+      {icon && (
+        <span className="acard__icon" aria-hidden="true">
+          <Icon name={icon} size={18} />
+        </span>
+      )}
       <span className="acard__title">{title}</span>
       <strong className="acard__value">{value}</strong>
       {hint && <span className="acard__hint">{hint}</span>}
@@ -295,6 +304,7 @@ export function AnalysisView() {
       <div className="acards">
         <Card
           testid="card-lead"
+          icon="clock"
           title="Läpimenoaika (tämä prosessi)"
           value={
             lead?.typicalHigh !== undefined
@@ -311,18 +321,24 @@ export function AnalysisView() {
         />
         <Card
           testid="card-handoffs"
+          icon="swap"
+          tone="violet"
           title="Luovutukset"
           value={String(summary.handoffCount)}
           hint="Siirtymät roolilta toiselle"
         />
         <Card
           testid="card-loops"
+          icon="loop"
+          tone="danger"
           title="Uudelleenkierrokset"
           value={String(summary.loopCount)}
           hint="Paluuyhteydet aiempaan vaiheeseen"
         />
         <Card
           testid="card-wait"
+          icon="hourglass"
+          tone="warn"
           title="Odotuksen osuus"
           value={totalTime > 0 ? `${Math.round((summary.waiting / totalTime) * 100)} %` : '–'}
           hint={

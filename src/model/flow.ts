@@ -1,7 +1,7 @@
 import { edgesOf, nodesOf } from './selectors'
 import type { ProcessNode, Project } from './types'
 
-export interface FlowRow {
+interface FlowRow {
   node: ProcessNode
   /** Sisennys haarautumien mukaan. */
   depth: number
@@ -49,7 +49,7 @@ export function flowOrder(p: Project, processId: string): FlowRow[] {
 }
 
 /** Vakaa väri entiteetille sen tunnisteesta. */
-export function entityHue(id: string): number {
+function entityHue(id: string): number {
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
   return h % 360

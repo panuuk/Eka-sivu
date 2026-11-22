@@ -99,10 +99,7 @@ export function comparisonFor(project: Project): ExportRequest['comparison'] {
   return result ?? undefined
 }
 
-export function renderOptions(
-  req: ExportRequest,
-  overrides: Partial<RenderOptions> = {},
-): RenderOptions {
+function renderOptions(req: ExportRequest, overrides: Partial<RenderOptions> = {}): RenderOptions {
   return {
     processId: req.processId,
     expand: req.options.expand,
@@ -175,7 +172,7 @@ export async function svgToPng(svg: string, scale = 2): Promise<Blob> {
 }
 
 /** Dokumentti: jokaiselle alipuun prosessille oma kaavio (ei avattuja alaprosesseja, ne ovat omina osioinaan). */
-export async function buildDocument(
+async function buildDocument(
   req: ExportRequest,
   opts: { interactive: boolean; includeQuestions: boolean; review?: boolean },
 ): Promise<string> {

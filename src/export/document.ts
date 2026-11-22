@@ -9,7 +9,7 @@ import type { ProcessCard, Project } from '../model/types'
 import { esc } from './svg'
 import { fontStack, sanitizeTheme, themeColors, type Theme } from './theme'
 
-export interface DocumentOptions {
+interface DocumentOptions {
   /** Prosessi, josta dokumentti alkaa (alaprosessit mukaan). */
   processId: string
   theme: Theme

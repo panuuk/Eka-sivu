@@ -16,5 +16,5 @@ export function useMedia(query: string): boolean {
 }
 
 /** Puhelimen levyinen näyttö: toissijaiset toiminnot kootaan valikkoon ja työkalut paneeliin. */
-export const NARROW_QUERY = '(max-width: 700px)'
+const NARROW_QUERY = '(max-width: 700px)'
 export const useNarrow = () => useMedia(NARROW_QUERY)

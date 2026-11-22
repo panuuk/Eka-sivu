@@ -21,7 +21,12 @@ function ReadinessPill() {
       className="readiness-pill"
       title={`Valmiusaste ${r.percent} %. ${r.openQuestions} avointa kysymystä. Avaa kysymykset.`}
       aria-label={`Valmiusaste ${r.percent} prosenttia, ${r.openQuestions} avointa kysymystä`}
-      onClick={() => useUi.getState().showRight('questions')}
+      onClick={() => {
+        // Kysymysjono on kaavion ja listan paneelissa: palataan kaavioon, jos ollaan muussa näkymässä.
+        const ui = useUi.getState()
+        if (ui.view !== 'canvas' && ui.view !== 'list') ui.setView('canvas')
+        ui.showRight('questions')
+      }}
       data-testid="readiness-pill"
     >
       <span className="readiness-pill__bar">
@@ -75,6 +80,7 @@ export function TopBar() {
   const layoutMode = useUi((s) => s.layoutMode)
   const leftOpen = useUi((s) => s.leftOpen)
   const rightOpen = useUi((s) => s.rightOpen)
+  const hasPanel = view === 'canvas' || view === 'list'
   const fileRef = useRef<HTMLInputElement>(null)
   const installPrompt = usePwa((s) => s.installPrompt)
   const narrow = useNarrow()
@@ -105,10 +111,6 @@ export function TopBar() {
       onSelect: () => void useStore.getState().adoptProject(buildSampleProject()),
     },
     {
-      label: 'Pikanäppäimet ja ohje',
-      onSelect: () => useUi.getState().setHelpOpen(true),
-    },
-    {
       label: 'Nimeä projekti uudelleen…',
       onSelect: async () => {
         const name = await useUi.getState().prompt({
@@ -120,25 +122,15 @@ export function TopBar() {
         if (name) useStore.getState().dispatch({ type: 'renameProject', name })
       },
     },
-    ...(installPrompt
-      ? [
-          {
-            label: 'Asenna sovellus…',
-            onSelect: () => void usePwa.getState().install(),
-          },
-        ]
-      : []),
     {
       label: 'Tuo taulukko tai kaavio…',
       separatorBefore: true,
       onSelect: () => useUi.getState().setImportOpen(true),
     },
-    {
-      label: 'Prosessikortti…',
-      onSelect: () => useUi.getState().setCardOpen(true),
-    },
+    { label: 'Tuo projekti (JSON)…', onSelect: () => fileRef.current?.click() },
     {
       label: 'Näkymät ja skenaariot…',
+      separatorBefore: true,
       onSelect: () => useUi.getState().setSavedViewsOpen(true),
     },
     {
@@ -153,8 +145,19 @@ export function TopBar() {
       label: 'Tallennus ja varmuuskopiot…',
       onSelect: () => useUi.getState().setStorageOpen(true),
     },
-    { label: 'Vie projekti (JSON)', onSelect: () => void useStorage.getState().exportJson() },
-    { label: 'Tuo projekti (JSON)…', onSelect: () => fileRef.current?.click() },
+    {
+      label: 'Pikanäppäimet ja ohje',
+      separatorBefore: true,
+      onSelect: () => useUi.getState().setHelpOpen(true),
+    },
+    ...(installPrompt
+      ? [
+          {
+            label: 'Asenna sovellus…',
+            onSelect: () => void usePwa.getState().install(),
+          },
+        ]
+      : []),
     {
       label: 'Poista projekti…',
       danger: true,
@@ -163,7 +166,7 @@ export function TopBar() {
         const ok = await useUi.getState().ask({
           title: `Poistetaanko “${project.name}”?`,
           message:
-            'Projekti poistetaan tästä selaimesta pysyvästi. Vie se ensin JSON-tiedostoon, jos haluat säilyttää sen.',
+            'Projekti poistetaan tästä selaimesta pysyvästi. Lataa se ensin tiedostoksi (Tallennus ja varmuuskopiot), jos haluat säilyttää sen.',
           confirmLabel: 'Poista projekti',
           danger: true,
         })
@@ -235,7 +238,10 @@ export function TopBar() {
         }}
       />
 
-      <nav className="breadcrumb" aria-label="Sijainti">
+      <nav
+        className={`breadcrumb${path.length <= 1 ? ' breadcrumb--root' : ''}`}
+        aria-label="Sijainti"
+      >
         <ol>
           {path.map((p, i) => (
             <li key={p.id}>
@@ -321,7 +327,7 @@ export function TopBar() {
           className={view === 'analysis' ? 'is-on' : ''}
           onClick={() => useUi.getState().setView('analysis')}
         >
-          <Icon name="graph" size={16} /> <span className="hide-sm">Analyysi</span>
+          <Icon name="chart" size={16} /> <span className="hide-sm">Analyysi</span>
         </button>
         <button
           type="button"
@@ -397,7 +403,8 @@ export function TopBar() {
             type="button"
             className="icon-btn"
             aria-label="Näytä tai piilota ominaisuudet"
-            aria-pressed={rightOpen}
+            aria-pressed={rightOpen && hasPanel}
+            disabled={!hasPanel}
             onClick={() => useUi.getState().toggleRight()}
           >
             <Icon name="panelRight" />

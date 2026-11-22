@@ -32,9 +32,9 @@ import { onProjectActivated, onProjectSaved } from './hooks'
 import { useStore } from './store'
 import { useUi } from './ui'
 
-export type FileLinkStatus = 'ok' | 'needs-permission' | 'error'
+type FileLinkStatus = 'ok' | 'needs-permission' | 'error'
 
-export interface FileLinkState {
+interface FileLinkState {
   projectId: string
   fileName: string
   status: FileLinkStatus
@@ -42,7 +42,7 @@ export interface FileLinkState {
   message?: string
 }
 
-export interface StorageInfo {
+interface StorageInfo {
   persisted: boolean | null
   usage: number | null
   quota: number | null
