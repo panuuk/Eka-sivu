@@ -105,15 +105,16 @@ function EntityRow({ entity }: { entity: Entity }) {
         className="icon-btn"
         aria-label={`Poista ${entity.name}`}
         onClick={async () => {
-          if (usage > 0) {
-            const ok = await useUi.getState().ask({
-              title: `Poistetaanko “${entity.name}”?`,
-              message: `Se on käytössä ${usage} vaiheessa, ja viittaukset poistetaan.`,
-              confirmLabel: 'Poista',
-              danger: true,
-            })
-            if (!ok) return
-          }
+          const ok = await useUi.getState().ask({
+            title: `Poistetaanko “${entity.name}”?`,
+            message:
+              usage > 0
+                ? `Se on käytössä ${usage} vaiheessa, ja viittaukset poistetaan. Voit kumota poiston (Ctrl+Z).`
+                : 'Voit kumota poiston (Ctrl+Z).',
+            confirmLabel: 'Poista',
+            danger: true,
+          })
+          if (!ok) return
           dispatch({ type: 'deleteEntity', id: entity.id })
         }}
       >

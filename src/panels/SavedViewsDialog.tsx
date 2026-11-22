@@ -292,7 +292,15 @@ function Body() {
                       type="button"
                       className="icon-btn"
                       aria-label={`Poista näkymä ${v.name}`}
-                      onClick={() => dispatch({ type: 'deleteView', id: v.id })}
+                      onClick={async () => {
+                        const ok = await useUi.getState().ask({
+                          title: `Poistetaanko näkymä “${v.name}”?`,
+                          message: 'Voit kumota poiston (Ctrl+Z).',
+                          confirmLabel: 'Poista',
+                          danger: true,
+                        })
+                        if (ok) dispatch({ type: 'deleteView', id: v.id })
+                      }}
                     >
                       <Icon name="trash" size={16} />
                     </button>
@@ -343,7 +351,15 @@ function Body() {
                     type="button"
                     className="icon-btn"
                     aria-label={`Poista skenaario ${s.name}`}
-                    onClick={() => dispatch({ type: 'deleteScenario', id: s.id })}
+                    onClick={async () => {
+                      const ok = await useUi.getState().ask({
+                        title: `Poistetaanko skenaario “${s.name}”?`,
+                        message: 'Voit kumota poiston (Ctrl+Z).',
+                        confirmLabel: 'Poista',
+                        danger: true,
+                      })
+                      if (ok) dispatch({ type: 'deleteScenario', id: s.id })
+                    }}
                   >
                     <Icon name="trash" size={16} />
                   </button>

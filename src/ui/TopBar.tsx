@@ -324,7 +324,7 @@ export function TopBar() {
           className={view === 'analysis' ? 'is-on' : ''}
           onClick={() => useUi.getState().setView('analysis')}
         >
-          <Icon name="graph" size={16} /> <span className="hide-sm">Analyysi</span>
+          <Icon name="chart" size={16} /> <span className="hide-sm">Analyysi</span>
         </button>
         <button
           type="button"

@@ -789,3 +789,91 @@
 .bulkbar__plain:hover:not(:disabled) {
   border-color: var(--ink-contrast);
 }
+
+/* ===== Auditoinnin korjaukset ===== */
+
+/* Suodatinpaneeli: tiivis ruudukko, valintaruutu ja teksti samalle riville */
+.filterbar__filters {
+  gap: 0.5rem 0.6rem;
+  padding: 0.25rem 0.1rem 0.1rem;
+}
+.filterbar__filters select {
+  padding: 0.3em 0.5em;
+  font-size: 0.9rem;
+}
+.filterbar__filters .check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.filterbar__filters .check input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* Vientimuodot kahteen sarakkeeseen: lyhyempi lista, enemmän tilaa asetuksille */
+.export__formats {
+  grid-template-columns: 1fr 1fr;
+}
+.export__formats button {
+  padding: 0.4em 0.7em;
+  font-size: 0.9rem;
+}
+
+/* Vertailun tyhjä tila samaan korttimuotoon kuin muissa tyhjissä tiloissa */
+.compare--empty {
+  max-width: 30rem;
+  margin: 4rem auto;
+  padding: 2rem;
+  text-align: center;
+  background:
+    radial-gradient(
+      120% 70% at 50% -10%,
+      color-mix(in srgb, var(--violet) 14%, transparent),
+      transparent 70%
+    ),
+    var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  height: auto;
+}
+.compare--empty p {
+  color: var(--muted);
+}
+
+/* Puhelin: tunnusluvut 2 × 2 -ruudukkoon, jotta yhteenveto mahtuu yhteen näyttöön */
+@media (max-width: 700px) {
+  .acards {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+  .acards .acard:first-child,
+  .acards .acard:last-child:nth-child(even) {
+    grid-column: 1 / -1;
+  }
+  .acard {
+    padding: 0.8rem;
+  }
+  .acard__icon {
+    top: 0.6rem;
+    right: 0.6rem;
+    width: 28px;
+    height: 28px;
+  }
+  .acard__title {
+    padding-right: 2rem;
+    font-size: 0.78rem;
+  }
+  .acard__value {
+    font-size: 1.4rem;
+  }
+  .acard__hint {
+    font-size: 0.72rem;
+  }
+  .export__formats {
+    grid-template-columns: 1fr 1fr;
+  }
+}

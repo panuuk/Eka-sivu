@@ -261,8 +261,6 @@ export function goToNode(nodeId: string, view: 'canvas' | 'list' = 'canvas') {
 
 let clip: Clip | null = null
 
-export const hasClip = () => clip !== null
-
 /** Kopioi valitut vaiheet (ei järjestelmän leikepöydälle, jottei tekstin kopiointi häiriinny). */
 export function copySelection(): boolean {
   const { project, selection } = st()
