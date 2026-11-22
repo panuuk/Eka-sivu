@@ -3,7 +3,7 @@ import type { Project } from '../model/types'
 
 export type ReplaceField = 'label' | 'description' | 'notes'
 
-export interface ReplaceOptions {
+interface ReplaceOptions {
   find: string
   replace: string
   caseSensitive: boolean
@@ -12,7 +12,7 @@ export interface ReplaceOptions {
   processId?: string
 }
 
-export interface ReplaceChange {
+interface ReplaceChange {
   nodeId: string
   field: ReplaceField
   before: string

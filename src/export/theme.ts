@@ -2,7 +2,7 @@
 
 export type Palette = 'light' | 'dark' | 'print'
 
-export interface ThemeColors {
+interface ThemeColors {
   bg: string
   surface: string
   surface2: string

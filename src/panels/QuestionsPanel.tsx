@@ -18,7 +18,7 @@ function showTarget(processId: string, targetId?: string) {
   useUi.getState().setView('canvas')
 }
 
-export function ReadinessCard({ processId, compact }: { processId: string; compact?: boolean }) {
+function ReadinessCard({ processId, compact }: { processId: string; compact?: boolean }) {
   const analysis = useAnalysis()
   const r = analysis.readiness(processId)
   if (r.nodes === 0) {

@@ -64,10 +64,10 @@ const WORK = new Set(['step', 'decision', 'subprocess'])
 /** Kuvan käytettävissä oleva alue diassa (tuumaa), ilman sivupaneelia. */
 const SLIDE_BOX = { w: 12.4, h: 5.9 }
 /** Läpikäyntidioja tehdään enintään näin monta, jotta tiedosto pysyy käsiteltävänä. */
-export const WALKTHROUGH_LIMIT = 40
+const WALKTHROUGH_LIMIT = 40
 
 /** Vaiheen tiedot luettavina riveinä (muistiinpanoihin ja läpikäyntidian sivupaneeliin). */
-export function stepLines(p: Project, n: ProcessNode): string[] {
+function stepLines(p: Project, n: ProcessNode): string[] {
   const names = (ids: string[]) =>
     ids
       .map((i) => p.entities[i]?.name)

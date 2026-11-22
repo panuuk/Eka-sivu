@@ -506,18 +506,51 @@
 .canvas__toolbar button:not(:disabled) svg {
   color: var(--muted);
 }
-.canvas__filter,
-.canvas__mode {
+.canvas__filter {
   top: 74px;
   border-radius: 14px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
 }
-.canvas__mode {
+/* Asettelu ja väritys samassa kortissa oikealla: yksi ryhmä kolmen irrallisen kellukkeen sijaan */
+.canvas__view {
+  position: absolute;
+  z-index: 6;
+  top: 74px;
+  right: 12px;
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.canvas__view .canvas__mode {
+  position: static;
   padding: 3px;
   gap: 2px;
+  border: 0;
+  border-radius: 11px;
+  box-shadow: none;
   background: var(--surface-3);
   overflow: visible;
+}
+.canvas__view .canvas__heat {
+  position: static;
+  justify-content: space-between;
+  padding: 0 0.15rem;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.canvas__view .canvas__heat select {
+  width: auto;
+  padding: 0.25em 0.5em;
+  font-size: 0.85rem;
+  color: var(--text);
 }
 .canvas__mode button {
   border-radius: 10px;
@@ -532,14 +565,8 @@
   color: var(--text);
   box-shadow: var(--shadow-sm);
 }
-.canvas__heat {
-  top: 122px;
-  right: 12px;
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-}
 .canvas__hint {
-  top: 172px;
+  top: 160px;
 }
 
 /* Tyhjän prosessin kortti: pastellihehku ylhäällä */
@@ -876,4 +903,17 @@
   .export__formats {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+.sources__formats {
+  text-align: left;
+  font-size: 0.85rem;
+}
+.sources__formats summary {
+  cursor: pointer;
+  text-align: center;
+  color: var(--muted);
+}
+.sources__formats p {
+  margin: 0.5rem 0 0;
 }

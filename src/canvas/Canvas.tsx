@@ -409,33 +409,35 @@ function CanvasInner() {
         data-testid="canvas-tools"
       >
         <FilterBar className="canvas__filter" />
-        <div className="canvas__mode" role="radiogroup" aria-label="Asettelu">
-          {(Object.keys(MODE_LABEL) as LayoutMode[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              role="radio"
-              aria-checked={mode === m}
-              className={mode === m ? 'is-on' : ''}
-              onClick={() => useUi.getState().setLayoutMode(m)}
+        <div className="canvas__view">
+          <div className="canvas__mode" role="radiogroup" aria-label="Asettelu">
+            {(Object.keys(MODE_LABEL) as LayoutMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={mode === m}
+                className={mode === m ? 'is-on' : ''}
+                onClick={() => useUi.getState().setLayoutMode(m)}
+              >
+                {MODE_LABEL[m]}
+              </button>
+            ))}
+          </div>
+          <label className="canvas__heat">
+            Väritys
+            <select
+              value={heatmap}
+              onChange={(e) => useUi.getState().setHeatmap(e.target.value as Heatmap)}
+              aria-label="Väritys"
             >
-              {MODE_LABEL[m]}
-            </button>
-          ))}
+              <option value="off">Ei väritystä</option>
+              <option value="time">Aika (työ ja odotus)</option>
+              <option value="pain">Kipupisteet</option>
+              <option value="handoff">Luovutukset</option>
+            </select>
+          </label>
         </div>
-        <label className="canvas__heat">
-          Väritys
-          <select
-            value={heatmap}
-            onChange={(e) => useUi.getState().setHeatmap(e.target.value as Heatmap)}
-            aria-label="Väritys"
-          >
-            <option value="off">Ei väritystä</option>
-            <option value="time">Aika (työ ja odotus)</option>
-            <option value="pain">Kipupisteet</option>
-            <option value="handoff">Luovutukset</option>
-          </select>
-        </label>
         {MODE_HINT[mode] && <p className="canvas__hint">{MODE_HINT[mode]}</p>}
       </div>
 

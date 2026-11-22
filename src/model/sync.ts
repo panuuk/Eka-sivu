@@ -54,7 +54,7 @@ export function stampChanges(before: Project, after: Project, now: number): Proj
 
 // ---------- Yhdistäminen ----------
 
-export type MergeChangeKind =
+type MergeChangeKind =
   | 'new-incoming' // vain tiedostossa
   | 'new-local' // vain tällä laitteella
   | 'changed' // eroaa, molemmissa
@@ -70,13 +70,13 @@ export interface MergeChange {
   winner: 'local' | 'incoming'
 }
 
-export interface MergePlan {
+interface MergePlan {
   changes: MergeChange[]
   /** Muutokset, joissa käyttäjän valinnalla ei ole merkitystä (uudet, vain toisella puolella). */
   counts: Record<MergeChangeKind, number>
 }
 
-export type Decisions = ReadonlyMap<string, 'local' | 'incoming'>
+type Decisions = ReadonlyMap<string, 'local' | 'incoming'>
 
 type Rec = Record<string, unknown> & { id: string }
 

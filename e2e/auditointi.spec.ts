@@ -63,3 +63,42 @@ test('Analyysi-näkymällä on oma kuvake, eikä se ole sama kuin Kaaviolla', as
     page.getByRole('radio', { name }).locator('svg path').first().getAttribute('d')
   expect(await icon('Analyysi')).not.toBe(await icon('Kaavio'))
 })
+
+test('oikea paneeli näkyy vain kaaviossa ja listassa, ja valmiusaste palauttaa kaavioon', async ({
+  page,
+}) => {
+  await loadSample(page)
+  await expect(page.locator('.workspace__right')).toHaveCount(1)
+  for (const name of [/Analyysi/, /Lähteet/, /Vertailu/]) {
+    await page.getByRole('radio', { name }).click()
+    await expect(page.locator('.workspace__right')).toHaveCount(0)
+    await expect(
+      page.getByRole('button', { name: 'Näytä tai piilota ominaisuudet' }),
+    ).toBeDisabled()
+  }
+  // Valmiusaste avaa kysymysjonon kaaviossa
+  await page.getByTestId('readiness-pill').click()
+  await expect(page.getByRole('radio', { name: 'Kaavio' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.locator('.workspace__right')).toBeVisible()
+  await expect(page.getByTestId('readiness')).toBeVisible()
+})
+
+test('prosessikortti tallentuu ominaisuuspaneelissa kohdistuksen poistuessa ja säilyy latauksen yli', async ({
+  page,
+}) => {
+  await loadSample(page)
+  await page.keyboard.press('Escape')
+  await page.getByRole('tab', { name: 'Ominaisuudet' }).click()
+  await page.getByTestId('card-section').locator('summary').click()
+  await page.getByTestId('card-purpose').fill('Käsitellä laskut ajallaan')
+  await page.getByTestId('card-risks').fill('Rivi 1\nRivi 2')
+  await page.getByLabel('Prosessin nimi').click()
+  await page.waitForTimeout(1200)
+  await page.reload()
+  await page.waitForSelector('.react-flow__node')
+  await page.keyboard.press('Escape')
+  await page.getByRole('tab', { name: 'Ominaisuudet' }).click()
+  await expect(page.getByTestId('card-section')).toHaveAttribute('open', '')
+  await expect(page.getByTestId('card-purpose')).toHaveValue('Käsitellä laskut ajallaan')
+  await expect(page.getByTestId('card-risks')).toHaveValue('Rivi 1\nRivi 2')
+})

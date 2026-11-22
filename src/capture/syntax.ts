@@ -18,13 +18,13 @@ import type { Confidence, DurationRange, PainSeverity, ProcessCard } from '../mo
  *   // kommentti
  */
 
-export interface ParsedPain {
+interface ParsedPain {
   text: string
   severity: PainSeverity
   idea?: string
 }
 
-export interface Annotations {
+interface Annotations {
   role?: string
   systems: string[]
   inputs: string[]
@@ -39,11 +39,11 @@ export interface Annotations {
   raci: { a: string[]; c: string[]; i: string[] }
 }
 
-export type ItemKind = 'step' | 'decision' | 'subprocess' | 'start' | 'end' | 'goto' | 'break'
+type ItemKind = 'step' | 'decision' | 'subprocess' | 'start' | 'end' | 'goto' | 'break'
 
-export type Jump = 'continue' | 'end' | { goto: string }
+type Jump = 'continue' | 'end' | { goto: string }
 
-export interface ParsedBranch {
+interface ParsedBranch {
   label: string
   line: number
   start: number
@@ -91,7 +91,7 @@ export interface ParseResult {
   issues: Issue[]
 }
 
-export interface ParseOptions {
+interface ParseOptions {
   /** Rivit (1-pohjaiset), jotka jätetään huomiotta alipuineen. */
   skipLines?: ReadonlySet<number>
 }
@@ -138,7 +138,7 @@ const DIRECTIVES: Record<string, string> = {
 const DIRECTIVE = /^:([\p{L}]+)\s*(.*)$/u
 
 /** Tunnettu direktiivirivi: palauttaa kentän ja arvon. */
-export function parseDirective(text: string): { key: string; value: string } | undefined {
+function parseDirective(text: string): { key: string; value: string } | undefined {
   const m = DIRECTIVE.exec(text)
   if (!m) return undefined
   const key = DIRECTIVES[m[1].toLowerCase()]

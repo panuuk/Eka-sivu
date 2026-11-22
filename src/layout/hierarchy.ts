@@ -9,14 +9,14 @@ import { portIn, portOut } from './elk'
  * hierarkia asetellaan yhdellä ELK-ajolla. Reunat kulkevat vain saman prosessin sisällä.
  */
 
-export interface HierNodeInput {
+interface HierNodeInput {
   id: string
   kind: NodeKind
   width: number
   height: number
   childProcessId?: string
 }
-export interface HierEdgeInput {
+interface HierEdgeInput {
   id: string
   from: string
   to: string
@@ -33,7 +33,7 @@ export interface HierarchyInput {
   maxNodes?: number
 }
 
-export interface HierarchyItem {
+interface HierarchyItem {
   id: string
   /** Ryhmän (alaprosessin) solmun tunniste. Puuttuu ylimmän tason solmuilta. */
   parentId?: string
@@ -56,7 +56,7 @@ export interface HierarchyLayout {
   groups: number
 }
 
-export const GROUP_PADDING = { top: 46, left: 20, bottom: 20, right: 20 }
+const GROUP_PADDING = { top: 46, left: 20, bottom: 20, right: 20 }
 
 function baseOptions(direction: Direction): Record<string, string> {
   return {

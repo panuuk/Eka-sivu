@@ -5,7 +5,7 @@
 
 const entities: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
 
-export function decodeXmlEntities(s: string): string {
+function decodeXmlEntities(s: string): string {
   return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
     if (e[0] === '#') {
       const code = e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10)
@@ -273,7 +273,7 @@ function bodyText(part: MimePart): string {
   return type.startsWith('text/html') ? stripHtml(text) : text
 }
 
-export interface ParsedEmail {
+interface ParsedEmail {
   subject: string
   text: string
 }

@@ -92,7 +92,7 @@ export function splitSentences(text: string): Span[] {
 }
 
 /** Otsikon näköinen rivi: enintään seitsemän sanaa eikä lauseen tai luettelon päätemerkkiä. */
-export function isHeadingLike(line: string): boolean {
+function isHeadingLike(line: string): boolean {
   const t = line.trim()
   if (!t || t.length > 70) return false
   if (/[.!?…:;,-]$/.test(t)) return false

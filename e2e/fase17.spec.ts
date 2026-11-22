@@ -68,20 +68,22 @@ test('dokumentin rakenne tulee malliin: prosessikortti, roolin kuvaus ja vaiheen
   await page.getByTestId('quick-apply').click()
   await expect(page.locator('dialog[open]')).toHaveCount(0)
 
-  // Prosessikortti
-  await page.getByRole('button', { name: 'Projektit' }).click()
-  await page.getByRole('menuitem', { name: 'Prosessikortti…' }).click()
+  // Prosessikortti on prosessin ominaisuuksissa ja tallentuu, kun kohdistus poistuu kortista
+  await page.keyboard.press('Escape')
+  await page.getByRole('tab', { name: 'Ominaisuudet' }).click()
+  await expect(page.getByTestId('card-section')).toHaveAttribute('open', '')
   await expect(page.getByTestId('card-purpose')).toHaveValue(/B2B-tarjousprosessin/)
   await expect(page.getByTestId('card-checklist')).toHaveValue('Kaikkiin vaatimuksiin on vastattu.')
   await page.getByTestId('card-owner').fill('Talousjohtaja')
   await page.getByTestId('card-risks').fill('Määräaika ylittyy\nResurssit loppuvat')
-  await page.getByTestId('card-save').click()
-  await expect(page.locator('dialog[open]')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Projektit' }).click()
-  await page.getByRole('menuitem', { name: 'Prosessikortti…' }).click()
+  await page.getByLabel('Prosessin nimi').click()
+  await page.getByLabel('Prosessin nimi').blur()
+  // Kumoaminen palauttaa kortin aiemman sisällön myös kenttiin
+  await page.getByRole('button', { name: 'Kumoa' }).click()
+  await expect(page.getByTestId('card-owner')).toHaveValue('')
+  await page.getByRole('button', { name: 'Tee uudelleen' }).click()
   await expect(page.getByTestId('card-owner')).toHaveValue('Talousjohtaja')
   await expect(page.getByTestId('card-risks')).toHaveValue('Määräaika ylittyy\nResurssit loppuvat')
-  await page.getByRole('button', { name: 'Peruuta' }).click()
 
   // Vaiheen tarkistuslista ja tuotokset näkyvät ominaisuuksissa
   await page.locator('.react-flow__node').filter({ hasText: 'Vastaanotto' }).first().click()

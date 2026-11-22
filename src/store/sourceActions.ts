@@ -47,7 +47,7 @@ export function labelFromQuote(quote: string): string {
   return truncate(capitalize(t), 90)
 }
 
-export interface RangeInput {
+interface RangeInput {
   sourceId: string
   start: number
   end: number

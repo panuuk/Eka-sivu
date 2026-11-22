@@ -19,7 +19,7 @@ import { useUi } from './ui'
 
 const st = () => useStore.getState()
 
-export interface InsertOptions {
+interface InsertOptions {
   kind?: NodeKind
   label: string
   afterId?: string

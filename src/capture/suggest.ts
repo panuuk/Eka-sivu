@@ -364,7 +364,7 @@ export function extractTiming(text: string): {
 }
 
 /** Kipupiste lauseesta, jos siinä on ongelmaan viittaava sana. */
-export function extractPain(text: string): { text: string; severity: PainSeverity } | undefined {
+function extractPain(text: string): { text: string; severity: PainSeverity } | undefined {
   if (!PAIN_RE.test(text)) return undefined
   const severity: PainSeverity = SEVERE_RE.test(text) ? 3 : 2
   return { text: truncate(capitalize(collapse(text).replace(/[.!?…:;,\s]+$/, '')), 90), severity }

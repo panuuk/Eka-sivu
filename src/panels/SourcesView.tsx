@@ -180,12 +180,15 @@ export function SourcesView() {
               </button>
             </p>
           )}
-          <p className="field__hint">
-            Tuetut tiedostot: Word (.docx), PowerPoint (.pptx), PDF (myös skannatut,
-            tekstintunnistuksella), kuvat (.png, .jpg), sähköposti (.eml) ja tekstitiedostot (.txt,
-            .md). Voit myös vetää tiedoston tähän. Excel, CSV, BPMN ja Mermaid tuodaan
-            projektivalikosta (“Tuo taulukko tai kaavio”).
-          </p>
+          <details className="field__hint sources__formats">
+            <summary>Tuetut tiedostot</summary>
+            <p>
+              Word (.docx), PowerPoint (.pptx), PDF (myös skannatut, tekstintunnistuksella), kuvat
+              (.png, .jpg), sähköposti (.eml) ja tekstitiedostot (.txt, .md). Voit myös vetää
+              tiedoston tähän. Excel, CSV, BPMN ja Mermaid ohjataan vedettäessä tuontiin, ja ne
+              löytyvät myös projektivalikosta (“Tuo taulukko tai kaavio”).
+            </p>
+          </details>
         </div>
         <FileInput onFiles={(f) => void importFiles(f)} />
       </div>

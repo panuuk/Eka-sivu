@@ -1,10 +1,10 @@
 import type { DurationRange } from './types'
 
 /** Työpäivä on 8 tuntia ja viikko 5 työpäivää. Arviot ovat työaikaa, eivät kalenteriaikaa. */
-export const MIN_PER_HOUR = 60
+const MIN_PER_HOUR = 60
 export const MIN_PER_DAY = 8 * 60
 export const MIN_PER_WEEK = 5 * MIN_PER_DAY
-export const MIN_PER_MONTH = 4 * MIN_PER_WEEK
+const MIN_PER_MONTH = 4 * MIN_PER_WEEK
 
 const UNITS: [RegExp, number][] = [
   [/^(?:min|minuutti|minuuttia|minuutin)$/i, 1],

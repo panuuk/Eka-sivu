@@ -41,7 +41,7 @@ export function opsUpdateSourceText(p: Project, sourceId: string, newText: strin
   return ops
 }
 
-export interface LinkedRef {
+interface LinkedRef {
   node: ProcessNode
   ref: SourceRef
   stale: boolean

@@ -1,6 +1,7 @@
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test, type Browser, type Page } from '@playwright/test'
+import { downloadJson } from './helpers'
 
 /** Tiedostopolku ilman ääkkösiä: testin tulostekansion nimi sisältää niitä. */
 const tmp = (name: string) => join(tmpdir(), `pk-sync-${process.pid}-${name}`)
@@ -27,11 +28,7 @@ async function quickAdd(page: Page, text: string) {
 }
 
 async function exportJson(page: Page, path: string) {
-  await page.getByRole('button', { name: 'Projektit' }).click()
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('menuitem', { name: 'Vie projekti (JSON)' }).click(),
-  ])
+  const [download] = await Promise.all([page.waitForEvent('download'), downloadJson(page)])
   await download.saveAs(path)
 }
 

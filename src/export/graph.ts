@@ -61,7 +61,7 @@ export interface RNode {
   heat?: number
 }
 
-export interface REdge {
+interface REdge {
   id: string
   from: string
   to: string

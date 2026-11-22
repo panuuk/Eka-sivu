@@ -37,7 +37,7 @@ export interface ImportedGraph {
   skipped: string[]
 }
 
-export interface GraphSummary {
+interface GraphSummary {
   steps: number
   decisions: number
   subprocesses: number
@@ -91,7 +91,7 @@ export function bridgeMerges(p: ImportedProcess): ImportedProcess {
 }
 
 /** Rakentaa operaatiot, jotka lisäävät prosessin annettuun prosessiin. Palauttaa myös lisätyt vaihtoehtoiset tunnisteet. */
-export function processOps(
+function processOps(
   project: Project,
   proc: ImportedProcess,
   processId: string,

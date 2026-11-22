@@ -15,7 +15,7 @@ import { useUi } from '../store/ui'
 import { ChipPicker } from '../ui/ChipPicker'
 import { Icon } from '../ui/Icon'
 import { Segmented, TextField } from './fields'
-import { ReadinessCard } from './QuestionsPanel'
+import { cardHasContent, ProcessCardFields } from './ProcessCardFields'
 import { WorkSection } from './WorkFields'
 
 const KINDS: NodeKind[] = ['step', 'decision', 'subprocess', 'start', 'end']
@@ -258,7 +258,12 @@ function ProcessInspector() {
           )
         }
       />
-      <ReadinessCard processId={processId} />
+      <details className="work" open={cardHasContent(proc)} data-testid="card-section">
+        <summary>Prosessikortti: tarkoitus, omistaja ja rajat</summary>
+        <div className="work__body">
+          <ProcessCardFields proc={proc} />
+        </div>
+      </details>
       <dl className="stats">
         <div>
           <dt>Vaiheita</dt>

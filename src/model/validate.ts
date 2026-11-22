@@ -1,6 +1,6 @@
 import type { Project } from './types'
 
-export interface ValidationIssue {
+interface ValidationIssue {
   code: string
   message: string
   id?: string

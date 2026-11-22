@@ -72,7 +72,7 @@ export function maskMarkdown(text: string): string {
 
 // ---------- Muunnos pikasyötteeksi ----------
 
-export interface MarkdownConversion {
+interface MarkdownConversion {
   /** Pikasyötteen teksti. */
   dsl: string
   /** Vaiheiden ja päätösten määrä. */
@@ -90,7 +90,7 @@ interface Section {
 }
 
 /** Numerointi pois: "3. Suunnittelu", "Vaihe 3: Suunnittelu", "3.1 Suunnittelu". */
-export function stripNumbering(s: string): string {
+function stripNumbering(s: string): string {
   return s
     .replace(/^(?:vaihe|step)\s+\d+\s*[.:)-]\s*/i, '')
     .replace(/^\d+(?:\.\d+)*[.)]?\s+/, '')
@@ -260,7 +260,7 @@ const splitItems = (s: string) => {
 }
 
 /** Vaiheen otsikon alla olevat rivit: nimetyt kentät (Tavoite, Syöte, Tuotos ...) ja muu teksti kuvaukseksi. */
-export function readStepBody(body: string[]): StepInfo {
+function readStepBody(body: string[]): StepInfo {
   const info: StepInfo = { description: [], inputs: [], outputs: [], checklist: [] }
   let mode: 'actions' | 'checklist' | undefined
   for (const line of body) {
@@ -302,7 +302,7 @@ export function readStepBody(body: string[]): StepInfo {
 type SectionKind = 'step' | 'purpose' | 'checklist' | 'metrics' | 'risks' | 'roles' | 'owner'
 
 /** Otsikon tyyppi: prosessin yleisosiot eivät ole vaiheita. */
-export function classifySection(title: string): SectionKind {
+function classifySection(title: string): SectionKind {
   const t = norm(title)
   const has = (words: string) => new RegExp(`(?<![\\p{L}])(?:${words})(?![\\p{L}])`, 'u').test(t)
   if (has('tarkistuslista|laadunvarmistus|laatukriteerit?|checklist|valmiuden kriteerit'))

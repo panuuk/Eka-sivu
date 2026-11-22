@@ -1,6 +1,6 @@
 /** Lähdetekstin korostukset: jakaa tekstin osiin, joissa jokaisella on joukko päällekkäisiä merkintöjä. */
 
-export type MarkType = 'ref' | 'role' | 'system' | 'artifact' | 'suggestion' | 'selection' | 'focus'
+type MarkType = 'ref' | 'role' | 'system' | 'artifact' | 'suggestion' | 'selection' | 'focus'
 
 export interface Mark {
   start: number
@@ -12,7 +12,7 @@ export interface Mark {
   stale?: boolean
 }
 
-export interface Segment {
+interface Segment {
   start: number
   end: number
   text: string

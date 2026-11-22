@@ -78,7 +78,7 @@ export function parseDelimited(text: string, delimiter = detectDelimiter(text)):
 }
 
 /** Poistaa tyhjät rivit ja tyhjät loppusarakkeet, ja siistii solujen välilyönnit. */
-export function trimTable(rows: Table): Table {
+function trimTable(rows: Table): Table {
   const cleaned = rows
     .map((r) => r.map((c) => c.replace(/\s+/g, ' ').trim()))
     .filter((r) => r.some((c) => c !== ''))
@@ -92,7 +92,7 @@ export function trimTable(rows: Table): Table {
 
 // --- Excel (.xlsx) ---
 
-export interface Workbook {
+interface Workbook {
   sheets: { name: string; rows: Table }[]
 }
 
@@ -297,7 +297,7 @@ const plain = (s: string) =>
     .replace(/\s+/g, ' ')
     .trim()
 
-export interface TableDslResult {
+interface TableDslResult {
   text: string
   /** Muunnettujen vaiheiden määrä. */
   steps: number

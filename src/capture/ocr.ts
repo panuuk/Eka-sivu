@@ -12,17 +12,17 @@ export interface OcrProgress {
   fraction: number
 }
 
-export interface OcrOptions {
+interface OcrOptions {
   /** Kielet tesseract-koodeina. Oletus: suomi ja englanti. */
   languages?: string[]
   onProgress?: (p: OcrProgress) => void
   signal?: AbortSignal
 }
 
-export const OCR_LANGUAGES = ['fin', 'eng']
+const OCR_LANGUAGES = ['fin', 'eng']
 
 /** Hyphenaation ja rivinvaihtojen siivous: "hyväk-\nsyy" -> "hyväksyy", kappaleet säilyvät. */
-export function cleanOcrText(raw: string): string {
+function cleanOcrText(raw: string): string {
   return raw
     .replace(/\r\n?/g, '\n')
     .replace(/([a-zäöå])-\n([a-zäöå])/g, '$1$2')
@@ -31,7 +31,7 @@ export function cleanOcrText(raw: string): string {
     .trim()
 }
 
-export function ocrBaseUrl(): string {
+function ocrBaseUrl(): string {
   return new URL('ocr/', document.baseURI).href
 }
 

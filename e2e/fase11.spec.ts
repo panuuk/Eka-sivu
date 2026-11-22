@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { downloadJson } from './helpers'
 
 async function fresh(page: Page) {
   await page.goto('/')
@@ -144,9 +145,8 @@ test('versiot säilyvät projektin JSON-viennissä ja tuonnissa', async ({ page 
   await dialog.getByLabel('Nimi', { exact: true }).fill('Vientitesti')
   await dialog.getByTestId('version-save').click()
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: /Projektit/ }).click()
   const downloadPromise = page.waitForEvent('download')
-  await page.getByRole('menuitem', { name: 'Vie projekti (JSON)' }).click()
+  await downloadJson(page)
   const download = await downloadPromise
   const path = await download.path()
   const fs = await import('node:fs')

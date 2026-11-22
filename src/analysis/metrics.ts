@@ -9,7 +9,7 @@ import { indexGraph, type GraphIndex } from './gaps'
 
 const WORK_KINDS = new Set(['step', 'decision', 'subprocess'])
 
-export interface Handoff {
+interface Handoff {
   edgeId: string
   fromId: string
   toId: string
@@ -20,14 +20,14 @@ export interface Handoff {
   waiting?: number
 }
 
-export interface RolePair {
+interface RolePair {
   fromRoleId: string
   toRoleId: string
   count: number
   waiting: number
 }
 
-export interface Loop {
+interface Loop {
   fromId: string
   toId: string
   processId: string
@@ -37,7 +37,7 @@ export interface Loop {
   extraMinutes?: number
 }
 
-export interface PathEstimate {
+interface PathEstimate {
   /** Nopein polku minimiarvoilla. */
   best?: number
   /** Lyhin ja pisin polku tyypillisillä arvoilla. */
@@ -52,7 +52,7 @@ export interface PathEstimate {
   pathSteps: number
 }
 
-export interface RoleLoad {
+interface RoleLoad {
   roleId: string | undefined
   steps: number
   /** Tyypillinen työaika yhteensä (min). */
@@ -61,7 +61,7 @@ export interface RoleLoad {
   waiting: number
 }
 
-export interface ProcessMetrics {
+interface ProcessMetrics {
   processId: string
   handoffs: Handoff[]
   loops: Loop[]
@@ -74,7 +74,7 @@ export interface ProcessMetrics {
   estimatedSteps: number
 }
 
-export interface Metrics extends ScopeSummary {
+interface Metrics extends ScopeSummary {
   perProcess: Map<string, ProcessMetrics>
   /** Solmu -> arvioitu aika (työ + odotus), lämpökarttaa varten. */
   nodeTime: Map<string, number>
@@ -336,7 +336,7 @@ export function analyzeMetrics(p: Project, index: GraphIndex = indexGraph(p)): M
   }
 }
 
-export interface ScopeSummary {
+interface ScopeSummary {
   rolePairs: RolePair[]
   roleLoad: RoleLoad[]
   handoffCount: number

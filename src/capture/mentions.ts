@@ -1,6 +1,6 @@
 import type { Entity, EntityKind, Project } from '../model/types'
 
-export interface Mention {
+interface Mention {
   start: number
   end: number
   entityId: string

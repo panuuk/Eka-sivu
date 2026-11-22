@@ -9,7 +9,7 @@ import type { Project } from '../model/types'
  * kysymyksiksi. Aukot lasketaan mallista aina uudelleen; tallennetaan vain käyttäjän päätökset (ohitukset).
  */
 
-export type GapRule =
+type GapRule =
   | 'no-role'
   | 'decision-branches'
   | 'decision-labels'
@@ -25,7 +25,7 @@ export type GapRule =
   | 'duplicate-label'
   | 'no-label'
 
-export type Severity = 'high' | 'medium' | 'low'
+type Severity = 'high' | 'medium' | 'low'
 
 export interface Gap {
   /** Vakaa avain: sama aukko tunnistetaan samaksi ajojen välillä (ohitukset perustuvat tähän). */
